@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(composer require *)",
+      "Bash(php artisan *)",
+      "Bash(vendor/bin/pint --dirty --format agent)",
+      "Bash(vendor/bin/phpstan analyse *)",
+      "PowerShell(Get-PSDrive C | Select-Object Used,Free,@{Name='UsedGB';Expression={[math]::Round\\($_.Used/1GB,2\\)}},@{Name='FreeGB';Expression={[math]::Round\\($_.Free/1GB,2\\)}} | Format-List)",
+      "mcp__laravel-boost__browser-logs",
+      "mcp__laravel-boost__search-docs",
+      "mcp__laravel-boost__last-error",
+      "mcp__laravel-boost__read-log-entries",
+      "WebFetch(domain:livewire.laravel.com)",
+      "Bash(composer show *)",
+      "Bash(cp \"/c/Users/hp/Downloads/hotelsdoc_logo.png\" \"/c/laragon/www/hotelsdoc/public/images/logo.png\")",
+      "Bash(cp \"/c/Users/hp/Downloads/hotelsdoc_logo.png\" \"/c/laragon/www/hotelsdoc/public/apple-touch-icon.png\")",
+      "Bash(cp \"/c/Users/hp/Downloads/hotelsdoc_logo.png\" \"/c/laragon/www/hotelsdoc/public/favicon.png\")",
+      "Bash(curl -s -o /dev/null -w \"vite status: %{http_code}\\\\n\" \"http://localhost:5173/@vite/client\")",
+      "Bash(curl -s -o /dev/null -w \"logo image status: %{http_code}\\\\n\" \"http://hotelsdoc.test/images/logo.png\")",
+      "Bash(curl -s -o /dev/null -w \"logo alt status: %{http_code}\\\\n\" \"http://localhost/hotelsdoc/public/images/logo.png\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "laravel-boost"
+  ]
+}
