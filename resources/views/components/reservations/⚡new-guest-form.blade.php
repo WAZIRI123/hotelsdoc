@@ -91,7 +91,7 @@ new class extends Component
 
             <div class="flex justify-end gap-2">
                 <flux:button variant="ghost" wire:click="close" type="button">{{ __('Cancel') }}</flux:button>
-                <flux:button type="submit" variant="primary">{{ __('Create &amp; select') }}</flux:button>
+                <flux:button type="submit" variant="primary">{{ __('Create & select') }}</flux:button>
             </div>
         </form>
     </div>

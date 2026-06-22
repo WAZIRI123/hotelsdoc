@@ -35,12 +35,12 @@
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
-                <flux:sidebar.group :heading="__('Bar &amp; restaurant')" class="grid">
+                <flux:sidebar.group :heading="__('Bar & restaurant')" class="grid">
                     <flux:sidebar.item icon="computer-desktop" :href="route('pos.lobby')" :current="request()->routeIs('pos.*')" wire:navigate>
                         {{ __('POS terminal') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="building-storefront" :href="route('outlets.index')" :current="request()->routeIs('outlets.*') || request()->routeIs('menu.*')" wire:navigate>
-                        {{ __('Outlets &amp; menus') }}
+                        {{ __('Outlets & menus') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
