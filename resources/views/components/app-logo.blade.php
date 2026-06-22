@@ -7,7 +7,7 @@
     <img
         src="{{ asset('images/logo-bright.png') }}"
         alt="{{ config('app.name', 'Hotels Doc') }}"
-        class="block w-40 h-auto max-w-none object-contain bg-zinc-900 rounded-md p-2 ring-1 ring-zinc-700 shadow-sm"
+        class="block w-40 h-[70px] max-w-none object-contain bg-zinc-900 rounded-md p-2 ring-1 ring-zinc-700 shadow-sm"
     />
     <span class="sr-only">{{ config('app.name', 'Hotels Doc') }}</span>
 </a>
