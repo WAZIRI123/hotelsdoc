@@ -47,6 +47,16 @@
                         {{ __('Daily cash-up') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                @canany(['manage-users', 'manage-roles'])
+                    <flux:sidebar.group expandable icon="cog-6-tooth" :heading="__('Settings')" class="grid">
+                        @can('manage-users')
+                            <flux:sidebar.item :href="route('users.index')" :current="request()->routeIs('users.index')" wire:navigate>
+                                {{ __('Roles and permissions') }}
+                            </flux:sidebar.item>
+                        @endcan
+                    </flux:sidebar.group>
+                @endcanany
             </flux:sidebar.nav>
 
             <flux:spacer />

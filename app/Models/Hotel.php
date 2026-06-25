@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Authorization\Listeners\SeedHotelRoles;
+use App\Domain\Tenancy\Listeners\SeedDefaultHotelData;
 use Database\Factories\HotelFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -63,7 +65,8 @@ class Hotel extends Model
         });
 
         static::created(function (Hotel $hotel): void {
-            app(\App\Domain\Tenancy\Listeners\SeedDefaultHotelData::class)->handle($hotel);
+            app(SeedDefaultHotelData::class)->handle($hotel);
+            app(SeedHotelRoles::class)->handle($hotel);
         });
     }
 
@@ -72,7 +75,7 @@ class Hotel extends Model
      */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withPivot('role')->withTimestamps();
+        return $this->belongsToMany(User::class)->withTimestamps();
     }
 
     /**

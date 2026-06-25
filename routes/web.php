@@ -14,7 +14,7 @@ use App\Livewire\Rooms\Index as RoomsIndex;
 use App\Livewire\RoomTypes\Index as RoomTypesIndex;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');

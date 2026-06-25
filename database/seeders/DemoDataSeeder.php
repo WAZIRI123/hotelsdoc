@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\POS\Actions\BillPosOrderToFolio;
+use App\Domain\POS\Actions\RecalculatePosOrderTotals;
 use App\Domain\Reservations\Actions\CancelReservation;
 use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CheckOutStay;
@@ -18,7 +19,6 @@ use App\Models\MenuItem;
 use App\Models\Outlet;
 use App\Models\PosOrder;
 use App\Models\RatePlan;
-use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomType;
 use App\Models\User;
@@ -26,6 +26,7 @@ use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Populates the database with a realistic playground so manual testing has
@@ -78,11 +79,12 @@ class DemoDataSeeder extends Seeder
             ['name' => 'Salim Cashier', 'password' => Hash::make('password'), 'email_verified_at' => now()],
         );
 
-        $hotel->users()->syncWithoutDetaching([
-            $testUser->id => ['role' => 'admin'],
-            $frontDesk->id => ['role' => 'front_desk'],
-            $cashier->id => ['role' => 'cashier'],
-        ]);
+        $hotel->users()->syncWithoutDetaching([$testUser->id, $frontDesk->id, $cashier->id]);
+
+        app(PermissionRegistrar::class)->setPermissionsTeamId($hotel->id);
+        $testUser->syncRoles(['admin']);
+        $frontDesk->syncRoles(['front_desk']);
+        $cashier->syncRoles(['cashier']);
 
         /* ---------- Rooms ---------- */
 
@@ -288,7 +290,7 @@ class DemoDataSeeder extends Seeder
                     'line_total' => Money::fromMajor($price * $qty),
                 ]);
             }
-            app(\App\Domain\POS\Actions\RecalculatePosOrderTotals::class)->execute($order);
+            app(RecalculatePosOrderTotals::class)->execute($order);
             $bill->execute($order->fresh(), $stay->folio);
         }
 
@@ -332,7 +334,7 @@ class DemoDataSeeder extends Seeder
                 'unit_price' => Money::fromMajor(5_000),
                 'line_total' => Money::fromMajor(10_000),
             ]);
-            app(\App\Domain\POS\Actions\RecalculatePosOrderTotals::class)->execute($order);
+            app(RecalculatePosOrderTotals::class)->execute($order);
             $folio = $bill->settleAsWalkIn($order->fresh());
             $recordPay->execute(
                 folio: $folio,
@@ -365,7 +367,10 @@ class DemoDataSeeder extends Seeder
             ['email' => 'manager@coastal.test'],
             ['name' => 'Coastal Manager', 'password' => Hash::make('password'), 'email_verified_at' => now()],
         );
-        $hotel->users()->syncWithoutDetaching([$manager->id => ['role' => 'admin']]);
+        $hotel->users()->syncWithoutDetaching([$manager->id]);
+
+        app(PermissionRegistrar::class)->setPermissionsTeamId($hotel->id);
+        $manager->syncRoles(['admin']);
 
         $std = RoomType::query()->create([
             'code' => 'STD', 'name' => 'Standard',

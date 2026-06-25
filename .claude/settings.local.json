@@ -17,7 +17,13 @@
       "Bash(cp \"/c/Users/hp/Downloads/hotelsdoc_logo.png\" \"/c/laragon/www/hotelsdoc/public/favicon.png\")",
       "Bash(curl -s -o /dev/null -w \"vite status: %{http_code}\\\\n\" \"http://localhost:5173/@vite/client\")",
       "Bash(curl -s -o /dev/null -w \"logo image status: %{http_code}\\\\n\" \"http://hotelsdoc.test/images/logo.png\")",
-      "Bash(curl -s -o /dev/null -w \"logo alt status: %{http_code}\\\\n\" \"http://localhost/hotelsdoc/public/images/logo.png\")"
+      "Bash(curl -s -o /dev/null -w \"logo alt status: %{http_code}\\\\n\" \"http://localhost/hotelsdoc/public/images/logo.png\")",
+      "Bash(php -v)",
+      "Bash(composer --version)",
+      "Bash(rm -f \"resources/views/components/settings/users/⚡index.blade.php\" \"resources/views/components/settings/roles/⚡index.blade.php\")",
+      "Bash(rmdir \"resources/views/components/settings/users\" \"resources/views/components/settings/roles\")",
+      "Bash(composer types:check)",
+      "Bash(git stash *)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -4,6 +4,7 @@ use App\Domain\Tenancy\TenantContext;
 use App\Models\Hotel;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /*
@@ -51,7 +52,10 @@ function actingAsTenantUser(?Hotel $hotel = null, ?User $user = null, string $ro
 {
     $hotel ??= Hotel::factory()->create();
     $user ??= User::factory()->create();
-    $hotel->users()->syncWithoutDetaching([$user->id => ['role' => $role]]);
+    $hotel->users()->syncWithoutDetaching([$user->id]);
+
+    app(PermissionRegistrar::class)->setPermissionsTeamId($hotel->id);
+    $user->syncRoles([$role]);
 
     test()->actingAs($user);
     app(TenantContext::class)->set($hotel);
