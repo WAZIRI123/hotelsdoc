@@ -17,8 +17,11 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $hotel_id
  * @property int $room_type_id
+ * @property int|null $meal_plan_id
  * @property string $name
  * @property Money $price
+ * @property Money $extra_adult_price
+ * @property Money $extra_child_price
  * @property Carbon|null $valid_from
  * @property Carbon|null $valid_to
  * @property bool $is_active
@@ -31,8 +34,11 @@ class RatePlan extends Model
     protected $fillable = [
         'hotel_id',
         'room_type_id',
+        'meal_plan_id',
         'name',
         'price',
+        'extra_adult_price',
+        'extra_child_price',
         'valid_from',
         'valid_to',
         'is_active',
@@ -45,6 +51,8 @@ class RatePlan extends Model
     {
         return [
             'price' => MoneyCast::class.':TZS',
+            'extra_adult_price' => MoneyCast::class.':TZS',
+            'extra_child_price' => MoneyCast::class.':TZS',
             'valid_from' => 'date:Y-m-d',
             'valid_to' => 'date:Y-m-d',
             'is_active' => 'boolean',
@@ -57,5 +65,13 @@ class RatePlan extends Model
     public function roomType(): BelongsTo
     {
         return $this->belongsTo(RoomType::class);
+    }
+
+    /**
+     * @return BelongsTo<MealPlan, $this>
+     */
+    public function mealPlan(): BelongsTo
+    {
+        return $this->belongsTo(MealPlan::class);
     }
 }

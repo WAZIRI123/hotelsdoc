@@ -16,7 +16,6 @@ it('creates a room', function (): void {
     Livewire::test(Index::class)
         ->set('room_type_id', $this->roomType->id)
         ->set('number', '101')
-        ->set('floor', '1')
         ->set('status', 'available')
         ->call('save')
         ->assertHasNoErrors();

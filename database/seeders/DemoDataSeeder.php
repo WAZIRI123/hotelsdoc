@@ -14,10 +14,12 @@ use App\Domain\Reservations\Actions\CreateReservation;
 use App\Domain\Tenancy\TenantContext;
 use App\Models\Guest;
 use App\Models\Hotel;
+use App\Models\MealPlan;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Outlet;
 use App\Models\PosOrder;
+use App\Models\RateCalendar;
 use App\Models\RatePlan;
 use App\Models\Room;
 use App\Models\RoomType;
@@ -86,6 +88,14 @@ class DemoDataSeeder extends Seeder
         $frontDesk->syncRoles(['front_desk']);
         $cashier->syncRoles(['cashier']);
 
+        /* ---------- Meal plans ---------- */
+
+        $this->seedStandardMealPlans();
+        $ep = MealPlan::query()->where('code', 'EP')->firstOrFail();
+        $bb = MealPlan::query()->where('code', 'BB')->firstOrFail();
+        $hb = MealPlan::query()->where('code', 'HB')->firstOrFail();
+        $ai = MealPlan::query()->where('code', 'AI')->firstOrFail();
+
         /* ---------- Rooms ---------- */
 
         $std = RoomType::query()->create([
@@ -93,56 +103,106 @@ class DemoDataSeeder extends Seeder
             'name' => 'Standard',
             'description' => 'Comfortable double room with garden view.',
             'base_occupancy' => 2, 'max_occupancy' => 3,
+            'max_adults' => 2, 'max_children' => 2,
             'default_rate' => Money::fromMajor(60_000),
+            'extra_guest_fee' => Money::fromMajor(15_000),
         ]);
         $dlx = RoomType::query()->create([
             'code' => 'DLX',
             'name' => 'Deluxe',
             'description' => 'Upgraded room with sea view and balcony.',
             'base_occupancy' => 2, 'max_occupancy' => 3,
+            'max_adults' => 2, 'max_children' => 2,
             'default_rate' => Money::fromMajor(120_000),
+            'extra_guest_fee' => Money::fromMajor(25_000),
         ]);
         $suite = RoomType::query()->create([
             'code' => 'SUITE',
             'name' => 'Suite',
             'description' => 'Two-room suite with lounge.',
             'base_occupancy' => 2, 'max_occupancy' => 4,
+            'max_adults' => 3, 'max_children' => 3,
             'default_rate' => Money::fromMajor(250_000),
+            'extra_guest_fee' => Money::fromMajor(40_000),
         ]);
         $family = RoomType::query()->create([
             'code' => 'FAM',
             'name' => 'Family',
             'description' => 'Two beds plus pull-out, sleeps 5.',
             'base_occupancy' => 3, 'max_occupancy' => 5,
+            'max_adults' => 3, 'max_children' => 4,
             'default_rate' => Money::fromMajor(180_000),
+            'extra_guest_fee' => Money::fromMajor(20_000),
         ]);
 
+        $stdBb = RatePlan::query()->create([
+            'room_type_id' => $std->id,
+            'meal_plan_id' => $bb->id,
+            'name' => 'Standard — Best Available BB',
+            'price' => Money::fromMajor(75_000),
+            'extra_adult_price' => Money::fromMajor(15_000),
+            'extra_child_price' => Money::fromMajor(8_000),
+        ]);
         RatePlan::query()->create([
             'room_type_id' => $std->id,
-            'name' => 'Standard — Off Season',
+            'meal_plan_id' => $ep->id,
+            'name' => 'Standard — Off Season Room Only',
             'price' => Money::fromMajor(45_000),
-            'valid_from' => null, 'valid_to' => null,
+            'extra_adult_price' => Money::fromMajor(12_000),
+            'extra_child_price' => Money::fromMajor(6_000),
+        ]);
+        RatePlan::query()->create([
+            'room_type_id' => $dlx->id,
+            'meal_plan_id' => $hb->id,
+            'name' => 'Deluxe — Half Board',
+            'price' => Money::fromMajor(150_000),
+            'extra_adult_price' => Money::fromMajor(30_000),
+            'extra_child_price' => Money::fromMajor(15_000),
+        ]);
+        RatePlan::query()->create([
+            'room_type_id' => $suite->id,
+            'meal_plan_id' => $ai->id,
+            'name' => 'Suite — All Inclusive',
+            'price' => Money::fromMajor(320_000),
+            'extra_adult_price' => Money::fromMajor(80_000),
+            'extra_child_price' => Money::fromMajor(40_000),
         ]);
 
+        // Rate calendar overrides: weekend uplift + one closed day next month
+        $weekendUpliftAnchor = CarbonImmutable::today()->startOfMonth();
+        $windowEnd = $weekendUpliftAnchor->addMonths(2);
+        for ($cursor = $weekendUpliftAnchor; $cursor->lessThan($windowEnd); $cursor = $cursor->addDay()) {
+            if ($cursor->isWeekend()) {
+                RateCalendar::query()->updateOrCreate(
+                    ['rate_plan_id' => $stdBb->id, 'date' => $cursor->toDateString()],
+                    ['price' => Money::fromMajor(95_000)],
+                );
+            }
+        }
+        RateCalendar::query()->updateOrCreate(
+            ['rate_plan_id' => $stdBb->id, 'date' => CarbonImmutable::today()->addDays(45)->toDateString()],
+            ['stop_sell' => true],
+        );
+
         $rooms = collect();
-        foreach ([['101', '1', $std], ['102', '1', $std], ['103', '1', $std], ['104', '1', $std]] as [$no, $floor, $type]) {
+        foreach ([['101', $std], ['102', $std], ['103', $std], ['104', $std]] as [$no, $type]) {
             $rooms->push(Room::query()->create([
-                'room_type_id' => $type->id, 'number' => $no, 'floor' => $floor,
+                'room_type_id' => $type->id, 'number' => $no,
             ]));
         }
-        foreach ([['201', '2', $dlx], ['202', '2', $dlx], ['203', '2', $dlx]] as [$no, $floor, $type]) {
+        foreach ([['201', $dlx], ['202', $dlx], ['203', $dlx]] as [$no, $type]) {
             $rooms->push(Room::query()->create([
-                'room_type_id' => $type->id, 'number' => $no, 'floor' => $floor,
+                'room_type_id' => $type->id, 'number' => $no,
             ]));
         }
-        foreach ([['301', '3', $suite], ['302', '3', $suite]] as [$no, $floor, $type]) {
+        foreach ([['301', $suite], ['302', $suite]] as [$no, $type]) {
             $rooms->push(Room::query()->create([
-                'room_type_id' => $type->id, 'number' => $no, 'floor' => $floor,
+                'room_type_id' => $type->id, 'number' => $no,
             ]));
         }
-        foreach ([['401', '4', $family], ['402', '4', $family], ['403', '4', $family]] as [$no, $floor, $type]) {
+        foreach ([['401', $family], ['402', $family], ['403', $family]] as [$no, $type]) {
             $rooms->push(Room::query()->create([
-                'room_type_id' => $type->id, 'number' => $no, 'floor' => $floor,
+                'room_type_id' => $type->id, 'number' => $no,
             ]));
         }
 
@@ -294,18 +354,22 @@ class DemoDataSeeder extends Seeder
             $bill->execute($order->fresh(), $stay->folio);
         }
 
-        // 3 upcoming (confirmed, future arrival)
-        foreach ([
-            [$guests[7], $rooms[10], $today->addDays(2), $today->addDays(5)],
-            [$guests[8], $rooms[3], $today->addDays(4), $today->addDays(7)],
-            [$guests[9], $rooms[6], $today->addDays(10), $today->addDays(14)],
-        ] as [$guest, $room, $arrival, $departure]) {
+        // 3 upcoming (confirmed, future arrival) — mix of default rate and rate plans
+        $upcoming = [
+            [$guests[7], $rooms[10], $today->addDays(2), $today->addDays(5), null, 2, 0],
+            [$guests[8], $rooms[3], $today->addDays(4), $today->addDays(7), $stdBb->id, 2, 1],
+            [$guests[9], $rooms[6], $today->addDays(10), $today->addDays(14), null, 2, 0],
+        ];
+        foreach ($upcoming as [$guest, $room, $arrival, $departure, $ratePlanId, $adults, $children]) {
             $createRes->execute(
                 guestId: $guest->id,
                 roomTypeId: $room->room_type_id,
                 roomId: $room->id,
                 arrival: $arrival,
                 departure: $departure,
+                adults: $adults,
+                children: $children,
+                ratePlanId: $ratePlanId,
             );
         }
 
@@ -348,6 +412,31 @@ class DemoDataSeeder extends Seeder
         app(TenantContext::class)->clear();
     }
 
+    /**
+     * Seeds the five industry-standard board-basis codes for the current tenant.
+     */
+    private function seedStandardMealPlans(): void
+    {
+        $plans = [
+            ['EP', 'European Plan', 'Room only, no meals included.', false, false, false],
+            ['BB', 'Bed & Breakfast', 'Room and breakfast included.', true, false, false],
+            ['HB', 'Half Board', 'Breakfast and dinner included.', true, false, true],
+            ['FB', 'Full Board', 'Breakfast, lunch and dinner included.', true, true, true],
+            ['AI', 'All Inclusive', 'All meals and selected beverages.', true, true, true],
+        ];
+
+        foreach ($plans as [$code, $name, $description, $b, $l, $d]) {
+            MealPlan::query()->create([
+                'code' => $code,
+                'name' => $name,
+                'description' => $description,
+                'includes_breakfast' => $b,
+                'includes_lunch' => $l,
+                'includes_dinner' => $d,
+            ]);
+        }
+    }
+
     private function seedCoastalInn(): void
     {
         $hotel = Hotel::query()->updateOrCreate(
@@ -372,13 +461,17 @@ class DemoDataSeeder extends Seeder
         app(PermissionRegistrar::class)->setPermissionsTeamId($hotel->id);
         $manager->syncRoles(['admin']);
 
+        $this->seedStandardMealPlans();
+
         $std = RoomType::query()->create([
             'code' => 'STD', 'name' => 'Standard',
             'base_occupancy' => 2, 'max_occupancy' => 2,
+            'max_adults' => 2, 'max_children' => 1,
             'default_rate' => Money::fromMajor(40_000),
+            'extra_guest_fee' => Money::zero(),
         ]);
         foreach (['1', '2', '3', '4', '5'] as $n) {
-            Room::query()->create(['room_type_id' => $std->id, 'number' => $n, 'floor' => '1']);
+            Room::query()->create(['room_type_id' => $std->id, 'number' => $n]);
         }
 
         Outlet::query()->create(['name' => 'Reception Bar', 'type' => 'bar']);

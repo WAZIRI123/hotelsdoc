@@ -29,7 +29,6 @@ class RoomFactory extends Factory
                 ->hotel_id,
             'room_type_id' => $roomType,
             'number' => fake()->unique()->numerify('###'),
-            'floor' => (string) fake()->numberBetween(1, 5),
             'status' => 'available',
             'is_active' => true,
         ];

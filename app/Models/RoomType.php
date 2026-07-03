@@ -21,7 +21,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $description
  * @property int $base_occupancy
  * @property int $max_occupancy
+ * @property int $max_adults
+ * @property int $max_children
  * @property Money $default_rate
+ * @property Money $extra_guest_fee
  * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -38,7 +41,10 @@ class RoomType extends Model
         'description',
         'base_occupancy',
         'max_occupancy',
+        'max_adults',
+        'max_children',
         'default_rate',
+        'extra_guest_fee',
         'is_active',
     ];
 
@@ -49,9 +55,12 @@ class RoomType extends Model
     {
         return [
             'default_rate' => MoneyCast::class.':TZS',
+            'extra_guest_fee' => MoneyCast::class.':TZS',
             'is_active' => 'boolean',
             'base_occupancy' => 'integer',
             'max_occupancy' => 'integer',
+            'max_adults' => 'integer',
+            'max_children' => 'integer',
         ];
     }
 

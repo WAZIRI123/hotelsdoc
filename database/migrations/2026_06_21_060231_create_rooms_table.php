@@ -15,7 +15,6 @@ return new class extends Migration
             $table->foreignId('hotel_id')->constrained()->cascadeOnDelete();
             $table->foreignId('room_type_id')->constrained()->cascadeOnDelete();
             $table->string('number');
-            $table->string('floor')->nullable();
             $table->string('status')->default('available')->comment('available|occupied|cleaning|maintenance|out_of_order');
             $table->text('notes')->nullable();
             $table->boolean('is_active')->default(true);

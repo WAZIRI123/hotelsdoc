@@ -23,7 +23,10 @@
       "Bash(rm -f \"resources/views/components/settings/users/⚡index.blade.php\" \"resources/views/components/settings/roles/⚡index.blade.php\")",
       "Bash(rmdir \"resources/views/components/settings/users\" \"resources/views/components/settings/roles\")",
       "Bash(composer types:check)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(npm run *)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -30,7 +30,7 @@ final class CheckInReservation
     public function execute(Reservation $reservation, ?User $actor = null): Stay
     {
         return DB::transaction(function () use ($reservation, $actor): Stay {
-            $reservation->loadMissing('rooms.room');
+            $reservation->loadMissing('rooms.room', 'rooms.nights');
 
             if ($reservation->status === 'checked_in') {
                 throw new RuntimeException('Reservation is already checked in.');
@@ -53,7 +53,7 @@ final class CheckInReservation
                 'status' => 'open',
             ]);
 
-            $nights = count($this->availability->nights($reservation->arrival, $reservation->departure));
+            $nightCount = count($this->availability->nights($reservation->arrival, $reservation->departure));
             $subtotal = Money::zero();
 
             foreach ($reservation->rooms as $reservationRoom) {
@@ -61,14 +61,17 @@ final class CheckInReservation
                     throw new RuntimeException('Reservation has a room slot with no assigned room.');
                 }
 
-                $lineTotal = $reservationRoom->nightly_rate->multiply($nights);
+                $lineTotal = $reservationRoom->nights->isNotEmpty()
+                    ? $reservationRoom->totalRate()
+                    : $reservationRoom->nightly_rate->multiply($nightCount);
+
                 $subtotal = $subtotal->add($lineTotal);
 
                 $folio->charges()->create([
                     'source_type' => 'room',
                     'source_id' => $reservationRoom->id,
-                    'description' => "Room {$reservationRoom->room->number} — {$nights} night(s)",
-                    'quantity' => $nights,
+                    'description' => "Room {$reservationRoom->room->number} — {$nightCount} night(s)",
+                    'quantity' => $nightCount,
                     'unit_price' => $reservationRoom->nightly_rate,
                     'total' => $lineTotal,
                     'posted_at' => now(),

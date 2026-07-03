@@ -16,7 +16,6 @@ use Illuminate\Support\Carbon;
  * @property int $hotel_id
  * @property int $room_type_id
  * @property string $number
- * @property string|null $floor
  * @property string $status
  * @property string|null $notes
  * @property bool $is_active
@@ -34,7 +33,6 @@ class Room extends Model
         'hotel_id',
         'room_type_id',
         'number',
-        'floor',
         'status',
         'notes',
         'is_active',

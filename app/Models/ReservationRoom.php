@@ -11,6 +11,7 @@ use Database\Factories\ReservationRoomFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -75,5 +76,21 @@ class ReservationRoom extends Model
     public function ratePlan(): BelongsTo
     {
         return $this->belongsTo(RatePlan::class);
+    }
+
+    /**
+     * Per-night rate snapshots taken at booking time.
+     *
+     * @return HasMany<ReservationRoomNight, $this>
+     */
+    public function nights(): HasMany
+    {
+        return $this->hasMany(ReservationRoomNight::class);
+    }
+
+    public function totalRate(): Money
+    {
+        return $this->nights
+            ->reduce(fn (Money $carry, ReservationRoomNight $night) => $carry->add($night->rate), Money::zero());
     }
 }

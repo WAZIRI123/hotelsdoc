@@ -18,7 +18,10 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->unsignedSmallInteger('base_occupancy')->default(2);
             $table->unsignedSmallInteger('max_occupancy')->default(2);
+            $table->unsignedSmallInteger('max_adults')->default(2);
+            $table->unsignedSmallInteger('max_children')->default(2);
             $table->unsignedBigInteger('default_rate')->comment('Minor units (cents TZS)');
+            $table->unsignedBigInteger('extra_guest_fee')->default(0)->comment('Per-guest-per-night surcharge above base_occupancy (minor units)');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 

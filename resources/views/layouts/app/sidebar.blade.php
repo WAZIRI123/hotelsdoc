@@ -10,17 +10,17 @@
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
-            <flux:sidebar.nav>
+            <flux:sidebar.nav class="mt-3">
                 <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                     {{ __('Dashboard') }}
                 </flux:sidebar.item>
 
                 <flux:sidebar.group :heading="__('Front desk')" class="grid">
                     <flux:sidebar.item icon="calendar-days" :href="route('reservations.index')" :current="request()->routeIs('reservations.*')" wire:navigate>
-                        {{ __('Reservations') }}
+                        {{ __('Guest Book') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*')" wire:navigate>
-                        {{ __('Guests') }}
+                             {{ __('Guests') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
@@ -30,6 +30,12 @@
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="rectangle-stack" :href="route('room-types.index')" :current="request()->routeIs('room-types.*')" wire:navigate>
                         {{ __('Room types') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="cake" :href="route('meal-plans.index')" :current="request()->routeIs('meal-plans.*')" wire:navigate>
+                        {{ __('Meal plans') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="tag" :href="route('rate-plans.index')" :current="request()->routeIs('rate-plans.*')" wire:navigate>
+                        {{ __('Rate plans') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 

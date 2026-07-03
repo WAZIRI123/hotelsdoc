@@ -36,7 +36,6 @@
         <flux:table.columns>
             <flux:table.column>{{ __('Number') }}</flux:table.column>
             <flux:table.column>{{ __('Type') }}</flux:table.column>
-            <flux:table.column>{{ __('Floor') }}</flux:table.column>
             <flux:table.column>{{ __('Status') }}</flux:table.column>
             <flux:table.column></flux:table.column>
         </flux:table.columns>
@@ -46,7 +45,6 @@
                 <flux:table.row :key="$room->id">
                     <flux:table.cell variant="strong">{{ $room->number }}</flux:table.cell>
                     <flux:table.cell>{{ $room->roomType?->name }}</flux:table.cell>
-                    <flux:table.cell>{{ $room->floor ?? '—' }}</flux:table.cell>
                     <flux:table.cell>
                         @php
                             $color = match ($room->status) {
@@ -81,7 +79,7 @@
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="5" class="text-center text-zinc-500">
+                    <flux:table.cell colspan="4" class="text-center text-zinc-500">
                         {{ __('No rooms found.') }}
                     </flux:table.cell>
                 </flux:table.row>
@@ -104,10 +102,7 @@
                 @endforeach
             </flux:select>
 
-            <div class="grid grid-cols-2 gap-4">
-                <flux:input wire:model="number" :label="__('Room number')" required autofocus />
-                <flux:input wire:model="floor" :label="__('Floor')" />
-            </div>
+            <flux:input wire:model="number" :label="__('Room number')" required autofocus />
 
             <flux:select wire:model="status" :label="__('Status')" required>
                 <flux:select.option value="available">{{ __('Available') }}</flux:select.option>

@@ -30,7 +30,10 @@ class RoomTypeFactory extends Factory
             'description' => fake()->sentence(),
             'base_occupancy' => 2,
             'max_occupancy' => 3,
+            'max_adults' => 2,
+            'max_children' => 2,
             'default_rate' => fake()->numberBetween(50_000, 300_000) * 100,
+            'extra_guest_fee' => 0,
             'is_active' => true,
         ];
     }

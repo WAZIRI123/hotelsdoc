@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Rooms;
 
+use App\Domain\Tenancy\TenantContext;
 use App\Models\Room;
 use App\Models\RoomType;
 use Flux\Flux;
@@ -25,9 +26,6 @@ class Index extends Component
 
     #[Validate('required|string|max:20')]
     public string $number = '';
-
-    #[Validate('nullable|string|max:20')]
-    public string $floor = '';
 
     #[Validate('required|in:available,occupied,cleaning,maintenance,out_of_order')]
     public string $status = 'available';
@@ -63,7 +61,7 @@ class Index extends Component
 
     public function openCreate(): void
     {
-        $this->reset(['editingId', 'number', 'floor', 'notes', 'room_type_id']);
+        $this->reset(['editingId', 'number', 'notes', 'room_type_id']);
         $this->status = 'available';
         $this->is_active = true;
         $this->resetValidation();
@@ -76,7 +74,6 @@ class Index extends Component
         $this->editingId = $room->id;
         $this->room_type_id = $room->room_type_id;
         $this->number = $room->number;
-        $this->floor = $room->floor ?? '';
         $this->status = $room->status;
         $this->notes = $room->notes ?? '';
         $this->is_active = $room->is_active;
@@ -90,7 +87,7 @@ class Index extends Component
             'number' => [
                 'required', 'string', 'max:20',
                 Rule::unique('rooms', 'number')
-                    ->where('hotel_id', app(\App\Domain\Tenancy\TenantContext::class)->id())
+                    ->where('hotel_id', app(TenantContext::class)->id())
                     ->ignore($this->editingId),
             ],
         ]);
@@ -98,7 +95,6 @@ class Index extends Component
         $attributes = [
             'room_type_id' => $this->room_type_id,
             'number' => $this->number,
-            'floor' => $this->floor ?: null,
             'status' => $this->status,
             'notes' => $this->notes ?: null,
             'is_active' => $this->is_active,
