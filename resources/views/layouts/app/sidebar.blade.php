@@ -17,7 +17,7 @@
 
                 <flux:sidebar.group :heading="__('Front desk')" class="grid">
                     <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*') || request()->routeIs('reservations.*')" wire:navigate>
-                             {{ __('Guests') }}
+                             {{ __('Guest Book') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
