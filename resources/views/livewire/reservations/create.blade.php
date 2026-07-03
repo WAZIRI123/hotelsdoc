@@ -79,7 +79,7 @@
                         <flux:callout.text>{{ __('Pick a different type or change the dates.') }}</flux:callout.text>
                     </flux:callout>
                 @else
-                    <flux:select wire:model="room_id" :label="__('Assign room')" required>
+                    <flux:select wire:model.live="room_id" :label="__('Assign room')" required>
                         <flux:select.option value="">{{ __('Choose a room…') }}</flux:select.option>
                         @foreach ($this->availableRooms as $room)
                             <flux:select.option :value="$room->id">

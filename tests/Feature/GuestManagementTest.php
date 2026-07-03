@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Domain\Reservations\Actions\CheckInReservation;
+use App\Domain\Reservations\Actions\CreateReservation;
 use App\Livewire\Guests\Index;
+use App\Models\Guest;
 use App\Models\Room;
 use App\Models\RoomType;
+use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
@@ -41,6 +45,25 @@ it('does not link rooms that are not available', function (): void {
 
     Livewire::test(Index::class)
         ->assertDontSeeHtml('href="'.route('reservations.create', ['room' => $occupied->id]).'"');
+});
+
+it('links occupied rooms to their active folio', function (): void {
+    $this->roomType->update(['default_rate' => 100_000_00]);
+    $room = Room::factory()->for($this->hotel)->for($this->roomType)->create(['number' => '210']);
+    $guest = Guest::factory()->for($this->hotel)->create();
+
+    $reservation = app(CreateReservation::class)->execute(
+        guestId: $guest->id,
+        roomTypeId: $this->roomType->id,
+        roomId: $room->id,
+        arrival: CarbonImmutable::parse('2026-08-01'),
+        departure: CarbonImmutable::parse('2026-08-03'),
+    );
+
+    $stay = app(CheckInReservation::class)->execute($reservation);
+
+    Livewire::test(Index::class)
+        ->assertSeeHtml('href="'.route('folios.show', $stay->folio).'"');
 });
 
 it('hides inactive rooms', function (): void {

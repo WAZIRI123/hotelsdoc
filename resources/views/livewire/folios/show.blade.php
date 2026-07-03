@@ -101,7 +101,7 @@
                 @empty
                     <flux:table.row>
                         <flux:table.cell colspan="4" class="text-center text-zinc-500">
-                            {{ __('No payments yet. Payment UI is coming in Phase 3.') }}
+                            {{ __('No payments yet.') }}
                         </flux:table.cell>
                     </flux:table.row>
                 @endforelse

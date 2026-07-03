@@ -10,10 +10,12 @@
             <flux:link :href="route('rooms.index')" wire:navigate>{{ __('Add some in Rooms.') }}</flux:link>
         </div>
     @else
-        <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             @foreach ($this->rooms as $room)
                 @php
                     $isAvailable = $room->status === 'available';
+                    $activeFolio = $this->activeFolios[$room->id] ?? null;
+                    $isOccupiedWithFolio = $room->status === 'occupied' && $activeFolio !== null;
                     $cardClasses = match ($room->status) {
                         'available' => 'bg-green-600',
                         'occupied' => 'bg-blue-500',
@@ -32,6 +34,13 @@
                             wire:navigate
                             class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
                             aria-label="{{ __('Reserve room') }} {{ $roomLabel }}">
+                            <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
+                        </a>
+                    @elseif ($isOccupiedWithFolio)
+                        <a href="{{ route('folios.show', $activeFolio) }}"
+                            wire:navigate
+                            class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+                            aria-label="{{ __('Open folio for room') }} {{ $roomLabel }}">
                             <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
                         </a>
                     @else
