@@ -6,6 +6,7 @@ use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CreateReservation;
 use App\Livewire\Guests\Index;
 use App\Models\Guest;
+use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomType;
 use Carbon\CarbonImmutable;
@@ -74,4 +75,35 @@ it('hides inactive rooms', function (): void {
 
     Livewire::test(Index::class)
         ->assertDontSee('301');
+});
+
+it('lists reservations for the current hotel on the guests page', function (): void {
+    $guest = Guest::factory()->for($this->hotel)->create(['first_name' => 'Ada', 'last_name' => 'Lovelace']);
+    $reservation = Reservation::factory()->for($this->hotel)->for($guest)->create([
+        'confirmation_no' => 'CONF-12345',
+        'arrival' => CarbonImmutable::parse('2026-09-01'),
+        'departure' => CarbonImmutable::parse('2026-09-04'),
+        'status' => 'confirmed',
+    ]);
+
+    Livewire::test(Index::class)
+        ->assertSee('CONF-12345')
+        ->assertSee('Ada Lovelace');
+});
+
+it('filters reservations on the guests page by status', function (): void {
+    $guest = Guest::factory()->for($this->hotel)->create();
+    Reservation::factory()->for($this->hotel)->for($guest)->create([
+        'confirmation_no' => 'CONF-AAA',
+        'status' => 'confirmed',
+    ]);
+    Reservation::factory()->for($this->hotel)->for($guest)->create([
+        'confirmation_no' => 'CONF-BBB',
+        'status' => 'cancelled',
+    ]);
+
+    Livewire::test(Index::class)
+        ->set('filterStatus', 'cancelled')
+        ->assertSee('CONF-BBB')
+        ->assertDontSee('CONF-AAA');
 });

@@ -16,10 +16,7 @@
                 </flux:sidebar.item>
 
                 <flux:sidebar.group :heading="__('Front desk')" class="grid">
-                    <flux:sidebar.item icon="calendar-days" :href="route('reservations.index')" :current="request()->routeIs('reservations.*')" wire:navigate>
-                        {{ __('Guest Book') }}
-                    </flux:sidebar.item>
-                    <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*')" wire:navigate>
+                    <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*') || request()->routeIs('reservations.*')" wire:navigate>
                              {{ __('Guests') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
