@@ -1,63 +1,113 @@
 <section class="w-full">
-    <div class="pb-6">
-        <flux:heading size="xl">{{ __('Guests') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Pick an available room to start a new reservation.') }}</flux:text>
+    <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="flex flex-wrap items-center gap-3">
+            <flux:icon.information-circle class="size-7 text-zinc-900 dark:text-zinc-100" />
+            <flux:heading size="xl" class="!text-3xl !font-normal">{{ __('Current rooms status') }}</flux:heading>
+
+            <a href="{{ route('reservations.create') }}" wire:navigate
+                class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
+                {{ __('Register customer') }}
+            </a>
+
+            <a href="#reservations"
+                x-on:click.prevent="$wire.set('filterStatus', 'all'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+                class="inline-flex items-center rounded-md bg-sky-400 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
+                {{ __('View Guests') }}
+            </a>
+        </div>
+
+        <nav class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <a href="{{ route('reservations.create') }}" wire:navigate
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Book Room') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#reservations"
+                x-on:click.prevent="$wire.set('filterStatus', 'all'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('All') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#reservations"
+                x-on:click.prevent="$wire.set('filterStatus', 'confirmed'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Confirmed') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#reservations"
+                x-on:click.prevent="$wire.set('filterStatus', 'checked_in'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Checked in') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#reservations"
+                x-on:click.prevent="$wire.set('filterStatus', 'checked_out'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Checked out') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#reservations"
+                x-on:click.prevent="$wire.set('filterStatus', 'cancelled'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Cancelled') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#reservations"
+                x-on:click.prevent="$wire.set('filterStatus', 'no_show'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('No show') }}</a>
+        </nav>
+
+        <hr class="my-5 border-zinc-200 dark:border-zinc-700" />
+
+        @if ($this->rooms->isEmpty())
+            <div class="rounded-lg border border-dashed border-zinc-200 p-12 text-center text-zinc-500 dark:border-zinc-700">
+                {{ __('No rooms yet.') }}
+                <flux:link :href="route('rooms.index')" wire:navigate>{{ __('Add some in Rooms.') }}</flux:link>
+            </div>
+        @else
+            <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+                @foreach ($this->rooms as $room)
+                    @php
+                        $isAvailable = $room->status === 'available';
+                        $activeFolio = $this->activeFolios[$room->id] ?? null;
+                        $isOccupiedWithFolio = $room->status === 'occupied' && $activeFolio !== null;
+                        $cardClasses = match ($room->status) {
+                            'available' => 'bg-green-600',
+                            'occupied' => 'bg-red-600',
+                            'cleaning' => 'bg-yellow-500',
+                            'maintenance' => 'bg-orange-500',
+                            'out_of_order' => 'bg-red-600',
+                            default => 'bg-zinc-500',
+                        };
+                        $statusLabel = strtoupper(str_replace('_', '-', $room->status));
+                        $roomLabel = trim($room->number.' '.($room->roomType?->name ?? ''));
+                    @endphp
+
+                    <div class="flex flex-col items-center gap-2">
+                        @if ($isAvailable)
+                            <a href="{{ route('reservations.create', ['room' => $room->id]) }}"
+                                wire:navigate
+                                class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+                                aria-label="{{ __('Reserve room') }} {{ $roomLabel }}">
+                                <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
+                            </a>
+                        @elseif ($isOccupiedWithFolio)
+                            <a href="{{ route('folios.show', $activeFolio) }}"
+                                wire:navigate
+                                class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+                                aria-label="{{ __('Open folio for room') }} {{ $roomLabel }}">
+                                <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
+                            </a>
+                        @else
+                            <div class="block w-full cursor-not-allowed"
+                                title="{{ $statusLabel }}"
+                                aria-disabled="true">
+                                <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
+                            </div>
+                        @endif
+
+                        <flux:text class="text-center text-sm font-medium">{{ $roomLabel }}</flux:text>
+                    </div>
+                @endforeach
+            </div>
+        @endif
     </div>
 
-    @if ($this->rooms->isEmpty())
-        <div class="rounded-lg border border-dashed border-zinc-200 p-12 text-center text-zinc-500 dark:border-zinc-700">
-            {{ __('No rooms yet.') }}
-            <flux:link :href="route('rooms.index')" wire:navigate>{{ __('Add some in Rooms.') }}</flux:link>
-        </div>
-    @else
-        <div class="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            @foreach ($this->rooms as $room)
-                @php
-                    $isAvailable = $room->status === 'available';
-                    $activeFolio = $this->activeFolios[$room->id] ?? null;
-                    $isOccupiedWithFolio = $room->status === 'occupied' && $activeFolio !== null;
-                    $cardClasses = match ($room->status) {
-                        'available' => 'bg-green-600',
-                        'occupied' => 'bg-blue-500',
-                        'cleaning' => 'bg-yellow-500',
-                        'maintenance' => 'bg-orange-500',
-                        'out_of_order' => 'bg-red-600',
-                        default => 'bg-zinc-500',
-                    };
-                    $statusLabel = strtoupper(str_replace('_', '-', $room->status));
-                    $roomLabel = trim($room->number.' '.($room->roomType?->name ?? ''));
-                @endphp
+    <a href="{{ route('rooms.index') }}" wire:navigate
+        class="mt-3 flex w-full flex-col items-center justify-center gap-2 rounded-lg bg-[#F3F3F3] px-6 py-4 text-zinc-500 transition hover:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 dark:focus:ring-offset-zinc-900">
+        <flux:icon.plus class="size-7" />
+        <span class="text-sm font-medium">{{ __('Add Room') }}</span>
+    </a>
 
-                <div class="flex flex-col items-center gap-2">
-                    @if ($isAvailable)
-                        <a href="{{ route('reservations.create', ['room' => $room->id]) }}"
-                            wire:navigate
-                            class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
-                            aria-label="{{ __('Reserve room') }} {{ $roomLabel }}">
-                            <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
-                        </a>
-                    @elseif ($isOccupiedWithFolio)
-                        <a href="{{ route('folios.show', $activeFolio) }}"
-                            wire:navigate
-                            class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
-                            aria-label="{{ __('Open folio for room') }} {{ $roomLabel }}">
-                            <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
-                        </a>
-                    @else
-                        <div class="block w-full cursor-not-allowed"
-                            title="{{ $statusLabel }}"
-                            aria-disabled="true">
-                            <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
-                        </div>
-                    @endif
-
-                    <flux:text class="text-center text-sm font-medium">{{ $roomLabel }}</flux:text>
-                </div>
-            @endforeach
-        </div>
-    @endif
-
-    <div class="mt-10">
+    <div id="reservations" class="mt-3 scroll-mt-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <div class="flex items-center justify-between gap-4 pb-6">
             <div>
                 <flux:heading size="lg">{{ __('Reservations') }}</flux:heading>
