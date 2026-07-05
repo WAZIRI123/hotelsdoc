@@ -4,13 +4,12 @@
             <flux:icon.information-circle class="size-7 text-zinc-900 dark:text-zinc-100" />
             <flux:heading size="xl" class="!text-3xl !font-normal">{{ __('Current rooms status') }}</flux:heading>
 
-            <a href="{{ route('reservations.create') }}" wire:navigate
+            <a href="{{ route('guests.register') }}" wire:navigate
                 class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
-                {{ __('Register customer') }}
+                {{ __('Register Guest') }}
             </a>
 
-            <a href="#reservations"
-                x-on:click.prevent="$wire.set('filterStatus', 'all'); document.getElementById('reservations').scrollIntoView({behavior: 'smooth', block: 'start'})"
+            <a href="{{ route('guests.list') }}" wire:navigate
                 class="inline-flex items-center rounded-md bg-sky-400 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
                 {{ __('View Guests') }}
             </a>

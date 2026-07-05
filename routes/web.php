@@ -1,7 +1,9 @@
 <?php
 
 use App\Livewire\Folios\Show as FolioShow;
+use App\Livewire\Guests\GuestList as GuestsList;
 use App\Livewire\Guests\Index as GuestsIndex;
+use App\Livewire\Guests\Register as GuestsRegister;
 use App\Livewire\MealPlans\Index as MealPlansIndex;
 use App\Livewire\Menu\Index as MenuIndex;
 use App\Livewire\Outlets\Index as OutletsIndex;
@@ -29,6 +31,8 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::livewire('rooms', RoomsIndex::class)->name('rooms.index');
 
     Route::livewire('guests', GuestsIndex::class)->name('guests.index');
+    Route::livewire('guests/register', GuestsRegister::class)->name('guests.register');
+    Route::livewire('guests/list', GuestsList::class)->name('guests.list');
 
     Route::livewire('reservations', ReservationsIndex::class)->name('reservations.index');
     Route::livewire('reservations/new', ReservationsCreate::class)->name('reservations.create');
