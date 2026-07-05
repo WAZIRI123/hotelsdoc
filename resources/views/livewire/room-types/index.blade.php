@@ -1,14 +1,32 @@
 <section class="w-full">
-    <div class="flex items-center justify-between gap-4 pb-6">
-        <div>
-            <flux:heading size="xl">{{ __('Room types') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Categories of rooms with their default rates.') }}</flux:text>
+    <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="flex flex-wrap items-center gap-3">
+            <flux:icon.rectangle-stack class="size-7 text-zinc-900 dark:text-zinc-100" />
+            <flux:heading size="xl" class="!text-3xl !font-normal">{{ __('Room types') }}</flux:heading>
+
+            <button type="button" wire:click="openCreate"
+                class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
+                {{ __('New room type') }}
+            </button>
+
+            <a href="{{ route('rooms.index') }}" wire:navigate
+                class="inline-flex items-center rounded-md bg-sky-400 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
+                {{ __('View Rooms') }}
+            </a>
         </div>
 
-        <flux:button variant="primary" icon="plus" wire:click="openCreate">
-            {{ __('New room type') }}
-        </flux:button>
-    </div>
+        <nav class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <a href="{{ route('rooms.index') }}" wire:navigate
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Rooms') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="{{ route('meal-plans.index') }}" wire:navigate
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Meal plans') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="{{ route('rate-plans.index') }}" wire:navigate
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Rate plans') }}</a>
+        </nav>
+
+        <hr class="my-5 border-zinc-200 dark:border-zinc-700" />
 
     <flux:table>
         <flux:table.columns>
@@ -60,6 +78,7 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 
     <flux:modal name="room-type-form" class="md:w-[480px]">
         <form wire:submit="save" class="space-y-6">

@@ -1,12 +1,26 @@
 <section class="w-full max-w-4xl">
-    <div class="flex items-center justify-between gap-4 pb-6">
-        <div>
-            <flux:heading size="xl">{{ __('Daily cash-up') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Confirmed payments collected on the selected day.') }}</flux:text>
+    <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="flex flex-wrap items-center gap-3">
+            <flux:icon.banknotes class="size-7 text-zinc-900 dark:text-zinc-100" />
+            <flux:heading size="xl" class="!text-3xl !font-normal">{{ __('Daily cash-up') }}</flux:heading>
+
+            <flux:spacer />
+
+            <flux:input type="date" wire:model.live="date" />
         </div>
 
-        <flux:input type="date" wire:model.live="date" />
-    </div>
+        <nav class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <a href="{{ route('pos.lobby') }}" wire:navigate
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('POS terminal') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="{{ route('outlets.index') }}" wire:navigate
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Outlets') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="{{ route('guests.index') }}" wire:navigate
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Guest Book') }}</a>
+        </nav>
+
+        <hr class="my-5 border-zinc-200 dark:border-zinc-700" />
 
     <flux:card class="mb-6">
         <flux:heading size="lg">{{ __('Totals by method') }}</flux:heading>
@@ -76,4 +90,5 @@
             </flux:table.rows>
         </flux:table>
     </flux:card>
+    </div>
 </section>

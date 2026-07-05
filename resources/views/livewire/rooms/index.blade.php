@@ -1,26 +1,41 @@
 <section class="w-full">
-    <div class="flex items-center justify-between gap-4 pb-6">
-        <div>
-            <flux:heading size="xl">{{ __('Rooms') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Individual rooms in your property.') }}</flux:text>
-        </div>
+    <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="flex flex-wrap items-center gap-3">
+            <flux:icon.building-office-2 class="size-7 text-zinc-900 dark:text-zinc-100" />
+            <flux:heading size="xl" class="!text-3xl !font-normal">{{ __('Rooms') }}</flux:heading>
 
-        <div class="flex items-center gap-2">
-            <flux:select wire:model.live="filterStatus" size="sm">
-                <flux:select.option value="all">{{ __('All statuses') }}</flux:select.option>
-                <flux:select.option value="available">{{ __('Available') }}</flux:select.option>
-                <flux:select.option value="occupied">{{ __('Occupied') }}</flux:select.option>
-                <flux:select.option value="cleaning">{{ __('Cleaning') }}</flux:select.option>
-                <flux:select.option value="maintenance">{{ __('Maintenance') }}</flux:select.option>
-                <flux:select.option value="out_of_order">{{ __('Out of order') }}</flux:select.option>
-            </flux:select>
-
-            <flux:button variant="primary" icon="plus" wire:click="openCreate"
-                :disabled="$this->roomTypes->isEmpty()">
+            <button type="button" wire:click="openCreate" @disabled($this->roomTypes->isEmpty())
+                class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:focus:ring-offset-zinc-900">
                 {{ __('New room') }}
-            </flux:button>
+            </button>
+
+            <a href="{{ route('room-types.index') }}" wire:navigate
+                class="inline-flex items-center rounded-md bg-sky-400 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
+                {{ __('Room types') }}
+            </a>
         </div>
-    </div>
+
+        <nav class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <a href="#" wire:click.prevent="$set('filterStatus', 'all')"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('All') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#" wire:click.prevent="$set('filterStatus', 'available')"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Available') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#" wire:click.prevent="$set('filterStatus', 'occupied')"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Occupied') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#" wire:click.prevent="$set('filterStatus', 'cleaning')"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Cleaning') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#" wire:click.prevent="$set('filterStatus', 'maintenance')"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Maintenance') }}</a>
+            <span class="text-zinc-400 dark:text-zinc-600">|</span>
+            <a href="#" wire:click.prevent="$set('filterStatus', 'out_of_order')"
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Out of order') }}</a>
+        </nav>
+
+        <hr class="my-5 border-zinc-200 dark:border-zinc-700" />
 
     @if ($this->roomTypes->isEmpty())
         <flux:callout variant="warning" icon="exclamation-triangle">
@@ -86,6 +101,7 @@
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 
     <flux:modal name="room-form" class="md:w-[480px]">
         <form wire:submit="save" class="space-y-6">
