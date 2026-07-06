@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property Money $price
  * @property string|null $tax_code
  * @property bool $is_active
+ * @property bool $track_stock
+ * @property int $stock_quantity
  */
 class MenuItem extends Model
 {
@@ -37,6 +39,8 @@ class MenuItem extends Model
         'price',
         'tax_code',
         'is_active',
+        'track_stock',
+        'stock_quantity',
     ];
 
     /**
@@ -47,7 +51,23 @@ class MenuItem extends Model
         return [
             'price' => MoneyCast::class.':TZS',
             'is_active' => 'boolean',
+            'track_stock' => 'boolean',
+            'stock_quantity' => 'integer',
         ];
+    }
+
+    public function isOutOfStock(): bool
+    {
+        return $this->track_stock && $this->stock_quantity <= 0;
+    }
+
+    public function canFulfillQuantity(int $quantity): bool
+    {
+        if (! $this->track_stock) {
+            return true;
+        }
+
+        return $this->stock_quantity >= $quantity;
     }
 
     /**

@@ -44,6 +44,11 @@ class Index extends Component
 
     public bool $itemIsActive = true;
 
+    public bool $itemTrackStock = false;
+
+    #[Validate('required|integer|min:0')]
+    public int $itemStockQuantity = 0;
+
     public function mount(Outlet $outlet): void
     {
         $this->outlet = $outlet;
@@ -113,7 +118,7 @@ class Index extends Component
 
     public function openCreateItem(?int $categoryId = null): void
     {
-        $this->reset(['editingItemId', 'itemName', 'itemDescription', 'itemPriceTsh']);
+        $this->reset(['editingItemId', 'itemName', 'itemDescription', 'itemPriceTsh', 'itemTrackStock', 'itemStockQuantity']);
         $this->itemCategoryId = $categoryId;
         $this->itemIsActive = true;
         $this->resetValidation();
@@ -129,6 +134,8 @@ class Index extends Component
         $this->itemDescription = $item->description ?? '';
         $this->itemPriceTsh = (int) $item->price->toMajor();
         $this->itemIsActive = $item->is_active;
+        $this->itemTrackStock = $item->track_stock;
+        $this->itemStockQuantity = $item->stock_quantity;
         $this->resetValidation();
         Flux::modal('item-form')->show();
     }
@@ -140,6 +147,7 @@ class Index extends Component
             'itemName' => 'required|string|max:120',
             'itemDescription' => 'nullable|string|max:300',
             'itemPriceTsh' => 'required|integer|min:0',
+            'itemStockQuantity' => 'required|integer|min:0',
         ]);
 
         $attrs = [
@@ -149,6 +157,8 @@ class Index extends Component
             'description' => $this->itemDescription ?: null,
             'price' => Money::fromMajor($this->itemPriceTsh),
             'is_active' => $this->itemIsActive,
+            'track_stock' => $this->itemTrackStock,
+            'stock_quantity' => $this->itemTrackStock ? $this->itemStockQuantity : 0,
         ];
 
         if ($this->editingItemId) {

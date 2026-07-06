@@ -59,6 +59,7 @@
                         <flux:table.columns>
                             <flux:table.column>{{ __('Item') }}</flux:table.column>
                             <flux:table.column align="center">{{ __('Price') }}</flux:table.column>
+                            <flux:table.column align="center">{{ __('Stock') }}</flux:table.column>
                             <flux:table.column>{{ __('Status') }}</flux:table.column>
                             <flux:table.column></flux:table.column>
                         </flux:table.columns>
@@ -72,6 +73,17 @@
                                         @endif
                                     </flux:table.cell>
                                     <flux:table.cell align="center" class="font-mono">{{ $item->price->format() }}</flux:table.cell>
+                                    <flux:table.cell align="center">
+                                        @if ($item->track_stock)
+                                            @if ($item->stock_quantity <= 0)
+                                                <flux:badge color="red" size="sm">{{ __('Out of stock') }}</flux:badge>
+                                            @else
+                                                <span class="font-mono">{{ $item->stock_quantity }}</span>
+                                            @endif
+                                        @else
+                                            <flux:text class="text-xs text-zinc-500">—</flux:text>
+                                        @endif
+                                    </flux:table.cell>
                                     <flux:table.cell>
                                         @if ($item->is_active)
                                             <flux:badge color="green" size="sm">{{ __('Active') }}</flux:badge>
@@ -131,6 +143,12 @@
             <flux:input wire:model="itemName" :label="__('Name')" required />
             <flux:textarea wire:model="itemDescription" :label="__('Description')" rows="2" />
             <flux:input wire:model.number="itemPriceTsh" type="number" min="0" :label="__('Price (TSh)')" required />
+            <flux:switch wire:model.live="itemTrackStock" :label="__('Track stock')"
+                :description="__('Block adding to orders once the counter hits zero.')" />
+            @if ($itemTrackStock)
+                <flux:input wire:model.number="itemStockQuantity" type="number" min="0"
+                    :label="__('Stock on hand')" required />
+            @endif
             <flux:switch wire:model="itemIsActive" :label="__('Active')" />
 
             <div class="flex justify-end gap-2">

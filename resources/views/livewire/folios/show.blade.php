@@ -22,6 +22,10 @@
             @endphp
             <flux:badge :color="$color" size="lg">{{ ucfirst($folio->status) }}</flux:badge>
 
+            <flux:button variant="ghost" icon="printer" :href="route('folios.print', $folio)" target="_blank">
+                {{ __('Print bill') }}
+            </flux:button>
+
             @if (in_array($folio->status, ['open', 'closed'], true))
                 <flux:button variant="primary" icon="banknotes" wire:click="openPayment">
                     {{ __('Record payment') }}

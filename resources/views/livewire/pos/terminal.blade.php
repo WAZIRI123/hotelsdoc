@@ -1,4 +1,6 @@
-<section class="w-full">
+<section class="w-full"
+    x-data
+    x-on:open-print.window="if ($event.detail?.url) { window.open($event.detail.url, '_blank', 'noopener'); }">
     <div class="flex items-center justify-between pb-4">
         <div>
             <flux:text class="text-sm">
@@ -18,11 +20,43 @@
                     <div>
                         <flux:heading size="lg" class="mb-3">{{ $category->name }}</flux:heading>
                         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            @php
+                                $itemPalette = [
+                                    'bg-rose-100 border-rose-200 hover:border-rose-500 dark:bg-rose-900/40 dark:border-rose-800',
+                                    'bg-amber-100 border-amber-200 hover:border-amber-500 dark:bg-amber-900/40 dark:border-amber-800',
+                                    'bg-emerald-100 border-emerald-200 hover:border-emerald-500 dark:bg-emerald-900/40 dark:border-emerald-800',
+                                    'bg-sky-100 border-sky-200 hover:border-sky-500 dark:bg-sky-900/40 dark:border-sky-800',
+                                    'bg-violet-100 border-violet-200 hover:border-violet-500 dark:bg-violet-900/40 dark:border-violet-800',
+                                    'bg-lime-100 border-lime-200 hover:border-lime-500 dark:bg-lime-900/40 dark:border-lime-800',
+                                    'bg-fuchsia-100 border-fuchsia-200 hover:border-fuchsia-500 dark:bg-fuchsia-900/40 dark:border-fuchsia-800',
+                                    'bg-cyan-100 border-cyan-200 hover:border-cyan-500 dark:bg-cyan-900/40 dark:border-cyan-800',
+                                ];
+                            @endphp
                             @foreach ($category->items as $item)
+                                @php
+                                    $outOfStock = $item->isOutOfStock();
+                                    $tileClass = $outOfStock
+                                        ? 'cursor-not-allowed opacity-50 bg-zinc-100 border-zinc-200 dark:bg-zinc-800/60 dark:border-zinc-700'
+                                        : 'hover:shadow '.$itemPalette[$item->id % count($itemPalette)];
+                                    $stockBadgeColor = $outOfStock
+                                        ? 'red'
+                                        : ($item->stock_quantity <= 3 ? 'amber' : 'green');
+                                @endphp
                                 <button type="button" wire:click="addItem({{ $item->id }})"
-                                    class="rounded-lg border border-zinc-200 bg-white p-3 text-left transition hover:border-blue-500 hover:shadow dark:border-zinc-700 dark:bg-zinc-900">
-                                    <div class="font-medium">{{ $item->name }}</div>
-                                    <div class="mt-1 font-mono text-sm text-zinc-500">{{ $item->price->format() }}</div>
+                                    @disabled($outOfStock)
+                                    class="relative rounded-lg border p-3 text-left transition {{ $tileClass }}">
+                                    @if ($item->track_stock)
+                                        <span class="absolute right-1.5 top-1.5">
+                                            <flux:badge :color="$stockBadgeColor" size="sm">
+                                                {{ $item->stock_quantity }} {{ __('left') }}
+                                            </flux:badge>
+                                        </span>
+                                    @endif
+                                    <div class="pr-14 font-medium">{{ $item->name }}</div>
+                                    <div class="mt-1 font-mono text-sm text-zinc-600 dark:text-zinc-300">{{ $item->price->format() }}</div>
+                                    @if ($outOfStock)
+                                        <div class="mt-1 text-xs font-medium text-rose-600 dark:text-rose-400">{{ __('Out of stock') }}</div>
+                                    @endif
                                 </button>
                             @endforeach
                         </div>
@@ -136,8 +170,14 @@
                             {{ $transaction->total_amount->format() }}
                         </flux:table.cell>
                         <flux:table.cell class="text-right">
-                            <flux:button variant="ghost" size="sm" icon="arrow-right"
-                                :href="route('pos.transactions.show', $transaction)" wire:navigate />
+                            <div class="inline-flex items-center gap-1">
+                                @if ($transaction->status === 'billed')
+                                    <flux:button variant="ghost" size="sm" icon="printer"
+                                        :href="route('pos.transactions.print', $transaction)" target="_blank" />
+                                @endif
+                                <flux:button variant="ghost" size="sm" icon="arrow-right"
+                                    :href="route('pos.transactions.show', $transaction)" wire:navigate />
+                            </div>
                         </flux:table.cell>
                     </flux:table.row>
                 @empty

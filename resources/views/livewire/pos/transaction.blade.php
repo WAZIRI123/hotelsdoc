@@ -19,10 +19,20 @@
                 {{ $posOrder->status }}
             </span>
 
-            <a href="{{ route('pos.terminal', $posOrder->outlet) }}" wire:navigate
-                class="ml-auto inline-flex items-center rounded-md bg-sky-400 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
-                {{ __('Back to terminal') }}
-            </a>
+            <div class="ml-auto flex items-center gap-2">
+                @if ($posOrder->status === 'billed')
+                    <a href="{{ route('pos.transactions.print', $posOrder) }}" target="_blank"
+                        class="inline-flex items-center gap-2 rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
+                        <flux:icon.printer class="size-4" />
+                        {{ __('Print bill') }}
+                    </a>
+                @endif
+
+                <a href="{{ route('pos.terminal', $posOrder->outlet) }}" wire:navigate
+                    class="inline-flex items-center rounded-md bg-sky-400 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
+                    {{ __('Back to terminal') }}
+                </a>
+            </div>
         </div>
 
         <nav class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">

@@ -20,6 +20,7 @@ use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -142,23 +143,39 @@ class Terminal extends Component
             return;
         }
 
-        $existing = $order->items->first(fn (PosOrderItem $i) => $i->menu_item_id === $item->id);
-
-        if ($existing !== null) {
-            $existing->update([
-                'quantity' => $existing->quantity + 1,
-                'line_total' => $existing->unit_price->multiply($existing->quantity + 1),
-            ]);
-        } else {
-            $order->items()->create([
-                'menu_item_id' => $item->id,
-                'name_snapshot' => $item->name,
-                'quantity' => 1,
-                'unit_price' => $item->price,
-                'tax_amount' => Money::zero(),
-                'line_total' => $item->price,
-            ]);
+        if (! $this->orderIsEditable($order)) {
+            return;
         }
+
+        if ($item->track_stock && $item->stock_quantity < 1) {
+            Flux::toast(variant: 'danger', text: "{$item->name} is out of stock.");
+
+            return;
+        }
+
+        DB::transaction(function () use ($item, $order): void {
+            if ($item->track_stock) {
+                $item->decrement('stock_quantity');
+            }
+
+            $existing = $order->items->first(fn (PosOrderItem $i) => $i->menu_item_id === $item->id);
+
+            if ($existing !== null) {
+                $existing->update([
+                    'quantity' => $existing->quantity + 1,
+                    'line_total' => $existing->unit_price->multiply($existing->quantity + 1),
+                ]);
+            } else {
+                $order->items()->create([
+                    'menu_item_id' => $item->id,
+                    'name_snapshot' => $item->name,
+                    'quantity' => 1,
+                    'unit_price' => $item->price,
+                    'tax_amount' => Money::zero(),
+                    'line_total' => $item->price,
+                ]);
+            }
+        });
 
         app(RecalculatePosOrderTotals::class)->execute($order);
         unset($this->order);
@@ -166,17 +183,41 @@ class Terminal extends Component
 
     public function changeQty(int $itemId, int $delta): void
     {
-        $item = PosOrderItem::query()->findOrFail($itemId);
-        $newQty = $item->quantity + $delta;
+        $item = PosOrderItem::query()->with(['menuItem', 'order'])->findOrFail($itemId);
+        $parentOrder = $item->order;
 
-        if ($newQty <= 0) {
-            $item->delete();
-        } else {
-            $item->update([
-                'quantity' => $newQty,
-                'line_total' => $item->unit_price->multiply($newQty),
-            ]);
+        if ($parentOrder === null || ! $this->orderIsEditable($parentOrder)) {
+            return;
         }
+
+        $newQty = $item->quantity + $delta;
+        $menuItem = $item->menuItem;
+
+        if ($delta > 0 && $menuItem?->track_stock && $menuItem->stock_quantity < $delta) {
+            Flux::toast(variant: 'danger', text: "{$menuItem->name} is out of stock.");
+
+            return;
+        }
+
+        DB::transaction(function () use ($item, $newQty, $delta, $menuItem): void {
+            if ($menuItem?->track_stock) {
+                if ($delta > 0) {
+                    $menuItem->decrement('stock_quantity', $delta);
+                } elseif ($delta < 0) {
+                    $restore = $newQty <= 0 ? $item->quantity : abs($delta);
+                    $menuItem->increment('stock_quantity', $restore);
+                }
+            }
+
+            if ($newQty <= 0) {
+                $item->delete();
+            } else {
+                $item->update([
+                    'quantity' => $newQty,
+                    'line_total' => $item->unit_price->multiply($newQty),
+                ]);
+            }
+        });
 
         $order = $this->order();
         if ($order !== null) {
@@ -192,7 +233,19 @@ class Terminal extends Component
             return;
         }
 
-        $order->update(['status' => 'voided']);
+        if (! $this->orderIsEditable($order)) {
+            return;
+        }
+
+        DB::transaction(function () use ($order): void {
+            foreach ($order->items as $line) {
+                if ($line->menuItem?->track_stock) {
+                    $line->menuItem->increment('stock_quantity', $line->quantity);
+                }
+            }
+            $order->update(['status' => 'voided']);
+        });
+
         Flux::toast(variant: 'success', text: 'Order voided.');
         $this->orderId = null;
         $this->startNewOrder();
@@ -285,8 +338,11 @@ class Terminal extends Component
             return;
         }
 
+        $printUrl = route('pos.transactions.print', $order->fresh());
+
         Flux::toast(variant: 'success', text: 'Payment received.');
         Flux::modal('pos-settle')->close();
+        $this->dispatch('open-print', url: $printUrl);
         $this->orderId = null;
         $this->startNewOrder();
     }
@@ -294,5 +350,16 @@ class Terminal extends Component
     public function render(): View
     {
         return view('livewire.pos.terminal');
+    }
+
+    private function orderIsEditable(PosOrder $order): bool
+    {
+        if (in_array($order->status, ['open', 'sent'], true)) {
+            return true;
+        }
+
+        Flux::toast(variant: 'danger', text: "Cannot modify a {$order->status} order.");
+
+        return false;
     }
 }

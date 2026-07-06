@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Tenancy\TenantContext;
 use App\Livewire\Folios\Show as FolioShow;
 use App\Livewire\Guests\GuestList as GuestsList;
 use App\Livewire\Guests\Index as GuestsIndex;
@@ -18,6 +19,8 @@ use App\Livewire\Reservations\Index as ReservationsIndex;
 use App\Livewire\Reservations\Show as ReservationsShow;
 use App\Livewire\Rooms\Index as RoomsIndex;
 use App\Livewire\RoomTypes\Index as RoomTypesIndex;
+use App\Models\Folio;
+use App\Models\PosOrder;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login')->name('home');
@@ -40,12 +43,28 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::livewire('reservations/{reservation}', ReservationsShow::class)->name('reservations.show');
 
     Route::livewire('folios/{folio}', FolioShow::class)->name('folios.show');
+    Route::get('folios/{folio}/print', function (Folio $folio) {
+        $folio->load(['charges', 'payments', 'guest', 'stay.reservation.rooms.roomType']);
+
+        return view('folios.print', [
+            'folio' => $folio,
+            'hotel' => app(TenantContext::class)->current(),
+        ]);
+    })->name('folios.print');
 
     Route::livewire('outlets', OutletsIndex::class)->name('outlets.index');
     Route::livewire('outlets/{outlet}/menu', MenuIndex::class)->name('menu.index');
 
     Route::livewire('pos', PosLobby::class)->name('pos.lobby');
     Route::livewire('pos/transactions/{posOrder}', PosTransaction::class)->name('pos.transactions.show');
+    Route::get('pos/transactions/{posOrder}/print', function (PosOrder $posOrder) {
+        $posOrder->load(['outlet', 'items', 'folio.guest', 'folio.payments']);
+
+        return view('pos.transactions.print', [
+            'order' => $posOrder,
+            'hotel' => app(TenantContext::class)->current(),
+        ]);
+    })->name('pos.transactions.print');
     Route::livewire('pos/{outlet}', PosTerminal::class)->name('pos.terminal');
 
     Route::livewire('reports/cash-up', CashUp::class)->name('reports.cash-up');
