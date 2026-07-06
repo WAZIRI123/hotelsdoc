@@ -9,6 +9,7 @@ use App\Livewire\Menu\Index as MenuIndex;
 use App\Livewire\Outlets\Index as OutletsIndex;
 use App\Livewire\POS\Lobby as PosLobby;
 use App\Livewire\POS\Terminal as PosTerminal;
+use App\Livewire\POS\Transaction as PosTransaction;
 use App\Livewire\RatePlans\Calendar as RatePlansCalendar;
 use App\Livewire\RatePlans\Index as RatePlansIndex;
 use App\Livewire\Reports\CashUp;
@@ -44,6 +45,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::livewire('outlets/{outlet}/menu', MenuIndex::class)->name('menu.index');
 
     Route::livewire('pos', PosLobby::class)->name('pos.lobby');
+    Route::livewire('pos/transactions/{posOrder}', PosTransaction::class)->name('pos.transactions.show');
     Route::livewire('pos/{outlet}', PosTerminal::class)->name('pos.terminal');
 
     Route::livewire('reports/cash-up', CashUp::class)->name('reports.cash-up');

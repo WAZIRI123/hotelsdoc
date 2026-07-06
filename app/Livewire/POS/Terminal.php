@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Livewire\POS;
 
-use App\Domain\POS\Actions\BillPosOrderToFolio;
-use App\Domain\POS\Actions\RecalculatePosOrderTotals;
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Payments\PaymentGatewayManager;
+use App\Domain\POS\Actions\BillPosOrderToFolio;
+use App\Domain\POS\Actions\RecalculatePosOrderTotals;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Outlet;
@@ -72,6 +72,22 @@ class Terminal extends Component
         }
 
         return PosOrder::query()->with('items.menuItem')->find($this->orderId);
+    }
+
+    /**
+     * @return Collection<int, PosOrder>
+     */
+    #[Computed]
+    public function transactions(): Collection
+    {
+        return PosOrder::query()
+            ->where('outlet_id', $this->outlet->id)
+            ->whereIn('status', ['billed', 'sent', 'voided'])
+            ->with(['folio.guest'])
+            ->withCount('items')
+            ->latest('id')
+            ->limit(20)
+            ->get();
     }
 
     /**
@@ -263,7 +279,7 @@ class Terminal extends Component
                 reference: $this->settleReference ?: null,
                 receivedBy: Auth::user(),
             );
-        } catch (RuntimeException | \InvalidArgumentException $e) {
+        } catch (RuntimeException|\InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
 
             return;

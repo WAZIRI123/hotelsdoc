@@ -87,6 +87,70 @@
         </flux:card>
     </div>
 
+    <flux:card class="mt-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <flux:heading size="lg">{{ __('Transactions') }}</flux:heading>
+                <flux:text class="mt-1 text-sm text-zinc-500">
+                    {{ __('Recent orders for this outlet.') }}
+                </flux:text>
+            </div>
+        </div>
+
+        <flux:table class="mt-4">
+            <flux:table.columns>
+                <flux:table.column>{{ __('Reference') }}</flux:table.column>
+                <flux:table.column>{{ __('Opened') }}</flux:table.column>
+                <flux:table.column>{{ __('Table') }}</flux:table.column>
+                <flux:table.column>{{ __('Items') }}</flux:table.column>
+                <flux:table.column>{{ __('Billed to') }}</flux:table.column>
+                <flux:table.column>{{ __('Status') }}</flux:table.column>
+                <flux:table.column class="text-right">{{ __('Total') }}</flux:table.column>
+                <flux:table.column></flux:table.column>
+            </flux:table.columns>
+            <flux:table.rows>
+                @forelse ($this->transactions as $transaction)
+                    <flux:table.row :key="$transaction->id">
+                        <flux:table.cell class="font-mono text-sm">{{ $transaction->reference }}</flux:table.cell>
+                        <flux:table.cell>{{ $transaction->created_at?->format('M j, H:i') }}</flux:table.cell>
+                        <flux:table.cell>{{ $transaction->table_no ?? '—' }}</flux:table.cell>
+                        <flux:table.cell>{{ $transaction->items_count }}</flux:table.cell>
+                        <flux:table.cell>
+                            {{ $transaction->folio?->guest?->fullName() ?? ($transaction->folio ? __('Walk-in') : '—') }}
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            @php
+                                $color = match ($transaction->status) {
+                                    'open' => 'blue',
+                                    'sent' => 'yellow',
+                                    'billed' => 'green',
+                                    'voided' => 'zinc',
+                                    default => 'zinc',
+                                };
+                            @endphp
+                            <flux:badge :color="$color" size="sm">
+                                {{ ucfirst($transaction->status) }}
+                            </flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell class="text-right font-mono">
+                            {{ $transaction->total_amount->format() }}
+                        </flux:table.cell>
+                        <flux:table.cell class="text-right">
+                            <flux:button variant="ghost" size="sm" icon="arrow-right"
+                                :href="route('pos.transactions.show', $transaction)" wire:navigate />
+                        </flux:table.cell>
+                    </flux:table.row>
+                @empty
+                    <flux:table.row>
+                        <flux:table.cell colspan="8" class="text-center text-zinc-500">
+                            {{ __('No transactions yet.') }}
+                        </flux:table.cell>
+                    </flux:table.row>
+                @endforelse
+            </flux:table.rows>
+        </flux:table>
+    </flux:card>
+
     <flux:modal name="pos-settle" class="md:w-[520px]">
         <div class="space-y-6">
             <flux:heading size="lg">{{ __('Settle order') }}</flux:heading>
