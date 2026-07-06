@@ -28,15 +28,15 @@
         <flux:table class="mt-4">
             <flux:table.columns>
                 <flux:table.column>{{ __('Method') }}</flux:table.column>
-                <flux:table.column>{{ __('Payments') }}</flux:table.column>
-                <flux:table.column class="text-right">{{ __('Total') }}</flux:table.column>
+                <flux:table.column align="center">{{ __('Payments') }}</flux:table.column>
+                <flux:table.column align="center">{{ __('Total') }}</flux:table.column>
             </flux:table.columns>
             <flux:table.rows>
                 @forelse ($this->totalsByMethod as $code => $group)
                     <flux:table.row :key="$code">
                         <flux:table.cell variant="strong">{{ $group['label'] }}</flux:table.cell>
-                        <flux:table.cell>{{ $group['count'] }}</flux:table.cell>
-                        <flux:table.cell class="text-right font-mono">{{ $group['total']->format() }}</flux:table.cell>
+                        <flux:table.cell align="center">{{ $group['count'] }}</flux:table.cell>
+                        <flux:table.cell align="center" class="font-mono">{{ $group['total']->format() }}</flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
@@ -65,7 +65,7 @@
                 <flux:table.column>{{ __('Folio') }}</flux:table.column>
                 <flux:table.column>{{ __('Method') }}</flux:table.column>
                 <flux:table.column>{{ __('Reference') }}</flux:table.column>
-                <flux:table.column class="text-right">{{ __('Amount') }}</flux:table.column>
+                <flux:table.column align="center">{{ __('Amount') }}</flux:table.column>
             </flux:table.columns>
             <flux:table.rows>
                 @forelse ($this->payments as $payment)
@@ -78,7 +78,7 @@
                         </flux:table.cell>
                         <flux:table.cell>{{ ucwords(str_replace('_', ' ', $payment->method_code)) }}</flux:table.cell>
                         <flux:table.cell class="font-mono text-xs">{{ $payment->reference ?? '—' }}</flux:table.cell>
-                        <flux:table.cell class="text-right font-mono">{{ $payment->amount->format() }}</flux:table.cell>
+                        <flux:table.cell align="center" class="font-mono">{{ $payment->amount->format() }}</flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
