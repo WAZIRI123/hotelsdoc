@@ -43,6 +43,10 @@ final class CheckOutStay
 
             foreach ($stay->reservation->rooms as $reservationRoom) {
                 $reservationRoom->room?->update(['status' => 'cleaning']);
+                $reservationRoom->activeOccupants()->update([
+                    'checked_out_at' => now(),
+                    'removed_by' => $actor?->id,
+                ]);
             }
 
             $stay->update([

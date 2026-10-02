@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $valid_from
  * @property Carbon|null $valid_to
  * @property bool $is_active
+ * @property bool $is_agent_rate Contract (STO) rate, only offered when an agent books
  */
 class RatePlan extends Model
 {
@@ -42,6 +43,7 @@ class RatePlan extends Model
         'valid_from',
         'valid_to',
         'is_active',
+        'is_agent_rate',
     ];
 
     /**
@@ -56,6 +58,7 @@ class RatePlan extends Model
             'valid_from' => 'date:Y-m-d',
             'valid_to' => 'date:Y-m-d',
             'is_active' => 'boolean',
+            'is_agent_rate' => 'boolean',
         ];
     }
 

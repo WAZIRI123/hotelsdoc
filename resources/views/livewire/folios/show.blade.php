@@ -26,6 +26,14 @@
                 {{ __('Print bill') }}
             </flux:button>
 
+            <flux:button variant="ghost" icon="envelope" wire:click="openSendEmail">
+                {{ __('Email bill') }}
+            </flux:button>
+
+            <flux:button variant="ghost" icon="chat-bubble-left-right" wire:click="openSendSms">
+                {{ __('SMS bill') }}
+            </flux:button>
+
             @if (in_array($folio->status, ['open', 'closed'], true))
                 <flux:button variant="primary" icon="banknotes" wire:click="openPayment">
                     {{ __('Record payment') }}
@@ -33,6 +41,37 @@
             @endif
         </div>
     </div>
+
+    <flux:modal name="send-bill-email" class="md:w-[480px]">
+        <form wire:submit="sendByEmail" class="space-y-6">
+            <flux:heading size="lg">{{ __('Email bill to guest') }}</flux:heading>
+            <flux:text>{{ __('Sends the bill as an HTML email. Reference:') }} <span class="font-mono">{{ $folio->reference }}</span></flux:text>
+            <flux:input wire:model="recipient_email" type="email" :label="__('Recipient email')" required />
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary" icon="paper-airplane">{{ __('Send email') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal name="send-bill-sms" class="md:w-[480px]">
+        <form wire:submit="sendBySms" class="space-y-6">
+            <flux:heading size="lg">{{ __('SMS bill to guest') }}</flux:heading>
+            <flux:text>{{ __('Sends a short SMS summary via Beem Africa. Reference:') }} <span class="font-mono">{{ $folio->reference }}</span></flux:text>
+            <flux:input wire:model="recipient_phone" :label="__('Recipient phone')" placeholder="0712345678" required />
+            <flux:text size="sm" class="text-zinc-500">
+                {{ __('Local numbers starting with 0 are converted to +255. Otherwise include country code (e.g. 255712345678).') }}
+            </flux:text>
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary" icon="paper-airplane">{{ __('Send SMS') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     @if ($this->fiscalReceipt)
         <flux:callout variant="success" icon="receipt-percent" class="mb-6">

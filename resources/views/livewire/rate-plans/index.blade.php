@@ -42,7 +42,12 @@
         <flux:table.rows>
             @forelse ($this->ratePlans as $plan)
                 <flux:table.row :key="$plan->id">
-                    <flux:table.cell variant="strong">{{ $plan->name }}</flux:table.cell>
+                    <flux:table.cell variant="strong">
+                        {{ $plan->name }}
+                        @if ($plan->is_agent_rate)
+                            <flux:badge color="sky" size="sm" class="ms-1">{{ __('Agent rate') }}</flux:badge>
+                        @endif
+                    </flux:table.cell>
                     <flux:table.cell>{{ $plan->roomType?->name }}</flux:table.cell>
                     <flux:table.cell>
                         @if ($plan->mealPlan)
@@ -138,6 +143,8 @@
             </div>
 
             <flux:switch wire:model="is_active" :label="__('Active')" />
+            <flux:switch wire:model="is_agent_rate" :label="__('Agent rate (STO)')"
+                :description="__('Only offered when an agent is the booker. Walk-in bookings never see this rate.')" />
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>

@@ -31,12 +31,13 @@
         <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
             <flux:text>{{ __('Search and browse every guest in your hotel.') }}</flux:text>
             <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
-                placeholder="{{ __('Name, phone, email…') }}" />
+                placeholder="{{ __('Name, caller, phone, email…') }}" />
         </div>
 
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Name') }}</flux:table.column>
+                <flux:table.column>{{ __('Caller name') }}</flux:table.column>
                 <flux:table.column>{{ __('Phone') }}</flux:table.column>
                 <flux:table.column>{{ __('Email') }}</flux:table.column>
                 <flux:table.column>{{ __('Nationality') }}</flux:table.column>
@@ -47,6 +48,7 @@
                 @forelse ($this->guests as $guest)
                     <flux:table.row :key="$guest->id">
                         <flux:table.cell variant="strong">{{ $guest->fullName() }}</flux:table.cell>
+                        <flux:table.cell>{{ $guest->caller_name ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->phone ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->email ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->nationality ?: '—' }}</flux:table.cell>
@@ -54,7 +56,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="5" class="text-center text-zinc-500">
+                        <flux:table.cell colspan="6" class="text-center text-zinc-500">
                             {{ __('No guests found.') }}
                         </flux:table.cell>
                     </flux:table.row>

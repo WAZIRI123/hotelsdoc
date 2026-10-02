@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use App\Livewire\Reservations\Create;
 use App\Livewire\Reservations\Show;
+use App\Models\Agent;
 use App\Models\Guest;
+use App\Models\Hotel;
+use App\Models\RatePlan;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomType;
@@ -28,7 +31,83 @@ it('creates a reservation via the Livewire form', function (): void {
         ->call('save')
         ->assertHasNoErrors();
 
-    expect(Reservation::query()->where('guest_id', $this->guest->id)->first())->not->toBeNull();
+    $reservation = Reservation::query()->where('guest_id', $this->guest->id)->first();
+
+    expect($reservation)->not->toBeNull()
+        ->and($reservation->agent_id)->toBeNull()
+        ->and($reservation->source)->toBe('walk_in');
+});
+
+it('lists active agents in the Booker field with Walk-in as default', function (): void {
+    Agent::factory()->for($this->hotel)->create(['name' => 'Safari Tours Ltd']);
+    Agent::factory()->for($this->hotel)->inactive()->create(['name' => 'Retired Travel']);
+
+    Livewire::test(Create::class)
+        ->assertSet('agent_id', null)
+        ->assertSee('Booker')
+        ->assertSee('Walk-in')
+        ->assertSee('Special request')
+        ->assertDontSee('Notes')
+        ->assertSee('Safari Tours Ltd')
+        ->assertDontSee('Retired Travel');
+});
+
+it('labels the rate plan field as Rate plan (Meal Plan)', function (): void {
+    RatePlan::factory()->for($this->hotel)->for($this->roomType)->create(['name' => 'STO']);
+
+    Livewire::test(Create::class)
+        ->set('room_type_id', $this->roomType->id)
+        ->assertSee('Rate plan (Meal Plan)')
+        ->assertSee('STO');
+});
+
+it('records the booking agent on the reservation', function (): void {
+    $agent = Agent::factory()->for($this->hotel)->create(['name' => 'Safari Tours Ltd']);
+
+    Livewire::test(Create::class)
+        ->set('arrival', '2026-09-01')
+        ->set('departure', '2026-09-04')
+        ->call('selectGuest', $this->guest->id)
+        ->set('agent_id', $agent->id)
+        ->set('room_type_id', $this->roomType->id)
+        ->set('room_id', $this->room->id)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $reservation = Reservation::query()->where('guest_id', $this->guest->id)->first();
+
+    expect($reservation->agent_id)->toBe($agent->id)
+        ->and($reservation->source)->toBe('agent');
+
+    Livewire::test(Show::class, ['reservation' => $reservation])
+        ->assertSee('Booker')
+        ->assertSee('Safari Tours Ltd');
+});
+
+it('rejects a booker from another hotel or an inactive agent', function (): void {
+    $foreign = Agent::factory()->for(Hotel::factory())->create();
+    $inactive = Agent::factory()->for($this->hotel)->inactive()->create();
+
+    foreach ([$foreign, $inactive] as $agent) {
+        Livewire::test(Create::class)
+            ->set('arrival', '2026-09-01')
+            ->set('departure', '2026-09-04')
+            ->call('selectGuest', $this->guest->id)
+            ->set('agent_id', $agent->id)
+            ->set('room_type_id', $this->roomType->id)
+            ->set('room_id', $this->room->id)
+            ->call('save')
+            ->assertHasErrors('agent_id');
+    }
+});
+
+it('falls back to walk-in when the booking agent is deleted', function (): void {
+    $agent = Agent::factory()->for($this->hotel)->create();
+    $reservation = Reservation::factory()->for($this->hotel)->for($this->guest)->create(['agent_id' => $agent->id]);
+
+    $agent->delete();
+
+    expect($reservation->fresh()->agent_id)->toBeNull();
 });
 
 it('only lists available rooms in the Create form', function (): void {
@@ -63,26 +142,39 @@ it('creates a guest inline and dispatches guest-created', function (): void {
     Livewire::test('reservations.new-guest-form')
         ->call('open', 'Brand')
         ->assertSet('show', true)
-        ->assertSet('firstName', 'Brand')
-        ->set('firstName', 'Brand New')
-        ->set('lastName', 'Customer')
+        ->assertSet('guest_names', 'Brand')
+        ->set('guest_names', 'Brand New Customer')
         ->set('phone', '+255 712 999 999')
+        ->set('nationality', 'Tanzania')
+        ->set('id_type', 'passport')
+        ->set('id_number', 'TZ123456')
         ->call('save')
         ->assertHasNoErrors()
         ->assertSet('show', false)
-        ->assertSet('firstName', '')
+        ->assertSet('guest_names', '')
         ->assertDispatched('guest-created');
 
-    $guest = Guest::query()->where('first_name', 'Brand New')->first();
+    $guest = Guest::query()->where('first_name', 'Brand')->first();
     expect($guest)->not->toBeNull()
+        ->and($guest->last_name)->toBe('New Customer')
+        ->and($guest->nationality)->toBe('Tanzania')
+        ->and($guest->id_number)->toBe('TZ123456')
         ->and($guest->hotel_id)->toBe($this->hotel->id);
 });
 
-it('rejects an inline guest with no first name', function (): void {
+it('rejects an inline guest with no names', function (): void {
     Livewire::test('reservations.new-guest-form')
         ->call('open')
         ->call('save')
-        ->assertHasErrors('firstName');
+        ->assertHasErrors('guest_names');
+});
+
+it('rejects an inline guest with an unknown nationality', function (): void {
+    Livewire::test('reservations.new-guest-form')
+        ->call('open', 'Jane Doe')
+        ->set('nationality', 'Atlantis')
+        ->call('save')
+        ->assertHasErrors('nationality');
 });
 
 it('selects the guest on the parent when guest-selected is dispatched', function (): void {

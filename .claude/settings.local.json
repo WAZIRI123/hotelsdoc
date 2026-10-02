@@ -28,7 +28,8 @@
       "WebFetch(domain:github.com)",
       "Bash(npm run *)",
       "Bash(DB_DATABASE=\":memory:\" php artisan *)",
-      "WebFetch(domain:docs.beem.africa)"
+      "WebFetch(domain:docs.beem.africa)",
+      "WebFetch(domain:kalebu.github.io)"
     ]
   },
   "enableAllProjectMcpServers": true,

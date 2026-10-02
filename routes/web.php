@@ -1,6 +1,15 @@
 <?php
 
 use App\Domain\Tenancy\TenantContext;
+use App\Http\Controllers\SwitchHotelController;
+use App\Livewire\Admin\Hotels\Create as AdminHotelsCreate;
+use App\Livewire\Admin\Hotels\Index as AdminHotelsIndex;
+use App\Livewire\Admin\Hotels\Show as AdminHotelsShow;
+use App\Livewire\Agents\Index as AgentsIndex;
+use App\Livewire\Agents\Register as AgentsRegister;
+use App\Livewire\Extras\Create as ExtrasCreate;
+use App\Livewire\Extras\Orders as ExtrasOrders;
+use App\Livewire\Extras\Services as ExtrasServices;
 use App\Livewire\Folios\Show as FolioShow;
 use App\Livewire\Guests\GuestList as GuestsList;
 use App\Livewire\Guests\Index as GuestsIndex;
@@ -38,6 +47,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::livewire('guests/register', GuestsRegister::class)->name('guests.register');
     Route::livewire('guests/list', GuestsList::class)->name('guests.list');
 
+    Route::livewire('agents', AgentsIndex::class)->name('agents.index');
+    Route::livewire('agents/register', AgentsRegister::class)->name('agents.register');
+    Route::livewire('agents/{agent}/edit', AgentsRegister::class)->name('agents.edit');
+
     Route::livewire('reservations', ReservationsIndex::class)->name('reservations.index');
     Route::livewire('reservations/new', ReservationsCreate::class)->name('reservations.create');
     Route::livewire('reservations/{reservation}', ReservationsShow::class)->name('reservations.show');
@@ -51,6 +64,10 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
             'hotel' => app(TenantContext::class)->current(),
         ]);
     })->name('folios.print');
+
+    Route::livewire('extras', ExtrasCreate::class)->name('extras.create');
+    Route::livewire('extras/orders', ExtrasOrders::class)->name('extras.orders');
+    Route::livewire('extras/services', ExtrasServices::class)->name('extras.services');
 
     Route::livewire('outlets', OutletsIndex::class)->name('outlets.index');
     Route::livewire('outlets/{outlet}/menu', MenuIndex::class)->name('menu.index');
@@ -68,6 +85,18 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::livewire('pos/{outlet}', PosTerminal::class)->name('pos.terminal');
 
     Route::livewire('reports/cash-up', CashUp::class)->name('reports.cash-up');
+});
+
+// Outside 'tenant' on purpose: this is where the active tenant gets chosen.
+Route::post('hotels/{hotel}/switch', SwitchHotelController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('hotels.switch');
+
+// Platform (cross-tenant) admin — deliberately outside the 'tenant' middleware.
+Route::middleware(['auth', 'verified', 'super-admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::livewire('hotels', AdminHotelsIndex::class)->name('hotels.index');
+    Route::livewire('hotels/new', AdminHotelsCreate::class)->name('hotels.create');
+    Route::livewire('hotels/{hotel}', AdminHotelsShow::class)->name('hotels.show');
 });
 
 require __DIR__.'/settings.php';

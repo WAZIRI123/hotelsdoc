@@ -23,10 +23,11 @@ use InvalidArgumentException;
 final class AvailabilityChecker
 {
     /**
+     * @param  int|null  $roomTypeId  null searches every room type
      * @return Collection<int, Room>
      */
     public function availableRooms(
-        int $roomTypeId,
+        ?int $roomTypeId,
         CarbonInterface $arrival,
         CarbonInterface $departure,
         ?int $excludeReservationId = null,
@@ -44,7 +45,7 @@ final class AvailabilityChecker
             ->all();
 
         return Room::query()
-            ->where('room_type_id', $roomTypeId)
+            ->when($roomTypeId, fn ($q, int $id) => $q->where('room_type_id', $id))
             ->where('is_active', true)
             ->whereNotIn('id', $bookedRoomIds)
             ->orderBy('number')
@@ -72,7 +73,7 @@ final class AvailabilityChecker
     /**
      * Expand a date range into the list of nights (inclusive arrival, exclusive departure).
      *
-     * @return list<string>  Y-m-d strings, suitable for whereIn() on a DATE column.
+     * @return list<string> Y-m-d strings, suitable for whereIn() on a DATE column.
      */
     public function nights(CarbonInterface $arrival, CarbonInterface $departure): array
     {

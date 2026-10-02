@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $room_type_id
  * @property int|null $room_id
  * @property int|null $rate_plan_id
+ * @property int $adults
+ * @property int $children
  * @property Money $nightly_rate
  */
 class ReservationRoom extends Model
@@ -33,6 +35,8 @@ class ReservationRoom extends Model
         'room_type_id',
         'room_id',
         'rate_plan_id',
+        'adults',
+        'children',
         'nightly_rate',
     ];
 
@@ -86,6 +90,37 @@ class ReservationRoom extends Model
     public function nights(): HasMany
     {
         return $this->hasMany(ReservationRoomNight::class);
+    }
+
+    /**
+     * Everyone who has been assigned to this room, including people who have left.
+     *
+     * @return HasMany<RoomOccupant, $this>
+     */
+    public function occupants(): HasMany
+    {
+        return $this->hasMany(RoomOccupant::class);
+    }
+
+    /**
+     * @return HasMany<RoomOccupant, $this>
+     */
+    public function activeOccupants(): HasMany
+    {
+        return $this->hasMany(RoomOccupant::class)->whereNull('checked_out_at');
+    }
+
+    /**
+     * @return HasMany<RoomMove, $this>
+     */
+    public function moves(): HasMany
+    {
+        return $this->hasMany(RoomMove::class);
+    }
+
+    public function guestCount(): int
+    {
+        return $this->adults + $this->children;
     }
 
     public function totalRate(): Money

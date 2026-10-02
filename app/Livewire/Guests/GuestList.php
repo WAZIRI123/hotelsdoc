@@ -39,6 +39,7 @@ class GuestList extends Component
                 $q->where(function ($q) use ($term): void {
                     $q->where('first_name', 'like', $term)
                         ->orWhere('last_name', 'like', $term)
+                        ->orWhere('caller_name', 'like', $term)
                         ->orWhere('phone', 'like', $term)
                         ->orWhere('email', 'like', $term)
                         ->orWhere('nationality', 'like', $term);

@@ -2,7 +2,7 @@
     <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <div class="flex flex-wrap items-center gap-3">
             <flux:icon.banknotes class="size-7 text-zinc-900 dark:text-zinc-100" />
-            <flux:heading size="xl" class="!text-3xl !font-normal">{{ __('Daily cash-up') }}</flux:heading>
+            <flux:heading size="xl" class="!text-3xl !font-normal">{{ __('Get Report') }}</flux:heading>
 
             <flux:spacer />
 

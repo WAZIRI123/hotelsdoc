@@ -94,6 +94,16 @@
                         @endif
 
                         <flux:text class="text-center text-sm font-medium">{{ $roomLabel }}</flux:text>
+
+                        @if ($room->roomType)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                                title="{{ __('Max :adults adults, :children children', ['adults' => $room->roomType->max_adults, 'children' => $room->roomType->max_children]) }}">
+                                <flux:icon.users variant="micro" class="size-3.5" />
+                                {{ trans_choice('{1} :count guest|[2,*] :count guests', $room->roomType->max_occupancy, ['count' => $room->roomType->max_occupancy]) }}
+                                <span class="text-zinc-400 dark:text-zinc-500">·</span>
+                                {{ $room->roomType->max_adults }}A {{ $room->roomType->max_children }}C
+                            </span>
+                        @endif
                     </div>
                 @endforeach
             </div>

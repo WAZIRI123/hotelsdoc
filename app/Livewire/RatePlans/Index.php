@@ -48,6 +48,8 @@ class Index extends Component
 
     public bool $is_active = true;
 
+    public bool $is_agent_rate = false;
+
     /**
      * @return Collection<int, RatePlan>
      */
@@ -87,6 +89,7 @@ class Index extends Component
         $this->extra_adult_price_tsh = 0;
         $this->extra_child_price_tsh = 0;
         $this->is_active = true;
+        $this->is_agent_rate = false;
         $this->resetValidation();
         Flux::modal('rate-plan-form')->show();
     }
@@ -104,6 +107,7 @@ class Index extends Component
         $this->valid_from = $plan->valid_from?->toDateString();
         $this->valid_to = $plan->valid_to?->toDateString();
         $this->is_active = $plan->is_active;
+        $this->is_agent_rate = $plan->is_agent_rate;
         $this->resetValidation();
         Flux::modal('rate-plan-form')->show();
     }
@@ -122,6 +126,7 @@ class Index extends Component
             'valid_from' => $this->valid_from ?: null,
             'valid_to' => $this->valid_to ?: null,
             'is_active' => $this->is_active,
+            'is_agent_rate' => $this->is_agent_rate,
         ];
 
         if ($this->editingId) {

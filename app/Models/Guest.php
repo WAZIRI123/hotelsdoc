@@ -17,8 +17,11 @@ use Illuminate\Support\Str;
  * @property int $hotel_id
  * @property string $first_name
  * @property string|null $last_name
+ * @property string|null $caller_name
  * @property string|null $phone
  * @property string|null $email
+ * @property string|null $id_type
+ * @property string|null $id_number
  */
 class Guest extends Model
 {
@@ -29,6 +32,7 @@ class Guest extends Model
         'hotel_id',
         'first_name',
         'last_name',
+        'caller_name',
         'phone',
         'email',
         'nationality',

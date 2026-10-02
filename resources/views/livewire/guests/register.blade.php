@@ -27,8 +27,12 @@
 
         <form wire:submit="save" class="space-y-6">
             <div class="grid gap-4 sm:grid-cols-2">
-                <flux:input wire:model="first_name" :label="__('First name')" required />
-                <flux:input wire:model="last_name" :label="__('Last name')" />
+                <flux:field>
+                    <flux:label>{{ __('Guest names') }} <span class="text-red-500">*</span></flux:label>
+                    <flux:input wire:model="guest_names" required />
+                    <flux:error name="guest_names" />
+                </flux:field>
+                <flux:input wire:model="caller_name" :label="__('Caller name')" />
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
@@ -37,19 +41,24 @@
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
-                <flux:input wire:model="nationality" :label="__('Nationality')" />
-                <flux:select wire:model="id_type" :label="__('ID type')" :placeholder="__('Select…')">
+                <flux:select wire:model="nationality" :label="__('Nationality')" :placeholder="__('Select country…')">
+                    @foreach ($countries as $country)
+                        <flux:select.option :value="$country">{{ $country }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:select wire:model.live="id_type" :label="__('ID type')">
+                    <flux:select.option value="">{{ __('None') }}</flux:select.option>
                     <flux:select.option value="passport">{{ __('Passport') }}</flux:select.option>
                     <flux:select.option value="national_id">{{ __('National ID') }}</flux:select.option>
                     <flux:select.option value="drivers_license">{{ __('Driver’s license') }}</flux:select.option>
                 </flux:select>
             </div>
 
-            <flux:input wire:model="id_number" :label="__('ID number')" />
+            @if ($id_type !== '')
+                <flux:input wire:model="id_number" :label="__('ID number')" />
+            @endif
 
             <flux:textarea wire:model="address" :label="__('Address')" rows="2" />
-
-            <flux:textarea wire:model="notes" :label="__('Notes')" rows="3" />
 
             <div class="flex justify-end gap-2">
                 <flux:button variant="ghost" :href="route('guests.index')" wire:navigate>

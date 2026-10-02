@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\SetCurrentHotel;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,7 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'tenant' => \App\Http\Middleware\SetCurrentHotel::class,
+            'tenant' => SetCurrentHotel::class,
+            'super-admin' => EnsureSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

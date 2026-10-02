@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Livewire\Guests;
 
 use App\Models\Guest;
+use App\Support\Countries;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -14,11 +16,11 @@ use Livewire\Component;
 #[Title('Register Guest')]
 class Register extends Component
 {
-    #[Validate('required|string|max:80')]
-    public string $first_name = '';
+    #[Validate('required|string|max:160')]
+    public string $guest_names = '';
 
-    #[Validate('nullable|string|max:80')]
-    public string $last_name = '';
+    #[Validate('nullable|string|max:120')]
+    public string $caller_name = '';
 
     #[Validate('nullable|string|max:32')]
     public string $phone = '';
@@ -26,7 +28,6 @@ class Register extends Component
     #[Validate('nullable|email|max:120')]
     public string $email = '';
 
-    #[Validate('nullable|string|max:80')]
     public string $nationality = '';
 
     #[Validate('nullable|in:passport,national_id,drivers_license')]
@@ -38,23 +39,32 @@ class Register extends Component
     #[Validate('nullable|string|max:500')]
     public string $address = '';
 
-    #[Validate('nullable|string|max:1000')]
-    public string $notes = '';
+    /**
+     * @return array<string, array<int, mixed>>
+     */
+    protected function rules(): array
+    {
+        return [
+            'nationality' => ['nullable', 'string', Rule::in(Countries::all())],
+        ];
+    }
 
     public function save(): void
     {
         $this->validate();
 
+        [$firstName, $lastName] = array_pad(preg_split('/\s+/', trim($this->guest_names), 2), 2, null);
+
         $guest = Guest::query()->create([
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name ?: null,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'caller_name' => $this->caller_name ?: null,
             'phone' => $this->phone ?: null,
             'email' => $this->email ?: null,
             'nationality' => $this->nationality ?: null,
             'id_type' => $this->id_type ?: null,
-            'id_number' => $this->id_number ?: null,
+            'id_number' => $this->id_type !== '' && $this->id_number !== '' ? $this->id_number : null,
             'address' => $this->address ?: null,
-            'notes' => $this->notes ?: null,
         ]);
 
         Flux::toast(variant: 'success', text: 'Guest '.$guest->fullName().' registered.');
@@ -64,6 +74,8 @@ class Register extends Component
 
     public function render(): View
     {
-        return view('livewire.guests.register');
+        return view('livewire.guests.register', [
+            'countries' => Countries::all(),
+        ]);
     }
 }

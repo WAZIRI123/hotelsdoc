@@ -10,7 +10,72 @@
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
+            @php
+                $tenantContext = app(\App\Domain\Tenancy\TenantContext::class);
+                $currentHotel = $tenantContext->has() ? $tenantContext->current() : null;
+                $switchableHotels = app(\App\Domain\Tenancy\HotelAccess::class)->switchableHotels(auth()->user());
+                $isVisitingHotel = $currentHotel !== null && ! $switchableHotels->contains($currentHotel);
+                $belongsToHotel = $currentHotel !== null
+                    || $switchableHotels->isNotEmpty()
+                    || (auth()->user()->isSuperAdmin() && session()->has(\App\Domain\Tenancy\HotelAccess::SESSION_KEY));
+            @endphp
+
+            @if ($switchableHotels->count() > 1 || ($currentHotel === null && $switchableHotels->isNotEmpty()) || $isVisitingHotel)
+                <flux:dropdown position="bottom" align="start" class="mt-2">
+                    <button type="button" data-test="hotel-switcher"
+                        class="flex w-full items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-start text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                        <flux:icon.building-office class="size-4 shrink-0 text-zinc-500" />
+                        <span class="flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">
+                            {{ $currentHotel?->name ?? __('Choose a hotel') }}
+                        </span>
+                        @if ($isVisitingHotel)
+                            <flux:badge size="sm" color="amber">{{ __('Visiting') }}</flux:badge>
+                        @endif
+                        <flux:icon.chevron-up-down class="size-4 shrink-0 text-zinc-400" />
+                    </button>
+
+                    <flux:menu class="min-w-60">
+                        @if ($switchableHotels->isNotEmpty())
+                        <flux:menu.group :heading="__('Switch hotel')">
+                            @foreach ($switchableHotels as $switchableHotel)
+                                <form method="POST" action="{{ route('hotels.switch', $switchableHotel) }}" wire:key="switch-hotel-{{ $switchableHotel->id }}">
+                                    @csrf
+                                    <flux:menu.item as="button" type="submit" class="w-full"
+                                        :icon="$currentHotel?->is($switchableHotel) ? 'check' : null">
+                                        {{ $switchableHotel->name }}
+                                    </flux:menu.item>
+                                </form>
+                            @endforeach
+                        </flux:menu.group>
+                        @endif
+
+                        @if (auth()->user()->isSuperAdmin())
+                            @if ($switchableHotels->isNotEmpty())
+                                <flux:menu.separator />
+                            @endif
+                            <flux:menu.item icon="arrow-uturn-left" :href="route('admin.hotels.index')" wire:navigate>
+                                {{ __('Back to platform') }}
+                            </flux:menu.item>
+                        @endif
+                    </flux:menu>
+                </flux:dropdown>
+            @elseif ($currentHotel !== null)
+                <div class="mt-2 flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700">
+                    <flux:icon.building-office class="size-4 shrink-0 text-zinc-500" />
+                    <span class="truncate font-medium text-zinc-900 dark:text-zinc-100">{{ $currentHotel->name }}</span>
+                </div>
+            @endif
+
             <flux:sidebar.nav class="mt-3">
+                @if (auth()->user()->isSuperAdmin())
+                    <flux:sidebar.group :heading="__('Platform')" class="grid">
+                        <flux:sidebar.item icon="building-office" :href="route('admin.hotels.index')" :current="request()->routeIs('admin.hotels.*')" wire:navigate>
+                            {{ __('Hotels') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
+
+                @if ($belongsToHotel)
                 <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                     {{ __('Dashboard') }}
                 </flux:sidebar.item>
@@ -19,6 +84,16 @@
                     <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*') || request()->routeIs('reservations.*')" wire:navigate>
                              {{ __('Guest Book') }}
                     </flux:sidebar.item>
+                    @can('manage-reservations')
+                        <flux:sidebar.item icon="briefcase" :href="route('agents.index')" :current="request()->routeIs('agents.*')" wire:navigate>
+                            {{ __('Agents') }}
+                        </flux:sidebar.item>
+                    @endcan
+                    @can('manage-folios')
+                        <flux:sidebar.item icon="cube" :href="route('extras.create')" :current="request()->routeIs('extras.*')" wire:navigate>
+                            {{ __('Extras services') }}
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Inventory')" class="grid">
@@ -47,7 +122,7 @@
 
                 <flux:sidebar.group :heading="__('Reports')" class="grid">
                     <flux:sidebar.item icon="banknotes" :href="route('reports.cash-up')" :current="request()->routeIs('reports.cash-up')" wire:navigate>
-                        {{ __('Daily cash-up') }}
+                        {{ __('Get Report') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
@@ -60,6 +135,7 @@
                         @endcan
                     </flux:sidebar.group>
                 @endcanany
+                @endif
             </flux:sidebar.nav>
 
             <flux:spacer />

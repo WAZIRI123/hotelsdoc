@@ -14,7 +14,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-#[Title('Cash-up')]
+#[Title('Get Report')]
 class CashUp extends Component
 {
     #[Url(as: 'date')]

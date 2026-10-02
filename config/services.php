@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'beem' => [
+        'api_key' => env('BEEM_API_KEY'),
+        'secret_key' => env('BEEM_SECRET_KEY'),
+        'source_addr' => env('BEEM_SOURCE_ADDR', 'INFO'),
+        'endpoint' => env('BEEM_SMS_ENDPOINT', 'https://apisms.beem.africa/v1/send'),
+    ],
+
 ];

@@ -71,7 +71,10 @@ final class RatePricingService
         }
     }
 
-    private function extraGuestSurcharge(RatePlan $plan, RoomType $roomType, int $adults, int $children): Money
+    /**
+     * Per-night surcharge a rate plan adds for guests above the room type's base occupancy.
+     */
+    public function extraGuestSurcharge(RatePlan $plan, RoomType $roomType, int $adults, int $children): Money
     {
         $surcharge = Money::zero();
 

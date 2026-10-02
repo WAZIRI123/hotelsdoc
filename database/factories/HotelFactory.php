@@ -32,4 +32,14 @@ class HotelFactory extends Factory
             'address' => fake()->address(),
         ];
     }
+
+    /**
+     * Indicate that the hotel has been suspended by a super-admin.
+     */
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'suspended_at' => now(),
+        ]);
+    }
 }

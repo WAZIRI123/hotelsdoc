@@ -7,6 +7,8 @@ namespace App\Models;
 use App\Domain\Authorization\Listeners\SeedHotelRoles;
 use App\Domain\Tenancy\Listeners\SeedDefaultHotelData;
 use Database\Factories\HotelFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -27,6 +29,7 @@ use Illuminate\Support\Str;
  * @property string|null $tin
  * @property string|null $vrn
  * @property array<string, mixed>|null $settings
+ * @property Carbon|null $suspended_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -55,7 +58,26 @@ class Hotel extends Model
     {
         return [
             'settings' => 'array',
+            'suspended_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Suspended hotels stay in the database but their staff cannot sign in
+     * to them. Super-admins can still enter them.
+     */
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
+    }
+
+    /**
+     * @param  Builder<Hotel>  $query
+     */
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->whereNull('hotels.suspended_at');
     }
 
     protected static function booted(): void

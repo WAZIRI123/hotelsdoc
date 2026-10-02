@@ -78,6 +78,8 @@ final class CheckInReservation
                 ]);
 
                 $reservationRoom->room->update(['status' => 'occupied']);
+
+                $reservationRoom->activeOccupants()->update(['checked_in_at' => now()]);
             }
 
             $folio->update([

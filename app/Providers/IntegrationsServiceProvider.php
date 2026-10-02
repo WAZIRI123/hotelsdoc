@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Domain\Fiscal\Contracts\FiscalReceiptIssuer;
+use App\Domain\Notifications\BeemSmsClient;
 use App\Domain\Payments\Contracts\PaymentGateway;
 use App\Domain\Payments\PaymentGatewayManager;
 use Illuminate\Contracts\Container\Container;
@@ -32,6 +33,15 @@ final class IntegrationsServiceProvider extends ServiceProvider
             }
 
             return $app->make($issuers[$default]);
+        });
+
+        $this->app->singleton(BeemSmsClient::class, function (): BeemSmsClient {
+            return new BeemSmsClient(
+                apiKey: (string) config('services.beem.api_key', ''),
+                secretKey: (string) config('services.beem.secret_key', ''),
+                sourceAddr: (string) config('services.beem.source_addr', 'INFO'),
+                endpoint: (string) config('services.beem.endpoint', 'https://apisms.beem.africa/v1/send'),
+            );
         });
     }
 }

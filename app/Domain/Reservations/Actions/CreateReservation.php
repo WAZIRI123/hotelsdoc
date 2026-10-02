@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Reservations\Actions;
 
-use App\Domain\Rates\Services\RatePricingService;
 use App\Domain\Reservations\Services\AvailabilityChecker;
+use App\Domain\Reservations\Services\OccupancyChanges;
+use App\Domain\Reservations\Services\RoomNightRates;
 use App\Models\RatePlan;
 use App\Models\Reservation;
 use App\Models\ReservationRoom;
@@ -21,7 +22,8 @@ final class CreateReservation
 {
     public function __construct(
         private readonly AvailabilityChecker $availability,
-        private readonly RatePricingService $pricing,
+        private readonly RoomNightRates $rates,
+        private readonly OccupancyChanges $occupancy,
     ) {}
 
     public function execute(
@@ -37,10 +39,11 @@ final class CreateReservation
         string $source = 'walk_in',
         ?string $externalId = null,
         ?string $notes = null,
+        ?int $agentId = null,
     ): Reservation {
         return DB::transaction(function () use (
             $guestId, $roomTypeId, $roomId, $arrival, $departure,
-            $adults, $children, $ratePlanId, $nightlyRate, $source, $externalId, $notes,
+            $adults, $children, $ratePlanId, $nightlyRate, $source, $externalId, $notes, $agentId,
         ): Reservation {
             $room = Room::query()->whereKey($roomId)->lockForUpdate()->firstOrFail();
 
@@ -48,39 +51,33 @@ final class CreateReservation
                 throw new RuntimeException('Selected room does not belong to the chosen room type.');
             }
 
+            if ($adults < 1) {
+                throw new RuntimeException('A room needs at least one adult.');
+            }
+
             $roomType = RoomType::query()->findOrFail($roomTypeId);
 
-            if ($adults > $roomType->max_adults) {
-                throw new RuntimeException("This room type allows at most {$roomType->max_adults} adults.");
-            }
-
-            if ($children > $roomType->max_children) {
-                throw new RuntimeException("This room type allows at most {$roomType->max_children} children.");
-            }
-
-            if (($adults + $children) > $roomType->max_occupancy) {
-                throw new RuntimeException("This room type sleeps at most {$roomType->max_occupancy} guests total.");
-            }
+            $this->occupancy->assertFits($roomType, $adults, $children);
 
             if (! $this->availability->isRoomAvailable($room->id, $arrival, $departure)) {
                 throw new RuntimeException("Room {$room->number} is no longer available for the requested dates.");
             }
 
             $nights = $this->availability->nights($arrival, $departure);
-            $perNightRates = $this->computePerNightRates(
-                $ratePlanId, $nightlyRate, $roomType, $adults, $children, $nights,
-            );
+            $ratePlan = $ratePlanId !== null ? RatePlan::query()->findOrFail($ratePlanId) : null;
+            $perNightRates = $this->rates->forStay($ratePlan, $nightlyRate, $roomType, $adults, $children, $nights);
 
             $displayRate = $perNightRates[$nights[0]];
 
             $reservation = Reservation::query()->create([
                 'guest_id' => $guestId,
+                'agent_id' => $agentId,
                 'arrival' => $arrival,
                 'departure' => $departure,
                 'adults' => $adults,
                 'children' => $children,
                 'status' => 'confirmed',
-                'source' => $source,
+                'source' => $agentId !== null && $source === 'walk_in' ? 'agent' : $source,
                 'external_id' => $externalId,
                 'notes' => $notes,
             ]);
@@ -90,6 +87,8 @@ final class CreateReservation
                 'room_type_id' => $roomTypeId,
                 'room_id' => $room->id,
                 'rate_plan_id' => $ratePlanId,
+                'adults' => $adults,
+                'children' => $children,
                 'nightly_rate' => $displayRate,
             ]);
 
@@ -99,6 +98,8 @@ final class CreateReservation
                     'rate' => $rate,
                 ]);
             }
+
+            $this->createOccupants($reservationRoom, $guestId, $adults, $children);
 
             foreach ($nights as $night) {
                 RoomAvailability::query()->updateOrCreate(
@@ -112,34 +113,23 @@ final class CreateReservation
     }
 
     /**
-     * @param  list<string>  $nights
-     * @return array<string, Money> keyed by Y-m-d
+     * The booker becomes the room's primary occupant; everyone else starts as
+     * an unnamed placeholder to be identified at check-in.
      */
-    private function computePerNightRates(
-        ?int $ratePlanId,
-        ?Money $nightlyRateOverride,
-        RoomType $roomType,
-        int $adults,
-        int $children,
-        array $nights,
-    ): array {
-        if ($nightlyRateOverride !== null) {
-            return array_fill_keys($nights, $nightlyRateOverride);
+    private function createOccupants(ReservationRoom $reservationRoom, int $guestId, int $adults, int $children): void
+    {
+        $reservationRoom->occupants()->create([
+            'guest_id' => $guestId,
+            'age_category' => 'adult',
+            'is_primary' => true,
+        ]);
+
+        for ($i = 1; $i < $adults; $i++) {
+            $reservationRoom->occupants()->create(['age_category' => 'adult']);
         }
 
-        if ($ratePlanId !== null) {
-            $ratePlan = RatePlan::query()->findOrFail($ratePlanId);
-            $this->pricing->assertBookable($ratePlan, $nights);
-
-            return $this->pricing->resolveNightlyRates($ratePlan, $roomType, $adults, $children, $nights);
+        for ($i = 0; $i < $children; $i++) {
+            $reservationRoom->occupants()->create(['age_category' => 'child']);
         }
-
-        $rate = $roomType->default_rate;
-        $extraGuests = max(0, ($adults + $children) - $roomType->base_occupancy);
-        if ($extraGuests > 0 && $roomType->extra_guest_fee->isPositive()) {
-            $rate = $rate->add($roomType->extra_guest_fee->multiply($extraGuests));
-        }
-
-        return array_fill_keys($nights, $rate);
     }
 }

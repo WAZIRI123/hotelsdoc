@@ -11,6 +11,29 @@
             <livewire:reservations.guest-picker />
 
             @error('guest_id') <flux:text class="text-red-600">{{ $message }}</flux:text> @enderror
+
+            <flux:field>
+                <flux:label>{{ __('Booker') }}</flux:label>
+                <div class="flex items-center gap-2">
+                    <div class="flex-1">
+                        <flux:select wire:model.live="agent_id">
+                            <flux:select.option value="">{{ __('Walk-in') }}</flux:select.option>
+                            @foreach ($this->agents as $agent)
+                                <flux:select.option :value="$agent->id" wire:key="booker-{{ $agent->id }}">
+                                    {{ $agent->name }}
+                                </flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </div>
+                    @can('manage-reservations')
+                        <flux:button size="sm" variant="ghost" icon="plus" :href="route('agents.register')" wire:navigate>
+                            {{ __('New agent') }}
+                        </flux:button>
+                    @endcan
+                </div>
+                <flux:description>{{ __('Choose the agent who made this booking, or leave as Walk-in.') }}</flux:description>
+                <flux:error name="agent_id" />
+            </flux:field>
         </flux:card>
 
         <flux:card class="space-y-4">
@@ -20,6 +43,13 @@
                 <flux:input wire:model.live="arrival" type="date" :label="__('Arrival')" required />
                 <flux:input wire:model.live="departure" type="date" :label="__('Departure')" required />
             </div>
+
+            @if ($this->bookerStaysElsewhere)
+                <flux:callout variant="warning" icon="exclamation-triangle">
+                    <flux:callout.heading>{{ __('This guest is already staying in :where for these dates', ['where' => $this->bookerStaysElsewhere]) }}</flux:callout.heading>
+                    <flux:callout.text>{{ __('You can still save. If they are booking for someone else, use Not staying on the reservation to name who sleeps in the room.') }}</flux:callout.text>
+                </flux:callout>
+            @endif
 
             <div class="grid grid-cols-3 gap-4">
                 <flux:field>
@@ -91,13 +121,14 @@
             @endif
 
             @if ($room_type_id && $this->availableRatePlans->isNotEmpty())
-                <flux:select wire:model.live="rate_plan_id" :label="__('Rate plan')">
+                <flux:select wire:model.live="rate_plan_id" :label="__('Rate plan (Meal Plan)')">
                     <flux:select.option value="">{{ __('Default rate (room only)') }}</flux:select.option>
                     @foreach ($this->availableRatePlans as $plan)
                         <flux:select.option :value="$plan->id">
                             {{ $plan->name }}
                             @if ($plan->mealPlan) — {{ $plan->mealPlan->code }} @endif
                             — {{ $plan->price->format() }}/night
+                            @if ($plan->is_agent_rate) ({{ __('Agent rate') }}) @endif
                         </flux:select.option>
                     @endforeach
                 </flux:select>
@@ -142,7 +173,7 @@
                 </flux:callout>
             @endif
 
-            <flux:textarea wire:model="notes" :label="__('Notes')" rows="2" />
+            <flux:textarea wire:model="notes" :label="__('Special request')" rows="2" />
         </flux:card>
 
         <div class="flex justify-end gap-2">

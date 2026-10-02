@@ -21,6 +21,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property bool $is_super_admin
  * @property Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -38,6 +39,13 @@ class User extends Authenticatable implements PasskeyUser
     use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_super_admin' => false,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -47,7 +55,17 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Platform operators who can create and set up hotels (tenants).
+     * Deliberately not a Spatie role: roles are scoped per hotel, this is not.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return (bool) $this->is_super_admin;
     }
 
     /**

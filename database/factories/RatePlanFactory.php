@@ -32,6 +32,12 @@ class RatePlanFactory extends Factory
             'valid_from' => null,
             'valid_to' => null,
             'is_active' => true,
+            'is_agent_rate' => false,
         ];
+    }
+
+    public function agentRate(): self
+    {
+        return $this->state(fn () => ['is_agent_rate' => true]);
     }
 }
