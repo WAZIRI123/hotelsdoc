@@ -23,6 +23,14 @@ use App\Livewire\POS\Transaction as PosTransaction;
 use App\Livewire\RatePlans\Calendar as RatePlansCalendar;
 use App\Livewire\RatePlans\Index as RatePlansIndex;
 use App\Livewire\Reports\CashUp;
+use App\Livewire\Reports\Credit as CreditReport;
+use App\Livewire\Reports\DrinksSales as DrinksSalesReport;
+use App\Livewire\Reports\Expenses as ExpensesReport;
+use App\Livewire\Reports\ExtrasSales as ExtrasSalesReport;
+use App\Livewire\Reports\FoodSales as FoodSalesReport;
+use App\Livewire\Reports\Index as ReportsIndex;
+use App\Livewire\Reports\ProfitLoss as ProfitLossReport;
+use App\Livewire\Reports\StockProducts as StockProductsReport;
 use App\Livewire\Reservations\Create as ReservationsCreate;
 use App\Livewire\Reservations\Index as ReservationsIndex;
 use App\Livewire\Reservations\Show as ReservationsShow;
@@ -84,7 +92,15 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     })->name('pos.transactions.print');
     Route::livewire('pos/{outlet}', PosTerminal::class)->name('pos.terminal');
 
+    Route::livewire('reports', ReportsIndex::class)->name('reports.index');
     Route::livewire('reports/cash-up', CashUp::class)->name('reports.cash-up');
+    Route::livewire('reports/drinks-sales', DrinksSalesReport::class)->name('reports.drinks-sales');
+    Route::livewire('reports/food-sales', FoodSalesReport::class)->name('reports.food-sales');
+    Route::livewire('reports/extras-sales', ExtrasSalesReport::class)->name('reports.extras-sales');
+    Route::livewire('reports/stock', StockProductsReport::class)->name('reports.stock');
+    Route::livewire('reports/expenses', ExpensesReport::class)->name('reports.expenses');
+    Route::livewire('reports/credit', CreditReport::class)->name('reports.credit');
+    Route::livewire('reports/profit-loss', ProfitLossReport::class)->name('reports.profit-loss');
 });
 
 // Outside 'tenant' on purpose: this is where the active tenant gets chosen.

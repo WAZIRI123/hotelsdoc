@@ -71,4 +71,14 @@ class Payment extends Model
     {
         return $this->belongsTo(Folio::class);
     }
+
+    /**
+     * The staff member who took this payment.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function receivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
 }

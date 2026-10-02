@@ -4,7 +4,7 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-[#F3F3F3] dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky collapsible="mobile" class="print:hidden border-e border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
@@ -121,8 +121,8 @@
                 </flux:sidebar.group>
 
                 <flux:sidebar.group :heading="__('Reports')" class="grid">
-                    <flux:sidebar.item icon="banknotes" :href="route('reports.cash-up')" :current="request()->routeIs('reports.cash-up')" wire:navigate>
-                        {{ __('Get Report') }}
+                    <flux:sidebar.item icon="chart-bar" :href="route('reports.index')" :current="request()->routeIs('reports.*')" wire:navigate>
+                        {{ __('Get Reports') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
@@ -148,7 +148,7 @@
         </flux:sidebar>
 
         <!-- Mobile User Menu -->
-        <flux:header class="lg:hidden">
+        <flux:header class="lg:hidden print:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <flux:spacer />

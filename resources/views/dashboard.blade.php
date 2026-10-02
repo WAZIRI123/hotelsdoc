@@ -63,7 +63,7 @@
             ],
             [
                 'permission' => 'view-reports',
-                'route' => 'reports.cash-up',
+                'route' => 'reports.index',
                 'label' => __('Get Reports'),
                 'icon' => 'chart-bar',
                 'color' => 'bg-blue-500',

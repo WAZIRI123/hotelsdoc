@@ -81,12 +81,18 @@ class DemoDataSeeder extends Seeder
             ['name' => 'Salim Cashier', 'password' => Hash::make('password'), 'email_verified_at' => now()],
         );
 
-        $hotel->users()->syncWithoutDetaching([$testUser->id, $frontDesk->id, $cashier->id]);
+        $accountant = User::query()->updateOrCreate(
+            ['email' => 'accountant@demo.test'],
+            ['name' => 'Rehema Accountant', 'password' => Hash::make('password'), 'email_verified_at' => now()],
+        );
+
+        $hotel->users()->syncWithoutDetaching([$testUser->id, $frontDesk->id, $cashier->id, $accountant->id]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($hotel->id);
         $testUser->syncRoles(['admin']);
         $frontDesk->syncRoles(['front_desk']);
         $cashier->syncRoles(['cashier']);
+        $accountant->syncRoles(['accountant']);
 
         /* ---------- Meal plans ---------- */
 
@@ -456,10 +462,15 @@ class DemoDataSeeder extends Seeder
             ['email' => 'manager@coastal.test'],
             ['name' => 'Coastal Manager', 'password' => Hash::make('password'), 'email_verified_at' => now()],
         );
-        $hotel->users()->syncWithoutDetaching([$manager->id]);
+        $accountant = User::query()->updateOrCreate(
+            ['email' => 'accountant@coastal.test'],
+            ['name' => 'Coastal Accountant', 'password' => Hash::make('password'), 'email_verified_at' => now()],
+        );
+        $hotel->users()->syncWithoutDetaching([$manager->id, $accountant->id]);
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($hotel->id);
         $manager->syncRoles(['admin']);
+        $accountant->syncRoles(['accountant']);
 
         $this->seedStandardMealPlans();
 

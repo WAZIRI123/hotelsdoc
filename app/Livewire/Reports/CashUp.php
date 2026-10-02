@@ -4,11 +4,19 @@ declare(strict_types=1);
 
 namespace App\Livewire\Reports;
 
+use App\Domain\Reports\ReportCatalog;
+use App\Domain\Tenancy\TenantContext;
+use App\Models\Folio;
 use App\Models\Payment;
+use App\Models\Reservation;
+use App\Models\ReservationRoom;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -17,14 +25,173 @@ use Livewire\Component;
 #[Title('Get Report')]
 class CashUp extends Component
 {
+    public const VIEWS = ['reservations', 'staff', 'general'];
+
+    /**
+     * The ReportCatalog entry that grants access to each tab.
+     *
+     * @var array<string, string>
+     */
+    public const VIEW_REPORTS = [
+        'reservations' => 'reservations',
+        'staff' => 'payments',
+        'general' => 'payments',
+    ];
+
     #[Url(as: 'date')]
     public string $date = '';
+
+    #[Url]
+    public string $to = '';
+
+    #[Url]
+    public string $currency = '';
+
+    #[Url]
+    public string $view = 'reservations';
+
+    public function boot(): void
+    {
+        abort_if($this->allowedViews() === [], 403);
+    }
 
     public function mount(): void
     {
         if ($this->date === '') {
             $this->date = CarbonImmutable::today()->toDateString();
         }
+
+        if ($this->to === '') {
+            $this->to = $this->date;
+        }
+
+        $this->showView($this->view);
+    }
+
+    public function showView(string $view): void
+    {
+        $allowed = $this->allowedViews();
+
+        $this->view = in_array($view, $allowed, true) ? $view : $allowed[0];
+    }
+
+    /**
+     * The tabs the current user may open, in display order.
+     *
+     * @return list<string>
+     */
+    public function allowedViews(): array
+    {
+        return array_values(array_filter(
+            self::VIEWS,
+            fn (string $view): bool => ReportCatalog::allows(Auth::user(), self::VIEW_REPORTS[$view]),
+        ));
+    }
+
+    public function getReport(): void
+    {
+        $this->validate([
+            'date' => ['required', 'date'],
+            'to' => ['required', 'date', 'after_or_equal:date'],
+            'currency' => ['nullable', 'string', 'size:3'],
+        ]);
+
+        unset($this->reservationRows, $this->payments);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function currencies(): array
+    {
+        return Folio::query()
+            ->distinct()
+            ->pluck('currency')
+            ->push(app(TenantContext::class)->current()->currency)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Reservations in-house at any point in the selected range (arriving, staying or departing).
+     *
+     * @return array<int, array{customer: string, rooms: string, check_in: string, nights: int, per_night: Money, discount: Money, total: Money, paid_by: string, paid: Money, balance: Money, status: string}>
+     */
+    #[Computed]
+    public function reservationRows(): array
+    {
+
+        $reservations = Reservation::query()
+            ->with(['guest', 'rooms.room', 'rooms.roomType', 'rooms.nights', 'stay.folio.charges', 'stay.folio.payments'])
+            ->whereDate('arrival', '<=', $this->reportEnd()->toDateString())
+            ->whereDate('departure', '>=', $this->reportDay()->toDateString())
+            ->when($this->currency !== '', fn (Builder $query) => $query->whereHas(
+                'stay.folio',
+                fn (Builder $folio) => $folio->where('currency', $this->currency),
+            ))
+            ->orderBy('arrival')
+            ->get();
+
+        return $reservations->map(function (Reservation $reservation): array {
+            $folio = $reservation->stay?->folio;
+
+            $perNight = $reservation->rooms->reduce(
+                fn (Money $carry, ReservationRoom $room): Money => $carry->add($room->nightly_rate),
+                Money::zero(),
+            );
+            $roomTotal = $reservation->rooms->reduce(
+                fn (Money $carry, ReservationRoom $room): Money => $carry->add($room->totalRate()),
+                Money::zero(),
+            );
+            $discount = Money::fromMinor((int) abs((int) $folio?->charges
+                ->where('source_type', 'discount')
+                ->sum(fn ($charge): int => $charge->total->amount)));
+            $total = $roomTotal->subtract($discount);
+            $paid = $folio === null ? Money::zero() : $folio->paid_total;
+
+            return [
+                'customer' => $reservation->guest?->fullName() ?? '—',
+                'rooms' => $reservation->rooms
+                    ->map(fn (ReservationRoom $room): string => $room->room === null ? $room->roomType->name : $room->room->number)
+                    ->implode(', '),
+                'check_in' => ($reservation->stay === null || $reservation->stay->checked_in_at === null
+                    ? $reservation->arrival
+                    : $reservation->stay->checked_in_at)->format('d-m-Y'),
+                'nights' => (int) $reservation->arrival->diffInDays($reservation->departure),
+                'per_night' => $perNight,
+                'discount' => $discount,
+                'total' => $total,
+                'paid_by' => $folio?->payments
+                    ->where('status', 'confirmed')
+                    ->pluck('method_code')
+                    ->unique()
+                    ->map(fn (string $code): string => ucwords(str_replace('_', ' ', $code)))
+                    ->implode(', ') ?? '',
+                'paid' => $paid,
+                'balance' => $total->subtract($paid),
+                'status' => ucwords(str_replace('_', ' ', $reservation->status)),
+            ];
+        })->all();
+    }
+
+    /**
+     * @return array{total: Money, paid: Money, balance: Money}
+     */
+    #[Computed]
+    public function reservationTotals(): array
+    {
+        $totals = ['total' => Money::zero(), 'paid' => Money::zero(), 'balance' => Money::zero()];
+
+        foreach ($this->reservationRows() as $row) {
+            foreach (array_keys($totals) as $key) {
+                $totals[$key] = $totals[$key]->add($row[$key]);
+            }
+        }
+
+        return $totals;
     }
 
     /**
@@ -33,12 +200,12 @@ class CashUp extends Component
     #[Computed]
     public function payments(): Collection
     {
-        $day = CarbonImmutable::parse($this->date);
 
         return Payment::query()
-            ->with('folio')
+            ->with(['folio', 'receivedBy'])
             ->where('status', 'confirmed')
-            ->whereBetween('confirmed_at', [$day->startOfDay(), $day->endOfDay()])
+            ->whereBetween('confirmed_at', [$this->reportDay(), $this->reportEnd()])
+            ->when($this->currency !== '', fn (Builder $query) => $query->where('currency', $this->currency))
             ->orderBy('confirmed_at')
             ->get();
     }
@@ -49,21 +216,22 @@ class CashUp extends Component
     #[Computed]
     public function totalsByMethod(): array
     {
-        $groups = [];
-        foreach ($this->payments() as $payment) {
-            $code = $payment->method_code;
-            if (! isset($groups[$code])) {
-                $groups[$code] = [
-                    'label' => ucwords(str_replace('_', ' ', $code)),
-                    'count' => 0,
-                    'total' => Money::zero(),
-                ];
-            }
-            $groups[$code]['count']++;
-            $groups[$code]['total'] = $groups[$code]['total']->add($payment->amount);
-        }
+        return $this->groupPayments(fn (Payment $payment): array => [
+            $payment->method_code,
+            ucwords(str_replace('_', ' ', $payment->method_code)),
+        ]);
+    }
 
-        return $groups;
+    /**
+     * @return array<string, array{label: string, count: int, total: Money}>
+     */
+    #[Computed]
+    public function totalsByStaff(): array
+    {
+        return $this->groupPayments(fn (Payment $payment): array => [
+            $payment->receivedBy === null ? 'unknown' : (string) $payment->receivedBy->id,
+            $payment->receivedBy === null ? __('Unknown') : $payment->receivedBy->name,
+        ]);
     }
 
     #[Computed]
@@ -75,8 +243,53 @@ class CashUp extends Component
         );
     }
 
+    /**
+     * The start of the selected range, falling back to today while the input is invalid.
+     */
+    public function reportDay(): CarbonImmutable
+    {
+        try {
+            return CarbonImmutable::parse($this->date)->startOfDay();
+        } catch (InvalidFormatException) {
+            return CarbonImmutable::today();
+        }
+    }
+
+    /**
+     * The end of the selected range, never before its start.
+     */
+    public function reportEnd(): CarbonImmutable
+    {
+        try {
+            $end = CarbonImmutable::parse($this->to)->endOfDay();
+        } catch (InvalidFormatException) {
+            $end = $this->reportDay()->endOfDay();
+        }
+
+        return $end->max($this->reportDay()->endOfDay());
+    }
+
     public function render(): View
     {
+        $this->showView($this->view);
+
         return view('livewire.reports.cash-up');
+    }
+
+    /**
+     * @param  callable(Payment): array{0: string, 1: string}  $keyAndLabel
+     * @return array<string, array{label: string, count: int, total: Money}>
+     */
+    private function groupPayments(callable $keyAndLabel): array
+    {
+        $groups = [];
+        foreach ($this->payments() as $payment) {
+            [$key, $label] = $keyAndLabel($payment);
+            $groups[$key] ??= ['label' => $label, 'count' => 0, 'total' => Money::zero()];
+            $groups[$key]['count']++;
+            $groups[$key]['total'] = $groups[$key]['total']->add($payment->amount);
+        }
+
+        return $groups;
     }
 }

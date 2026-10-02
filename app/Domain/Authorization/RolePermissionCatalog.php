@@ -29,6 +29,7 @@ final class RolePermissionCatalog
         'manage-payments',
         'manage-outlets',
         'manage-menu',
+        'manage-stock',
         'operate-pos',
         'view-reports',
     ];
@@ -46,7 +47,14 @@ final class RolePermissionCatalog
             'manage-payments',
             'manage-outlets',
             'manage-menu',
+            'manage-stock',
             'operate-pos',
+            'view-reports',
+        ],
+        'accountant' => [
+            'manage-folios',
+            'manage-payments',
+            'manage-stock',
             'view-reports',
         ],
         'front_desk' => [
