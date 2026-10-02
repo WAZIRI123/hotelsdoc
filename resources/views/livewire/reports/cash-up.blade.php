@@ -2,7 +2,7 @@
     $amount = fn (\App\Support\Money $money): string => number_format($money->toMajor(), 0);
     $reportFrom = $this->reportDay()->format('d M Y');
     $reportTo = $this->reportEnd()->format('d M Y');
-    $currencyLabel = $currency !== '' ? $currency : __('All currencies');
+    $currencyLabel = \App\Support\HotelCurrency::current();
     $tabs = array_intersect_key([
         'reservations' => __('In/Out Reservations'),
         'staff' => __('Staff Payments'),
@@ -70,14 +70,6 @@
             </div>
             <div class="w-full sm:w-56">
                 <flux:input type="date" wire:model="to" :label="__('To')" />
-            </div>
-            <div class="w-full sm:w-56">
-                <flux:select wire:model="currency" :label="__('Currency')">
-                    <flux:select.option value="">{{ __('All currencies') }}</flux:select.option>
-                    @foreach ($this->currencies as $code)
-                        <flux:select.option :value="$code">{{ $code }}</flux:select.option>
-                    @endforeach
-                </flux:select>
             </div>
             <button type="submit"
                 class="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">

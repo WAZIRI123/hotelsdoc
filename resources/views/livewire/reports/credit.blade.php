@@ -14,25 +14,15 @@
 <x-reports.shell
     :heading="__('Credit Report')"
     icon="document-text"
-    :subtitle="__('Unpaid balances from :from to :to', ['from' => $this->periodStart()->format('d M Y'), 'to' => $this->periodEnd()->format('d M Y')]) . ' · ' . $currency"
+    :subtitle="__('Unpaid balances from :from to :to', ['from' => $this->periodStart()->format('d M Y'), 'to' => $this->periodEnd()->format('d M Y')]) . ' · ' . $this->hotelCurrency()"
     :tiles="[
         [__('Accommodation'), $amount($totals['accommodation']), 'text-zinc-900 dark:text-zinc-100'],
         [__('Restaurant'), $amount($totals['restaurant']), 'text-zinc-900 dark:text-zinc-100'],
         [__('Bar'), $amount($totals['bar']), 'text-zinc-900 dark:text-zinc-100'],
         [__('Total Credits'), $amount($totals['total']), 'text-red-600 dark:text-red-400'],
     ]"
-    :footnote="__('Currency:') . ' ' . $currency"
+    :footnote="__('Currency:') . ' ' . $this->hotelCurrency()"
 >
-    <x-slot:filters>
-        <div class="w-full sm:w-40">
-            <flux:select wire:model="currency" :label="__('Currency')">
-                @foreach ($this->currencies as $code)
-                    <flux:select.option :value="$code">{{ $code }}</flux:select.option>
-                @endforeach
-            </flux:select>
-        </div>
-    </x-slot:filters>
-
     <table class="w-full text-sm text-zinc-700 dark:text-zinc-300">
         <thead class="border-b border-zinc-200 dark:border-zinc-700">
             <tr>

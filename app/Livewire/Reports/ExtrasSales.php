@@ -19,39 +19,11 @@ class ExtrasSales extends ReportComponent
     public const VIEWS = ['orders', 'items'];
 
     #[Url]
-    public string $currency = '';
-
-    #[Url]
     public string $view = 'orders';
-
-    public function mount(): void
-    {
-        parent::mount();
-
-        if ($this->currency === '') {
-            $this->currency = $this->hotelCurrency();
-        }
-    }
 
     public function showView(string $view): void
     {
         $this->view = in_array($view, self::VIEWS, true) ? $view : 'orders';
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    #[Computed]
-    public function currencies(): array
-    {
-        return ExtraOrder::query()
-            ->distinct()
-            ->pluck('currency')
-            ->push($this->hotelCurrency())
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
     }
 
     /**
@@ -64,7 +36,6 @@ class ExtrasSales extends ReportComponent
             ->with(['items', 'stay.guest', 'folio.payments', 'creator'])
             ->whereDate('order_date', '>=', $this->periodStart())
             ->whereDate('order_date', '<=', $this->periodEnd())
-            ->where('currency', $this->currency)
             ->orderBy('order_date')
             ->orderBy('id')
             ->get();
@@ -80,9 +51,9 @@ class ExtrasSales extends ReportComponent
 
         foreach ($this->orders() as $order) {
             foreach ($order->items as $item) {
-                $rows[$item->extra_service_id] ??= ['name' => $item->name_snapshot, 'quantity' => 0, 'total' => Money::zero($this->currency)];
+                $rows[$item->extra_service_id] ??= ['name' => $item->name_snapshot, 'quantity' => 0, 'total' => Money::zero($this->hotelCurrency())];
                 $rows[$item->extra_service_id]['quantity'] += $item->quantity;
-                $rows[$item->extra_service_id]['total'] = $rows[$item->extra_service_id]['total']->add(new Money((int) $item->line_total, $this->currency));
+                $rows[$item->extra_service_id]['total'] = $rows[$item->extra_service_id]['total']->add(new Money((int) $item->line_total, $this->hotelCurrency()));
             }
         }
 
@@ -133,9 +104,9 @@ class ExtrasSales extends ReportComponent
             'orders' => $orders->count(),
             'walk_in' => $orders->filter(fn (ExtraOrder $order): bool => $order->isWalkIn())->count(),
             'quantity' => array_sum(array_column($this->itemRows(), 'quantity')),
-            'total' => new Money((int) $orders->sum('total_amount'), $this->currency),
-            'paid' => array_reduce($this->orderRows(), fn (Money $carry, array $row): Money => $carry->add($row['paid']), Money::zero($this->currency)),
-            'balance' => array_reduce($this->orderRows(), fn (Money $carry, array $row): Money => $carry->add($row['balance']), Money::zero($this->currency)),
+            'total' => new Money((int) $orders->sum('total_amount'), $this->hotelCurrency()),
+            'paid' => array_reduce($this->orderRows(), fn (Money $carry, array $row): Money => $carry->add($row['paid']), Money::zero($this->hotelCurrency())),
+            'balance' => array_reduce($this->orderRows(), fn (Money $carry, array $row): Money => $carry->add($row['balance']), Money::zero($this->hotelCurrency())),
         ];
     }
 

@@ -28,6 +28,7 @@ use Illuminate\Support\Str;
  * @property string $currency
  * @property Carbon $order_date
  * @property int $total_amount
+ * @property int $tax_amount VAT contained in total_amount
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -45,6 +46,7 @@ class ExtraOrder extends Model
         'currency',
         'order_date',
         'total_amount',
+        'tax_amount',
     ];
 
     /**
@@ -55,6 +57,7 @@ class ExtraOrder extends Model
         return [
             'order_date' => 'date',
             'total_amount' => 'integer',
+            'tax_amount' => 'integer',
         ];
     }
 
@@ -66,9 +69,20 @@ class ExtraOrder extends Model
         });
     }
 
+    /**
+     * What the customer pays, VAT included.
+     */
     public function total(): Money
     {
         return new Money($this->total_amount, $this->currency);
+    }
+
+    /**
+     * The VAT contained in the total.
+     */
+    public function tax(): Money
+    {
+        return new Money($this->tax_amount, $this->currency);
     }
 
     public function isWalkIn(): bool

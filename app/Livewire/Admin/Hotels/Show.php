@@ -16,6 +16,7 @@ use App\Models\RatePlan;
 use App\Models\Room;
 use App\Models\RoomType;
 use App\Models\User;
+use App\Support\Vat;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -41,6 +42,11 @@ class Show extends Component
     public string $slug = '';
 
     public string $currency = 'TZS';
+
+    /** none|inclusive|exclusive — see App\Support\Vat. */
+    public string $vat_mode = Vat::NONE;
+
+    public string $vat_rate = '18';
 
     public string $timezone = 'Africa/Dar_es_Salaam';
 
@@ -158,6 +164,8 @@ class Show extends Component
             'name' => 'required|string|max:120',
             'slug' => ['required', 'alpha_dash:ascii', 'max:80', Rule::unique('hotels', 'slug')->ignore($this->hotel->id)],
             'currency' => 'required|in:'.implode(',', Create::CURRENCIES),
+            'vat_mode' => ['required', Rule::in(array_keys(Vat::MODES))],
+            'vat_rate' => ['required', 'numeric', $this->vat_mode === Vat::NONE ? 'min:0' : 'gt:0', 'max:100'],
             'timezone' => 'required|timezone:all',
             'phone' => 'nullable|string|max:32',
             'fax' => 'nullable|string|max:32',
@@ -344,6 +352,8 @@ class Show extends Component
         $this->name = $this->hotel->name;
         $this->slug = $this->hotel->slug;
         $this->currency = $this->hotel->currency;
+        $this->vat_mode = $this->hotel->vat_mode;
+        $this->vat_rate = rtrim(rtrim((string) $this->hotel->vat_rate, '0'), '.') ?: '0';
         $this->timezone = $this->hotel->timezone;
         $this->phone = $this->hotel->phone ?? '';
         $this->fax = $this->hotel->fax ?? '';

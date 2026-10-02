@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Extras\Actions;
 
+use App\Domain\Folios\Actions\PostFolioCharge;
 use App\Models\ExtraOrder;
 use App\Models\ExtraService;
 use App\Models\Folio;
@@ -17,13 +18,16 @@ use RuntimeException;
 /**
  * Records a sale of extra services.
  *
- * The order total is posted as a single charge on a folio (mirroring
+ * The order total is posted as a single charge on a folio, with VAT applied
+ * per the hotel's setting (mirroring
  * BillPosOrderToFolio): the stay's folio for an in-house guest, or a fresh
  * walk-in folio for a walk-in customer, which the caller then settles with
  * RecordPayment so the sale reaches the cash-up.
  */
 final class RecordExtraOrder
 {
+    public function __construct(private readonly PostFolioCharge $postCharge) {}
+
     /**
      * @param  list<array{extra_service_id: int, quantity: int, unit_price: int}>  $lines  unit_price in minor units
      */
@@ -93,27 +97,18 @@ final class RecordExtraOrder
                 ]);
             }
 
-            $order->update(['total_amount' => $total]);
+            $charge = $this->postCharge->price(
+                folio: $folio,
+                sourceType: 'extra_order',
+                sourceId: $order->id,
+                description: "Extras — order {$order->reference}",
+                price: new Money($total, $currency),
+            );
 
-            $amount = new Money($total, $currency);
-
-            $folio->charges()->create([
-                'source_type' => 'extra_order',
-                'source_id' => $order->id,
-                'description' => "Extras — order {$order->reference}",
-                'quantity' => 1,
-                'unit_price' => $amount,
-                'tax_amount' => Money::zero($currency),
-                'total' => $amount,
-                'posted_at' => now(),
-            ]);
-
-            $folio->refresh();
-            $newSubtotal = $folio->subtotal->add($amount);
-
-            $folio->update([
-                'subtotal' => $newSubtotal,
-                'total_amount' => $newSubtotal->add($folio->tax_total),
+            // What the customer pays, VAT included, and the VAT inside it.
+            $order->update([
+                'total_amount' => $charge->total->amount,
+                'tax_amount' => $charge->tax_amount->amount,
             ]);
 
             return $order->load('items');

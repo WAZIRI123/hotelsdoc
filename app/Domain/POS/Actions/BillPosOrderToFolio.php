@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\POS\Actions;
 
+use App\Domain\Folios\Actions\PostFolioCharge;
 use App\Models\Folio;
 use App\Models\PosOrder;
 use App\Support\Money;
@@ -23,6 +24,8 @@ use RuntimeException;
  */
 final class BillPosOrderToFolio
 {
+    public function __construct(private readonly PostFolioCharge $postCharge) {}
+
     public function execute(PosOrder $order, Folio $folio): PosOrder
     {
         return DB::transaction(function () use ($order, $folio): PosOrder {
@@ -48,27 +51,14 @@ final class BillPosOrderToFolio
                 throw new RuntimeException('Cannot bill an empty order.');
             }
 
-            $folio->charges()->create([
-                'source_type' => 'pos_order',
-                'source_id' => $order->id,
-                'description' => "{$order->outlet->name} — order {$order->reference}",
-                'quantity' => 1,
-                'unit_price' => $order->total_amount,
-                'tax_amount' => $order->tax_total,
-                'total' => $order->total_amount,
-                'posted_at' => now(),
-            ]);
-
-            $folio->refresh();
-            $newSubtotal = $folio->subtotal->add($order->subtotal);
-            $newTax = $folio->tax_total->add($order->tax_total);
-            $newTotal = $newSubtotal->add($newTax);
-
-            $folio->update([
-                'subtotal' => $newSubtotal,
-                'tax_total' => $newTax,
-                'total_amount' => $newTotal,
-            ]);
+            $this->postCharge->amounts(
+                folio: $folio,
+                sourceType: 'pos_order',
+                sourceId: $order->id,
+                description: "{$order->outlet->name} — order {$order->reference}",
+                net: $order->subtotal,
+                tax: $order->tax_total,
+            );
 
             $order->update([
                 'folio_id' => $folio->id,

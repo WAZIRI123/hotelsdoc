@@ -399,8 +399,8 @@
 
         @php $balance = $folio->total_amount->subtract($folio->paid_total); @endphp
         <div class="totals">
-            <div class="row"><span>{{ __('Subtotal') }}</span><span class="value">{{ $folio->subtotal->format() }}</span></div>
-            <div class="row"><span>{{ __('Tax') }}</span><span class="value">{{ $folio->tax_total->format() }}</span></div>
+            <div class="row"><span>{{ __('Subtotal (before VAT)') }}</span><span class="value">{{ $folio->subtotal->format() }}</span></div>
+            <div class="row"><span>{{ $hotel->vat()->label() }}</span><span class="value">{{ $folio->tax_total->format() }}</span></div>
             <div class="row grand"><span>{{ __('Total') }}</span><span class="value">{{ $folio->total_amount->format() }}</span></div>
             <div class="row sub"><span>{{ __('Amount paid') }}</span><span class="value">{{ $folio->paid_total->format() }}</span></div>
             @if ($balance->isZero())

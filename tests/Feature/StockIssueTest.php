@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Stock\Actions\IssueStock;
 use App\Livewire\Menu\Index as MenuIndex;
+use App\Livewire\Reports\ProfitLoss;
 use App\Livewire\Reports\StockProducts;
 use App\Livewire\Stock\Issue;
 use App\Models\Hotel;
@@ -193,4 +194,28 @@ it('keeps tracked stock on hand out of the menu edit form', function (): void {
         ->assertHasNoErrors();
 
     expect($this->barBeer->fresh())->track_stock->toBeTrue()->stock_quantity->toBe(7);
+});
+
+it('records opening stock from the menu as a stock entry kept out of stock purchases', function (): void {
+    CarbonImmutable::setTestNow('2026-10-02 09:00');
+
+    Livewire::test(MenuIndex::class, ['outlet' => $this->bar])
+        ->call('openEditItem', $this->barBeer->id)
+        ->set('itemTrackStock', true)
+        ->set('itemStockQuantity', 7)
+        ->call('saveItem')
+        ->assertHasNoErrors();
+
+    $entry = StockEntry::query()->where('menu_item_id', $this->barBeer->id)->sole();
+
+    expect($entry)
+        ->quantity->toBe(7)
+        ->description->toBe('Opening stock')
+        ->unit_cost->toBeNull()
+        ->recorded_by->toBe($this->user->id)
+        ->and($entry->entry_date->toDateString())->toBe('2026-10-02')
+        ->and($this->barBeer->fresh()->stock_quantity)->toBe(7)
+        ->and(Livewire::test(ProfitLoss::class, ['from' => '2026-10-01', 'to' => '2026-10-31'])->instance()->stockPurchases()->isZero())->toBeTrue();
+
+    CarbonImmutable::setTestNow();
 });

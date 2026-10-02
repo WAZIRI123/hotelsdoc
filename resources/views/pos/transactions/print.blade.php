@@ -272,8 +272,8 @@
         </table>
 
         <div class="totals">
-            <div class="row"><span>{{ __('Subtotal') }}</span><span class="value">{{ $order->subtotal->format() }}</span></div>
-            <div class="row"><span>{{ __('Tax') }}</span><span class="value">{{ $order->tax_total->format() }}</span></div>
+            <div class="row"><span>{{ __('Subtotal (before VAT)') }}</span><span class="value">{{ $order->subtotal->format() }}</span></div>
+            <div class="row"><span>{{ $hotel->vat()->label() }}</span><span class="value">{{ $order->tax_total->format() }}</span></div>
             <div class="row grand"><span>{{ __('Total') }}</span><span class="value">{{ $order->total_amount->format() }}</span></div>
         </div>
 

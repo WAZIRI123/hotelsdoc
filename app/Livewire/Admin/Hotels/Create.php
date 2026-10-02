@@ -6,10 +6,12 @@ namespace App\Livewire\Admin\Hotels;
 
 use App\Domain\Tenancy\Actions\ProvisionHotel;
 use App\Models\User;
+use App\Support\Vat;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -29,6 +31,11 @@ class Create extends Component
     public string $slug = '';
 
     public string $currency = 'TZS';
+
+    /** none|inclusive|exclusive — see App\Support\Vat. */
+    public string $vat_mode = Vat::NONE;
+
+    public string $vat_rate = '18';
 
     public string $timezone = 'Africa/Dar_es_Salaam';
 
@@ -103,6 +110,8 @@ class Create extends Component
             'name' => 'required|string|max:120',
             'slug' => 'required|alpha_dash:ascii|max:80|unique:hotels,slug',
             'currency' => 'required|in:'.implode(',', self::CURRENCIES),
+            'vat_mode' => ['required', Rule::in(array_keys(Vat::MODES))],
+            'vat_rate' => ['required', 'numeric', $this->vat_mode === Vat::NONE ? 'min:0' : 'gt:0', 'max:100'],
             'timezone' => 'required|timezone:all',
             'phone' => 'nullable|string|max:32',
             'fax' => 'nullable|string|max:32',
@@ -122,6 +131,8 @@ class Create extends Component
                 'name' => $validated['name'],
                 'slug' => $validated['slug'],
                 'currency' => $validated['currency'],
+                'vat_mode' => $validated['vat_mode'],
+                'vat_rate' => $validated['vat_rate'],
                 'timezone' => $validated['timezone'],
                 'phone' => $validated['phone'] ?: null,
                 'fax' => $validated['fax'] ?: null,

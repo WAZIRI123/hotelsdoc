@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Domain\Reservations\Actions;
 
+use App\Domain\Folios\Actions\PostFolioCharge;
 use App\Domain\Reservations\Services\AvailabilityChecker;
 use App\Models\Folio;
 use App\Models\Reservation;
 use App\Models\Stay;
 use App\Models\User;
-use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -25,7 +25,10 @@ use RuntimeException;
  */
 final class CheckInReservation
 {
-    public function __construct(private readonly AvailabilityChecker $availability) {}
+    public function __construct(
+        private readonly AvailabilityChecker $availability,
+        private readonly PostFolioCharge $postCharge,
+    ) {}
 
     public function execute(Reservation $reservation, ?User $actor = null): Stay
     {
@@ -54,7 +57,6 @@ final class CheckInReservation
             ]);
 
             $nightCount = count($this->availability->nights($reservation->arrival, $reservation->departure));
-            $subtotal = Money::zero();
 
             foreach ($reservation->rooms as $reservationRoom) {
                 if ($reservationRoom->room === null) {
@@ -69,27 +71,19 @@ final class CheckInReservation
                     ? $reservationRoom->totalRate()
                     : $reservationRoom->nightly_rate->multiply($nightCount);
 
-                $subtotal = $subtotal->add($lineTotal);
-
-                $folio->charges()->create([
-                    'source_type' => 'room',
-                    'source_id' => $reservationRoom->id,
-                    'description' => "Room {$reservationRoom->room->number} — {$nightCount} night(s)",
-                    'quantity' => $nightCount,
-                    'unit_price' => $reservationRoom->nightly_rate,
-                    'total' => $lineTotal,
-                    'posted_at' => now(),
-                ]);
+                $this->postCharge->price(
+                    folio: $folio,
+                    sourceType: 'room',
+                    sourceId: $reservationRoom->id,
+                    description: "Room {$reservationRoom->room->number} — {$nightCount} night(s)",
+                    price: $lineTotal,
+                    quantity: $nightCount,
+                );
 
                 $reservationRoom->room->update(['status' => 'occupied']);
 
                 $reservationRoom->activeOccupants()->update(['checked_in_at' => now()]);
             }
-
-            $folio->update([
-                'subtotal' => $subtotal,
-                'total_amount' => $subtotal,
-            ]);
 
             $reservation->update(['status' => 'checked_in']);
 

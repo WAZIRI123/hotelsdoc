@@ -26,6 +26,7 @@ final class ReportCatalog
         'expenses' => ['label' => 'Expenses Report', 'icon' => 'plus', 'color' => 'bg-[#DAA520]', 'permissions' => ['view-reports'], 'route' => 'reports.expenses', 'params' => []],
         'payments' => ['label' => 'Payments Report', 'icon' => 'banknotes', 'color' => 'bg-[#2E8B57]', 'permissions' => ['view-reports', 'manage-payments'], 'route' => 'reports.cash-up', 'params' => ['view' => 'general']],
         'credit' => ['label' => 'Credit Report', 'icon' => 'document-text', 'color' => 'bg-[#D2691E]', 'permissions' => ['view-reports', 'manage-folios'], 'route' => 'reports.credit', 'params' => []],
+        'agents' => ['label' => 'Agents Report', 'icon' => 'briefcase', 'color' => 'bg-[#4682B4]', 'permissions' => ['view-reports', 'manage-reservations'], 'route' => 'reports.agents', 'params' => []],
         'profit-loss' => ['label' => 'Profit & Loss Report', 'icon' => 'arrows-right-left', 'color' => 'bg-[#FF6347]', 'permissions' => ['view-reports'], 'route' => 'reports.profit-loss', 'params' => []],
     ];
 

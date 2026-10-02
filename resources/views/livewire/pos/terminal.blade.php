@@ -102,6 +102,12 @@
 
             @if ($this->order)
                 <flux:separator class="my-4" />
+                @if ($this->order->tax_total->isPositive())
+                    <div class="mb-1 flex justify-between text-sm text-zinc-500 dark:text-zinc-400">
+                        <span>{{ \App\Support\Vat::current()->label() }}</span>
+                        <span class="font-mono">{{ $this->order->tax_total->format() }}</span>
+                    </div>
+                @endif
                 <div class="flex justify-between text-lg">
                     <flux:heading size="sm">{{ __('Total') }}</flux:heading>
                     <span class="font-mono font-semibold">{{ $this->order->total_amount->format() }}</span>

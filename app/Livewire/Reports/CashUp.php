@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace App\Livewire\Reports;
 
 use App\Domain\Reports\ReportCatalog;
-use App\Domain\Tenancy\TenantContext;
-use App\Models\Folio;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\ReservationRoom;
 use App\Support\Money;
+use App\Support\Vat;
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -43,9 +41,6 @@ class CashUp extends Component
 
     #[Url]
     public string $to = '';
-
-    #[Url]
-    public string $currency = '';
 
     #[Url]
     public string $view = 'reservations';
@@ -93,26 +88,9 @@ class CashUp extends Component
         $this->validate([
             'date' => ['required', 'date'],
             'to' => ['required', 'date', 'after_or_equal:date'],
-            'currency' => ['nullable', 'string', 'size:3'],
         ]);
 
         unset($this->reservationRows, $this->payments);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    #[Computed]
-    public function currencies(): array
-    {
-        return Folio::query()
-            ->distinct()
-            ->pluck('currency')
-            ->push(app(TenantContext::class)->current()->currency)
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
     }
 
     /**
@@ -128,10 +106,6 @@ class CashUp extends Component
             ->with(['guest', 'rooms.room', 'rooms.roomType', 'rooms.nights', 'stay.folio.charges', 'stay.folio.payments'])
             ->whereDate('arrival', '<=', $this->reportEnd()->toDateString())
             ->whereDate('departure', '>=', $this->reportDay()->toDateString())
-            ->when($this->currency !== '', fn (Builder $query) => $query->whereHas(
-                'stay.folio',
-                fn (Builder $folio) => $folio->where('currency', $this->currency),
-            ))
             ->orderBy('arrival')
             ->get();
 
@@ -149,7 +123,8 @@ class CashUp extends Component
             $discount = Money::fromMinor((int) abs((int) $folio?->charges
                 ->where('source_type', 'discount')
                 ->sum(fn ($charge): int => $charge->total->amount)));
-            $total = $roomTotal->subtract($discount);
+            // Room rates are entered prices; when VAT is added on top the guest is billed more.
+            $total = Vat::current()->split($roomTotal)['gross']->subtract($discount);
             $paid = $folio === null ? Money::zero() : $folio->paid_total;
 
             return [
@@ -205,7 +180,6 @@ class CashUp extends Component
             ->with(['folio', 'receivedBy'])
             ->where('status', 'confirmed')
             ->whereBetween('confirmed_at', [$this->reportDay(), $this->reportEnd()])
-            ->when($this->currency !== '', fn (Builder $query) => $query->where('currency', $this->currency))
             ->orderBy('confirmed_at')
             ->get();
     }

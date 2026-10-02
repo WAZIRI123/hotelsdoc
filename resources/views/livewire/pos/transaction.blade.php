@@ -106,11 +106,11 @@
 
         <div class="ml-auto max-w-sm space-y-2">
             <div class="flex justify-between text-sm">
-                <span>{{ __('Subtotal') }}</span>
+                <span>{{ __('Subtotal (before VAT)') }}</span>
                 <span class="font-mono">{{ $posOrder->subtotal->format() }}</span>
             </div>
             <div class="flex justify-between text-sm">
-                <span>{{ __('Tax') }}</span>
+                <span>{{ \App\Support\Vat::current()->label() }}</span>
                 <span class="font-mono">{{ $posOrder->tax_total->format() }}</span>
             </div>
             <flux:separator />

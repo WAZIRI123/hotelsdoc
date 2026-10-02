@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Reservations\Services;
 
+use App\Domain\Folios\Actions\PostFolioCharge;
 use App\Models\Folio;
 use App\Models\Reservation;
 use App\Models\ReservationRoom;
@@ -24,6 +25,7 @@ final class OccupancyChanges
     public function __construct(
         private readonly AvailabilityChecker $availability,
         private readonly RoomNightRates $rates,
+        private readonly PostFolioCharge $postCharge,
     ) {}
 
     public function assertFits(RoomType $roomType, int $adults, int $children): void
@@ -153,24 +155,6 @@ final class OccupancyChanges
             throw new RuntimeException('This stay has no open folio to post the room adjustment to.');
         }
 
-        $quantity = max(1, $quantity);
-
-        $folio->charges()->create([
-            'source_type' => 'room',
-            'source_id' => $reservationRoom->id,
-            'description' => $description,
-            'quantity' => $quantity,
-            'unit_price' => new Money(intdiv(abs($total->amount), $quantity), $total->currency),
-            'total' => $total,
-            'posted_at' => now(),
-        ]);
-
-        $folio->refresh();
-        $newSubtotal = $folio->subtotal->add($total);
-
-        $folio->update([
-            'subtotal' => $newSubtotal,
-            'total_amount' => $newSubtotal->add($folio->tax_total),
-        ]);
+        $this->postCharge->price($folio, 'room', $reservationRoom->id, $description, $total, $quantity);
     }
 }

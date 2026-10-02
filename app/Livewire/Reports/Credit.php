@@ -11,7 +11,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
-use Livewire\Attributes\Url;
 
 /**
  * Folios opened in the period that still owe money, with the balance split
@@ -21,34 +20,6 @@ use Livewire\Attributes\Url;
 class Credit extends ReportComponent
 {
     private const DEPARTMENTS = ['accommodation', 'restaurant', 'bar', 'total'];
-
-    #[Url]
-    public string $currency = '';
-
-    public function mount(): void
-    {
-        parent::mount();
-
-        if ($this->currency === '') {
-            $this->currency = $this->hotelCurrency();
-        }
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    #[Computed]
-    public function currencies(): array
-    {
-        return Folio::query()
-            ->distinct()
-            ->pluck('currency')
-            ->push($this->hotelCurrency())
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
-    }
 
     /**
      * Unpaid balances of folios opened in the period, split by department.
@@ -61,7 +32,6 @@ class Credit extends ReportComponent
         $folios = Folio::query()
             ->with(['guest', 'charges'])
             ->whereIn('status', ['open', 'closed'])
-            ->where('currency', $this->currency)
             ->whereColumn('total_amount', '>', 'paid_total')
             ->whereBetween('created_at', [$this->periodStart(), $this->periodEnd()])
             ->orderBy('created_at')
@@ -113,7 +83,7 @@ class Credit extends ReportComponent
         $totals = ['count' => 0];
 
         foreach (self::DEPARTMENTS as $key) {
-            $totals[$key] = Money::zero($this->currency);
+            $totals[$key] = Money::zero($this->hotelCurrency());
         }
 
         foreach ($this->rows() as $row) {
@@ -125,13 +95,6 @@ class Credit extends ReportComponent
         }
 
         return $totals;
-    }
-
-    public function getReport(): void
-    {
-        parent::getReport();
-
-        $this->validate(['currency' => ['required', 'string', 'size:3']]);
     }
 
     public function render(): View

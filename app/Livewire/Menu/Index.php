@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Livewire\Menu;
 
+use App\Domain\Stock\Actions\RecordStockEntry;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Outlet;
 use App\Models\StockType;
 use App\Support\Money;
+use Carbon\CarbonImmutable;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -158,7 +162,7 @@ class Index extends Component
         Flux::modal('item-form')->show();
     }
 
-    public function saveItem(): void
+    public function saveItem(RecordStockEntry $recordStockEntry): void
     {
         $this->validate([
             'itemCategoryId' => 'required|integer|exists:menu_categories,id',
@@ -171,12 +175,11 @@ class Index extends Component
 
         $item = $this->editingItemId ? MenuItem::query()->findOrFail($this->editingItemId) : null;
 
-        // Stock already being tracked only moves through receipts, issues and sales so the stock report stays accurate.
-        $stockQuantity = match (true) {
-            ! $this->itemTrackStock => 0,
-            $item?->track_stock === true => $item->stock_quantity,
-            default => $this->itemStockQuantity,
-        };
+        // Stock only moves through receipts, issues and sales so the stock report stays accurate:
+        // opening stock for a newly tracked item is recorded as a stock entry, not written directly.
+        $isNewlyTracked = $this->itemTrackStock && $item?->track_stock !== true;
+        $openingStock = $isNewlyTracked ? $this->itemStockQuantity : 0;
+        $stockQuantity = $this->itemTrackStock && ! $isNewlyTracked ? $item->stock_quantity : 0;
 
         $attrs = [
             'outlet_id' => $this->outlet->id,
@@ -190,11 +193,23 @@ class Index extends Component
             'stock_quantity' => $stockQuantity,
         ];
 
-        if ($item) {
-            $item->update($attrs);
-        } else {
-            MenuItem::query()->create($attrs);
-        }
+        DB::transaction(function () use ($item, $attrs, $openingStock, $recordStockEntry): void {
+            if ($item) {
+                $item->update($attrs);
+            } else {
+                $item = MenuItem::query()->create($attrs);
+            }
+
+            if ($openingStock > 0) {
+                $recordStockEntry->execute(
+                    item: $item,
+                    quantity: $openingStock,
+                    entryDate: CarbonImmutable::today(),
+                    description: __('Opening stock'),
+                    recordedBy: Auth::user(),
+                );
+            }
+        });
 
         Flux::modal('item-form')->close();
         Flux::toast(variant: 'success', text: 'Item saved.');

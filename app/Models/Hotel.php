@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Domain\Authorization\Listeners\SeedHotelRoles;
 use App\Domain\Tenancy\Listeners\SeedDefaultHotelData;
 use App\Support\HotelCurrency;
+use App\Support\Vat;
 use Database\Factories\HotelFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,6 +28,8 @@ use Illuminate\Support\Str;
  * @property string|null $logo_path
  * @property string $slug
  * @property string $currency
+ * @property string $vat_mode none|inclusive|exclusive
+ * @property string $vat_rate Percent, decimal string
  * @property string $timezone
  * @property string|null $phone
  * @property string|null $fax
@@ -51,6 +54,8 @@ class Hotel extends Model
         'name',
         'slug',
         'currency',
+        'vat_mode',
+        'vat_rate',
         'timezone',
         'phone',
         'fax',
@@ -62,6 +67,12 @@ class Hotel extends Model
         'settings',
     ];
 
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'vat_mode' => Vat::NONE,
+        'vat_rate' => 0,
+    ];
+
     /**
      * @return array<string, string>
      */
@@ -69,8 +80,14 @@ class Hotel extends Model
     {
         return [
             'settings' => 'array',
+            'vat_rate' => 'decimal:2',
             'suspended_at' => 'datetime',
         ];
+    }
+
+    public function vat(): Vat
+    {
+        return Vat::forHotel($this);
     }
 
     /**

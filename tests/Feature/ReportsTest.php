@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Domain\Payments\Actions\RecordPayment;
+use App\Domain\Reservations\Actions\CancelReservation;
 use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CreateReservation;
+use App\Livewire\Reports\Agents;
 use App\Livewire\Reports\CashUp;
 use App\Livewire\Reports\Credit;
 use App\Livewire\Reports\DrinksSales;
@@ -13,6 +15,7 @@ use App\Livewire\Reports\ExtrasSales;
 use App\Livewire\Reports\FoodSales;
 use App\Livewire\Reports\ProfitLoss;
 use App\Livewire\Reports\StockProducts;
+use App\Models\Agent;
 use App\Models\Expense;
 use App\Models\ExtraOrder;
 use App\Models\ExtraService;
@@ -135,14 +138,13 @@ it('lists food orders with customer, payments and balance', function (): void {
         ->and($component->instance()->totals()['balance']->toMajor())->toBe(24_000.0);
 });
 
-it('summarises extras sales per service in the chosen currency', function (): void {
+it('summarises extras sales per service in the hotel currency', function (): void {
     $order = ExtraOrder::factory()->for($this->hotel)->create(['order_date' => '2026-09-12', 'total_amount' => 30_000_00]);
     $service = ExtraService::factory()->for($this->hotel)->create(['name' => 'Laundry']);
     $order->items()->create(['hotel_id' => $this->hotel->id, 'extra_service_id' => $service->id, 'name_snapshot' => 'Laundry', 'quantity' => 3, 'unit_price' => 10_000_00, 'line_total' => 30_000_00]);
-    ExtraOrder::factory()->for($this->hotel)->create(['order_date' => '2026-09-12', 'currency' => 'USD', 'total_amount' => 50_00]);
 
     $component = Livewire::test(ExtrasSales::class, ['from' => '2026-09-01', 'to' => '2026-09-30'])
-        ->assertSet('currency', 'TZS')
+        ->assertSee('Currency: TZS')
         ->assertSet('view', 'orders')
         ->assertSeeInOrder(['Date', 'Customer', 'Currency', 'Total', 'Discount', 'Grand Total', 'Paid By', 'Amount Paid', 'Balance'])
         ->assertSee('Counter')
@@ -457,6 +459,49 @@ it('counts every row of a hotel that runs in a currency other than TZS', functio
         ->and($component->instance()->netProfit()->format())->toBe('KES 7,500');
 });
 
+it('totals bookings, room nights, revenue and balances per agent', function (): void {
+    $roomType = RoomType::factory()->for($this->hotel)->create(['default_rate' => 100_000_00]);
+    $rooms = Room::factory()->for($this->hotel)->for($roomType)->count(3)->create();
+    $safari = Agent::factory()->for($this->hotel)->create(['name' => 'Safari Tours']);
+    $coastal = Agent::factory()->for($this->hotel)->create(['name' => 'Coastal Travel']);
+    $book = fn (Room $room, ?Agent $agent, string $arrival, string $departure) => app(CreateReservation::class)->execute(
+        guestId: Guest::factory()->for($this->hotel)->create()->id,
+        roomTypeId: $roomType->id,
+        roomId: $room->id,
+        arrival: CarbonImmutable::parse($arrival),
+        departure: CarbonImmutable::parse($departure),
+        agentId: $agent?->id,
+    );
+
+    $checkedIn = $book($rooms[0], $safari, '2026-09-10', '2026-09-13');
+    $folio = app(CheckInReservation::class)->execute($checkedIn, $this->user)->folio;
+    app(RecordPayment::class)->execute($folio, 'cash', Money::fromMajor(100_000), receivedBy: $this->user);
+    $book($rooms[1], $safari, '2026-09-20', '2026-09-21');
+    app(CancelReservation::class)->execute($book($rooms[2], $safari, '2026-09-25', '2026-09-27'));
+    $book($rooms[1], $coastal, '2026-09-05', '2026-09-07');
+    $book($rooms[2], null, '2026-09-05', '2026-09-06');
+    $book($rooms[2], $coastal, '2026-10-05', '2026-10-06');
+
+    $component = Livewire::test(Agents::class, ['from' => '2026-09-01', 'to' => '2026-09-30'])
+        ->assertSeeInOrder(['Safari Tours', 'Coastal Travel']);
+
+    [$safariRow, $coastalRow] = $component->instance()->rows();
+
+    expect($safariRow)
+        ->bookings->toBe(2)
+        ->lost->toBe(1)
+        ->room_nights->toBe(4)
+        ->and($safariRow['room_revenue']->toMajor())->toBe(400_000.0)
+        ->and($safariRow['billed']->toMajor())->toBe(300_000.0)
+        ->and($safariRow['paid']->toMajor())->toBe(100_000.0)
+        ->and($safariRow['balance']->toMajor())->toBe(200_000.0)
+        ->and($coastalRow)
+        ->bookings->toBe(1)
+        ->room_nights->toBe(2)
+        ->and($coastalRow['billed']->isZero())->toBeTrue()
+        ->and($component->instance()->totals()['room_revenue']->toMajor())->toBe(600_000.0);
+});
+
 it('blocks report pages for roles without access', function (string $role, string $routeName): void {
     actingAsTenantUser($this->hotel, User::factory()->create(), $role);
 
@@ -470,11 +515,12 @@ it('blocks report pages for roles without access', function (string $role, strin
     ['cashier', 'reports.stock'],
     ['staff', 'reports.credit'],
     ['waiter', 'reports.extras-sales'],
+    ['cashier', 'reports.agents'],
 ]);
 
 it('renders every report page for an accountant', function (string $routeName): void {
     $this->get(route($routeName))->assertOk();
-})->with(['reports.cash-up', 'reports.drinks-sales', 'reports.food-sales', 'reports.extras-sales', 'reports.stock', 'reports.expenses', 'reports.credit', 'reports.profit-loss']);
+})->with(['reports.cash-up', 'reports.drinks-sales', 'reports.food-sales', 'reports.extras-sales', 'reports.stock', 'reports.expenses', 'reports.credit', 'reports.profit-loss', 'reports.agents']);
 
 it('limits cash-up tabs to the payments views for a cashier', function (): void {
     actingAsTenantUser($this->hotel, User::factory()->create(), 'cashier');

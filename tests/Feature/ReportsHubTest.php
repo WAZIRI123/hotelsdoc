@@ -25,7 +25,7 @@ it('limits front desk to reservation and folio reports', function (): void {
 
     $keys = array_keys(Livewire::test(Index::class)->instance()->reports());
 
-    expect($keys)->toBe(['reservations', 'extras', 'credit']);
+    expect($keys)->toBe(['reservations', 'extras', 'credit', 'agents']);
 });
 
 it('shows no reports to plain staff', function (): void {

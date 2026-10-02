@@ -79,17 +79,23 @@ class Index extends Component
     #[Computed]
     public function activeFolios(): array
     {
-        return ReservationRoom::query()
+        $reservationRooms = ReservationRoom::query()
             ->whereNotNull('room_id')
             ->whereHas('reservation', fn ($q) => $q->where('status', 'checked_in'))
             ->with('reservation.stay.folio')
-            ->get()
-            ->mapWithKeys(function (ReservationRoom $reservationRoom): array {
-                $folio = $reservationRoom->reservation?->stay?->folio;
+            ->get();
 
-                return $folio ? [$reservationRoom->room_id => $folio] : [];
-            })
-            ->all();
+        $folios = [];
+
+        foreach ($reservationRooms as $reservationRoom) {
+            $folio = $reservationRoom->reservation?->stay?->folio;
+
+            if ($folio !== null && $reservationRoom->room_id !== null) {
+                $folios[$reservationRoom->room_id] = $folio;
+            }
+        }
+
+        return $folios;
     }
 
     /**

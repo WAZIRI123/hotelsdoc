@@ -66,11 +66,11 @@
                         <td style="padding-top:20px;">
                             <table role="presentation" width="320" align="right" cellpadding="0" cellspacing="0" style="font-size:13px;">
                                 <tr>
-                                    <td style="padding:6px 0;">{{ __('Subtotal') }}</td>
+                                    <td style="padding:6px 0;">{{ __('Subtotal (before VAT)') }}</td>
                                     <td align="right" style="padding:6px 0;font-family:'Courier New',monospace;">{{ $folio->subtotal->format() }}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding:6px 0;">{{ __('Tax') }}</td>
+                                    <td style="padding:6px 0;">{{ $hotel->vat()->label() }}</td>
                                     <td align="right" style="padding:6px 0;font-family:'Courier New',monospace;">{{ $folio->tax_total->format() }}</td>
                                 </tr>
                                 <tr>

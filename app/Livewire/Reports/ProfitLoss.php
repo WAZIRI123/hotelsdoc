@@ -18,7 +18,7 @@ use Livewire\Attributes\Title;
 
 /**
  * Income (room charges, POS and extras sales, other folio charges, net of
- * discounts and tax) against recorded expenses and stock purchases for the
+ * discounts and VAT) against recorded expenses and stock purchases for the
  * period. A hotel runs in a single currency, so every row is counted; none
  * are filtered out.
  *
@@ -49,7 +49,7 @@ class ProfitLoss extends ReportComponent
             __('Extras Sales') => $this->money((int) ExtraOrder::query()
                 ->whereDate('order_date', '>=', $this->periodStart())
                 ->whereDate('order_date', '<=', $this->periodEnd())
-                ->sum('total_amount')),
+                ->sum(DB::raw('total_amount - tax_amount'))),
             __('Other Charges') => $this->folioCharges(fn (Builder $query) => $query->whereNotIn('source_type', self::SEPARATELY_REPORTED_SOURCES)),
             __('Less: Discounts') => $this->folioCharges(fn (Builder $query) => $query->where('source_type', 'discount')),
         ];
@@ -151,7 +151,7 @@ class ProfitLoss extends ReportComponent
             ->whereBetween('posted_at', [$this->periodStart(), $this->periodEnd()])
             ->whereHas('folio', fn (Builder $folio) => $folio->where('status', '!=', 'void'));
 
-        return $this->money((int) $scope($query)->sum('total'));
+        return $this->money((int) $scope($query)->sum(DB::raw('total - tax_amount')));
     }
 
     /**

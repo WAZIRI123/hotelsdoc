@@ -25,6 +25,7 @@ use App\Livewire\POS\Terminal as PosTerminal;
 use App\Livewire\POS\Transaction as PosTransaction;
 use App\Livewire\RatePlans\Calendar as RatePlansCalendar;
 use App\Livewire\RatePlans\Index as RatePlansIndex;
+use App\Livewire\Reports\Agents as AgentsReport;
 use App\Livewire\Reports\CashUp;
 use App\Livewire\Reports\Credit as CreditReport;
 use App\Livewire\Reports\DrinksSales as DrinksSalesReport;
@@ -135,6 +136,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::livewire('reports/stock', StockProductsReport::class)->name('reports.stock');
     Route::livewire('reports/expenses', ExpensesReport::class)->name('reports.expenses');
     Route::livewire('reports/credit', CreditReport::class)->name('reports.credit');
+    Route::livewire('reports/agents', AgentsReport::class)->name('reports.agents');
     Route::livewire('reports/profit-loss', ProfitLossReport::class)->name('reports.profit-loss');
 });
 

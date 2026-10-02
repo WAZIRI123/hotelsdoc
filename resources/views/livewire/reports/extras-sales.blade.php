@@ -10,14 +10,14 @@
 <x-reports.shell
     :heading="__('Extras Sales Report')"
     icon="cube"
-    :subtitle="__('Extras sold from :from to :to', ['from' => $this->periodStart()->format('d M Y'), 'to' => $this->periodEnd()->format('d M Y')]) . ' · ' . $currency"
+    :subtitle="__('Extras sold from :from to :to', ['from' => $this->periodStart()->format('d M Y'), 'to' => $this->periodEnd()->format('d M Y')]) . ' · ' . $this->hotelCurrency()"
     :tiles="[
         [__('Orders'), $totals['orders'], 'text-zinc-900 dark:text-zinc-100'],
         [__('Walk-in Orders'), $totals['walk_in'], 'text-zinc-900 dark:text-zinc-100'],
         [__('Items Sold'), $totals['quantity'], 'text-zinc-900 dark:text-zinc-100'],
         [__('Sales'), $amount($totals['total']), 'text-green-600 dark:text-green-400'],
     ]"
-    :footnote="__('Currency:') . ' ' . $currency"
+    :footnote="__('Currency:') . ' ' . $this->hotelCurrency()"
 >
     <x-slot:nav>
         @foreach ($tabs as $key => $label)
@@ -32,16 +32,6 @@
                 ])>{{ $label }}</button>
         @endforeach
     </x-slot:nav>
-
-    <x-slot:filters>
-        <div class="w-full sm:w-40">
-            <flux:select wire:model="currency" :label="__('Currency')">
-                @foreach ($this->currencies as $code)
-                    <flux:select.option :value="$code">{{ $code }}</flux:select.option>
-                @endforeach
-            </flux:select>
-        </div>
-    </x-slot:filters>
 
     <table class="w-full text-sm text-zinc-700 dark:text-zinc-300">
         @if ($view === 'items')
@@ -112,7 +102,7 @@
                 <tr>
                     <td colspan="3" class="{{ $td }} text-base">{{ __('Total') }}</td>
                     <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['total']) }}</td>
-                    <td class="{{ $td }} text-right tabular-nums">{{ $money(\App\Support\Money::zero($currency)) }}</td>
+                    <td class="{{ $td }} text-right tabular-nums">{{ $money(\App\Support\Money::zero($this->hotelCurrency())) }}</td>
                     <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['total']) }}</td>
                     <td class="{{ $td }}"></td>
                     <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['paid']) }}</td>

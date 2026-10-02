@@ -15,7 +15,7 @@
         [__('Expenses'), $amount($this->totalExpenses), 'text-red-600 dark:text-red-400'],
         [$net->isNegative() ? __('Net Loss') : __('Net Profit'), $amount($net), $net->isNegative() ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'],
     ]"
-    :footnote="__('POS sales are before tax. Stock Purchases are stock received in the period (quantity × unit cost). Currency:') . ' ' . $this->hotelCurrency()"
+    :footnote="__('Sales are shown before VAT. Stock Purchases are stock received in the period (quantity × unit cost). Currency:') . ' ' . $this->hotelCurrency()"
 >
     <div class="p-4">
         <table class="w-full border-collapse text-sm text-zinc-700 dark:text-zinc-300">

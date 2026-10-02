@@ -49,6 +49,18 @@
                     </flux:select>
                 </div>
 
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <flux:select wire:model.live="vat_mode" :label="__('VAT')">
+                        @foreach (\App\Support\Vat::MODES as $mode => $label)
+                            <flux:select.option value="{{ $mode }}">{{ __($label) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    @if ($vat_mode !== \App\Support\Vat::NONE)
+                        <flux:input wire:model="vat_rate" type="number" min="0" max="100" step="0.01" :label="__('VAT rate (%)')" required
+                            :description:trailing="$vat_mode === \App\Support\Vat::INCLUSIVE ? __('Prices entered for rooms, menu and extras already include VAT.') : __('VAT is added on top of the prices entered for rooms, menu and extras.')" />
+                    @endif
+                </div>
+
                 <div class="grid gap-4 sm:grid-cols-3">
                     <flux:input wire:model="phone" :label="__('Phone')" />
                     <flux:input wire:model="email" type="email" :label="__('Email')" />
