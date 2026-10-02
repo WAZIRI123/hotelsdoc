@@ -37,6 +37,7 @@
         <flux:table>
             <flux:table.columns>
                 <flux:table.column>{{ __('Name') }}</flux:table.column>
+                <flux:table.column>{{ __('Gender') }}</flux:table.column>
                 <flux:table.column>{{ __('Caller name') }}</flux:table.column>
                 <flux:table.column>{{ __('Phone') }}</flux:table.column>
                 <flux:table.column>{{ __('Email') }}</flux:table.column>
@@ -48,6 +49,7 @@
                 @forelse ($this->guests as $guest)
                     <flux:table.row :key="$guest->id">
                         <flux:table.cell variant="strong">{{ $guest->fullName() }}</flux:table.cell>
+                        <flux:table.cell>{{ $guest->gender ? __(ucfirst($guest->gender)) : '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->caller_name ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->phone ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->email ?: '—' }}</flux:table.cell>
@@ -56,7 +58,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="6" class="text-center text-zinc-500">
+                        <flux:table.cell colspan="7" class="text-center text-zinc-500">
                             {{ __('No guests found.') }}
                         </flux:table.cell>
                     </flux:table.row>

@@ -60,6 +60,8 @@ class Show extends Component
 
     public string $quickName = '';
 
+    public string $quickGender = '';
+
     /** Bumped on every form open so the guest picker starts empty. */
     public int $pickerKey = 0;
 
@@ -208,12 +210,13 @@ class Show extends Component
         $this->quickNamingOccupantId = $occupant->id;
         // The booker is replaced by whoever actually sleeps here, never renamed.
         $this->quickName = $isBooker ? '' : ($occupant->guest?->fullName() ?? '');
+        $this->quickGender = $isBooker ? '' : ($occupant->guest?->gender ?? '');
     }
 
     public function cancelQuickNaming(): void
     {
-        $this->reset(['quickNamingOccupantId', 'quickName']);
-        $this->resetValidation('quickName');
+        $this->reset(['quickNamingOccupantId', 'quickName', 'quickGender']);
+        $this->resetValidation(['quickName', 'quickGender']);
     }
 
     /**
@@ -223,11 +226,12 @@ class Show extends Component
     {
         $this->validate([
             'quickName' => ['required', 'string', 'max:255'],
+            'quickGender' => ['nullable', 'in:'.implode(',', Guest::GENDERS)],
         ], [
             'quickName.required' => __('Type the guest name.'),
         ]);
 
-        $this->nameQuickly(fn (RoomOccupant $occupant) => $action->executeWithNewGuest($occupant, $this->quickName));
+        $this->nameQuickly(fn (RoomOccupant $occupant) => $action->executeWithNewGuest($occupant, $this->quickName, $this->quickGender ?: null));
     }
 
     /**
@@ -483,7 +487,7 @@ class Show extends Component
 
     private function resetOccupantForm(): void
     {
-        $this->reset(['addingToRoomId', 'namingOccupantId', 'occupantAgeCategory', 'occupantGuestId', 'quickNamingOccupantId', 'quickName']);
+        $this->reset(['addingToRoomId', 'namingOccupantId', 'occupantAgeCategory', 'occupantGuestId', 'quickNamingOccupantId', 'quickName', 'quickGender']);
         $this->resetValidation();
         $this->pickerKey++;
     }

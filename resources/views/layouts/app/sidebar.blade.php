@@ -140,6 +140,10 @@
 
             <flux:spacer />
 
+            @if ($currentHotel !== null)
+                <livewire:layout.sidebar-summary />
+            @endif
+
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
 

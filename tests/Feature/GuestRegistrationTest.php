@@ -21,6 +21,14 @@ it('renders the register guest page', function (): void {
         ->assertSeeHtml('<span class="text-red-500">*</span>');
 });
 
+it('rejects an unknown gender', function (): void {
+    Livewire::test(Register::class)
+        ->set('guest_names', 'Ada')
+        ->set('gender', 'unknown')
+        ->call('save')
+        ->assertHasErrors(['gender' => 'in']);
+});
+
 it('validates required guest names', function (): void {
     Livewire::test(Register::class)
         ->set('guest_names', '')
@@ -31,6 +39,7 @@ it('validates required guest names', function (): void {
 it('creates a guest and redirects to the guest list', function (): void {
     Livewire::test(Register::class)
         ->set('guest_names', 'Ada King Lovelace')
+        ->set('gender', 'female')
         ->set('caller_name', 'Charles Babbage')
         ->set('phone', '+255 700 000 000')
         ->set('email', 'ada@example.com')
@@ -44,6 +53,7 @@ it('creates a guest and redirects to the guest list', function (): void {
 
     expect($guest->last_name)->toBe('King Lovelace')
         ->and($guest->fullName())->toBe('Ada King Lovelace')
+        ->and($guest->gender)->toBe('female')
         ->and($guest->caller_name)->toBe('Charles Babbage')
         ->and($guest->nationality)->toBe('United Kingdom');
 });

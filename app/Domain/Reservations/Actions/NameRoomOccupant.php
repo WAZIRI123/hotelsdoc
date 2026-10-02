@@ -63,7 +63,7 @@ final class NameRoomOccupant
      * name-only guest, or fixes the spelling when the current guest exists
      * only for this occupant. ID details can be completed on the guest later.
      */
-    public function executeWithNewGuest(RoomOccupant $occupant, string $fullName): RoomOccupant
+    public function executeWithNewGuest(RoomOccupant $occupant, string $fullName, ?string $gender = null): RoomOccupant
     {
         $fullName = trim($fullName);
 
@@ -71,10 +71,14 @@ final class NameRoomOccupant
             throw new InvalidArgumentException('A name is required.');
         }
 
+        if ($gender !== null && ! in_array($gender, Guest::GENDERS, true)) {
+            throw new InvalidArgumentException('Unknown gender.');
+        }
+
         $occupant->loadMissing('reservationRoom.reservation', 'guest');
 
         [$firstName, $lastName] = array_pad(preg_split('/\s+/', $fullName, 2) ?: [], 2, null);
-        $name = ['first_name' => $firstName, 'last_name' => $lastName];
+        $name = ['first_name' => $firstName, 'last_name' => $lastName, 'gender' => $gender];
 
         return DB::transaction(function () use ($occupant, $name): RoomOccupant {
             $currentGuest = $occupant->guest;

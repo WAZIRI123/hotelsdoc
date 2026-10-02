@@ -27,6 +27,7 @@ class GuestFactory extends Factory
             'phone' => fake()->phoneNumber(),
             'email' => fake()->safeEmail(),
             'nationality' => fake()->country(),
+            'gender' => fake()->randomElement(Guest::GENDERS),
         ];
     }
 }

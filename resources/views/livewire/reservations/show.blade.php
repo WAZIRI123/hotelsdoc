@@ -67,10 +67,17 @@
                                                     <input wire:model.live.debounce.300ms="quickName" type="text" autofocus autocomplete="off"
                                                         placeholder="{{ __('Type full name, press Enter') }}"
                                                         class="w-56 rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900" />
+                                                    <select wire:model="quickGender" aria-label="{{ __('Gender') }}"
+                                                        class="rounded-md border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900">
+                                                        <option value="">{{ __('Gender') }}</option>
+                                                        <option value="male">{{ __('Male') }}</option>
+                                                        <option value="female">{{ __('Female') }}</option>
+                                                    </select>
                                                     <flux:button size="xs" type="submit" variant="primary" icon="check" />
                                                     <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="cancelQuickNaming" />
                                                 </form>
                                                 @error('quickName') <flux:text class="mt-1 text-xs text-red-600">{{ $message }}</flux:text> @enderror
+                                                @error('quickGender') <flux:text class="mt-1 text-xs text-red-600">{{ $message }}</flux:text> @enderror
 
                                                 @if ($this->quickNameMatches->isNotEmpty())
                                                     <div class="absolute z-10 mt-1 w-80 rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">

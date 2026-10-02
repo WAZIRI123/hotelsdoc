@@ -36,7 +36,14 @@
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
+                <flux:select wire:model="gender" :label="__('Gender')" :placeholder="__('Select gender…')">
+                    <flux:select.option value="male">{{ __('Male') }}</flux:select.option>
+                    <flux:select.option value="female">{{ __('Female') }}</flux:select.option>
+                </flux:select>
                 <flux:input wire:model="phone" :label="__('Phone')" />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="email" type="email" :label="__('Email')" />
             </div>
 

@@ -17,6 +17,7 @@ use Illuminate\Support\Str;
  * @property int $hotel_id
  * @property string $first_name
  * @property string|null $last_name
+ * @property string|null $gender
  * @property string|null $caller_name
  * @property string|null $phone
  * @property string|null $email
@@ -28,10 +29,13 @@ class Guest extends Model
     /** @use HasFactory<GuestFactory> */
     use BelongsToTenant, HasFactory;
 
+    public const GENDERS = ['male', 'female'];
+
     protected $fillable = [
         'hotel_id',
         'first_name',
         'last_name',
+        'gender',
         'caller_name',
         'phone',
         'email',

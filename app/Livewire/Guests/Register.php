@@ -19,6 +19,9 @@ class Register extends Component
     #[Validate('required|string|max:160')]
     public string $guest_names = '';
 
+    #[Validate('nullable|in:male,female')]
+    public string $gender = '';
+
     #[Validate('nullable|string|max:120')]
     public string $caller_name = '';
 
@@ -58,6 +61,7 @@ class Register extends Component
         $guest = Guest::query()->create([
             'first_name' => $firstName,
             'last_name' => $lastName,
+            'gender' => $this->gender ?: null,
             'caller_name' => $this->caller_name ?: null,
             'phone' => $this->phone ?: null,
             'email' => $this->email ?: null,

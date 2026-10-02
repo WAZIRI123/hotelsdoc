@@ -98,6 +98,30 @@ it('quick-names a placeholder by typing, registering a name-only guest', functio
         ->and($guest->id_number)->toBeNull();
 });
 
+it('records the gender typed with a quick name and prefills it when correcting', function (): void {
+    $placeholder = $this->reservationRoom->occupants()->whereNull('guest_id')->first();
+
+    $component = Livewire::test(Show::class, ['reservation' => $this->reservation])
+        ->call('startQuickNaming', $placeholder->id)
+        ->set('quickName', 'Neema Kweka')
+        ->set('quickGender', 'other')
+        ->call('saveQuickName')
+        ->assertHasErrors(['quickGender' => 'in'])
+        ->set('quickGender', 'female')
+        ->call('saveQuickName')
+        ->assertHasNoErrors();
+
+    expect($placeholder->fresh()->guest->gender)->toBe('female');
+
+    $component->call('startQuickNaming', $placeholder->id)
+        ->assertSet('quickGender', 'female')
+        ->set('quickGender', 'male')
+        ->call('saveQuickName')
+        ->assertHasNoErrors();
+
+    expect($placeholder->fresh()->guest->gender)->toBe('male');
+});
+
 it('suggests existing guests while typing and links the picked one', function (): void {
     $existing = Guest::factory()->for($this->hotel)->create(['first_name' => 'Neema', 'last_name' => 'Kweka']);
     Guest::factory()->for($this->hotel)->create(['first_name' => 'Zawadi', 'last_name' => 'Kweka']);

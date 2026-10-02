@@ -16,6 +16,9 @@ new class extends Component
     #[Validate('required|string|max:160')]
     public string $guest_names = '';
 
+    #[Validate('nullable|in:male,female')]
+    public string $gender = '';
+
     #[Validate('nullable|string|max:120')]
     public string $caller_name = '';
 
@@ -69,6 +72,7 @@ new class extends Component
         $guest = Guest::query()->create([
             'first_name' => $firstName,
             'last_name' => $lastName,
+            'gender' => $this->gender ?: null,
             'caller_name' => $this->caller_name ?: null,
             'phone' => $this->phone ?: null,
             'email' => $this->email ?: null,
@@ -87,7 +91,7 @@ new class extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['guest_names', 'caller_name', 'phone', 'email', 'nationality', 'id_type', 'id_number', 'address']);
+        $this->reset(['guest_names', 'gender', 'caller_name', 'phone', 'email', 'nationality', 'id_type', 'id_number', 'address']);
         $this->resetValidation();
     }
 
@@ -134,7 +138,14 @@ new class extends Component
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
+                <flux:select wire:model="gender" :label="__('Gender')" :placeholder="__('Select gender…')">
+                    <flux:select.option value="male">{{ __('Male') }}</flux:select.option>
+                    <flux:select.option value="female">{{ __('Female') }}</flux:select.option>
+                </flux:select>
                 <flux:input wire:model="phone" :label="__('Phone')" />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="email" type="email" :label="__('Email')" />
             </div>
 
