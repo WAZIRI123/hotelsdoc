@@ -31,6 +31,9 @@ use Illuminate\Support\Str;
  * @property Money $paid_total
  * @property Carbon|null $closed_at
  * @property Carbon|null $settled_at
+ * @property Carbon|null $voided_at
+ * @property int|null $voided_by
+ * @property string|null $void_reason
  */
 class Folio extends Model
 {
@@ -61,6 +64,9 @@ class Folio extends Model
         'paid_total',
         'closed_at',
         'settled_at',
+        'voided_at',
+        'voided_by',
+        'void_reason',
     ];
 
     /**
@@ -75,6 +81,7 @@ class Folio extends Model
             'paid_total' => MoneyCast::class,
             'closed_at' => 'datetime',
             'settled_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
     }
 
@@ -94,6 +101,26 @@ class Folio extends Model
     public function acceptsCharges(): bool
     {
         return in_array($this->status, ['open', 'closed', 'settled'], true);
+    }
+
+    /**
+     * The status a settled folio goes back to when it is owed money again.
+     */
+    public function unsettledStatus(): string
+    {
+        return $this->closed_at === null ? 'open' : 'closed';
+    }
+
+    /**
+     * Mark the folio's fiscal receipt as no longer current, after what the
+     * guest owes or has paid has changed.
+     */
+    public function supersedeReceipts(): void
+    {
+        FiscalReceipt::query()
+            ->where('folio_id', $this->id)
+            ->where('status', 'issued')
+            ->update(['status' => 'superseded']);
     }
 
     /**

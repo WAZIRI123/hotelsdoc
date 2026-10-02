@@ -162,7 +162,6 @@
                             @php
                                 $color = match ($transaction->status) {
                                     'open' => 'blue',
-                                    'sent' => 'yellow',
                                     'billed' => 'green',
                                     'voided' => 'zinc',
                                     default => 'zinc',

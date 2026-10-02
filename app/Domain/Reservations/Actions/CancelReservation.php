@@ -14,7 +14,7 @@ final class CancelReservation
     public function execute(Reservation $reservation): Reservation
     {
         return DB::transaction(function () use ($reservation): Reservation {
-            if (! in_array($reservation->status, ['hold', 'confirmed'], true)) {
+            if ($reservation->status !== 'confirmed') {
                 throw new RuntimeException(
                     "Cannot cancel a reservation in status [{$reservation->status}].",
                 );

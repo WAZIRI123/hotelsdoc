@@ -29,7 +29,7 @@ final class BillPosOrderToFolio
     public function execute(PosOrder $order, Folio $folio): PosOrder
     {
         return DB::transaction(function () use ($order, $folio): PosOrder {
-            if (! in_array($order->status, ['open', 'sent'], true)) {
+            if ($order->status !== 'open') {
                 throw new RuntimeException(
                     "Cannot bill a POS order in status [{$order->status}].",
                 );

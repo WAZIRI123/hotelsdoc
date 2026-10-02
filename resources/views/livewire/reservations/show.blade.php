@@ -249,6 +249,15 @@
                 <flux:button variant="primary" icon="key" class="w-full" wire:click="checkIn">
                     {{ __('Check in') }}
                 </flux:button>
+                <flux:button variant="ghost" icon="calendar-days" class="w-full" wire:click="startChangingDates">
+                    {{ __('Change dates') }}
+                </flux:button>
+                @if ($this->canMarkNoShow())
+                    <flux:button variant="ghost" icon="user-minus" class="w-full"
+                        wire:click="markNoShow" wire:confirm="{{ __('Mark this guest as a no-show? The room is released.') }}">
+                        {{ __('Mark no-show') }}
+                    </flux:button>
+                @endif
                 <flux:button variant="ghost" icon="x-mark" class="w-full"
                     wire:click="cancel" wire:confirm="{{ __('Cancel this reservation?') }}">
                     {{ __('Cancel reservation') }}
@@ -258,7 +267,30 @@
                     wire:click="checkOut">
                     {{ __('Check out') }}
                 </flux:button>
+                <flux:button variant="ghost" icon="calendar-days" class="w-full" wire:click="startChangingDates">
+                    {{ __('Change departure') }}
+                </flux:button>
             @endif
+
+            <flux:modal name="change-dates" class="md:w-[480px]">
+                <form wire:submit="changeDates" class="space-y-6">
+                    <flux:heading size="lg">{{ $reservation->status === 'checked_in' ? __('Change departure') : __('Change dates') }}</flux:heading>
+                    @if ($reservation->status === 'checked_in')
+                        <flux:text>{{ __('Added nights are billed to the folio; nights dropped are credited.') }}</flux:text>
+                    @endif
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <flux:input type="date" wire:model="newArrival" :label="__('Arrival')"
+                            :disabled="$reservation->status === 'checked_in'" required />
+                        <flux:input type="date" wire:model="newDeparture" :label="__('Departure')" required />
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <flux:modal.close>
+                            <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                        </flux:modal.close>
+                        <flux:button type="submit" variant="primary">{{ __('Save dates') }}</flux:button>
+                    </div>
+                </form>
+            </flux:modal>
 
             @if ($reservation->stay?->folio)
                 <flux:separator />

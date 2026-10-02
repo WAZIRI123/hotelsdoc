@@ -8,6 +8,7 @@ use App\Domain\Reports\FolioPaymentShare;
 use App\Models\ExtraOrder;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -34,6 +35,7 @@ class ExtrasSales extends ReportComponent
     {
         return ExtraOrder::query()
             ->with(['items', 'stay.guest', 'folio.payments', 'creator'])
+            ->whereDoesntHave('folio', fn (Builder $folio) => $folio->where('status', 'void'))
             ->whereDate('order_date', '>=', $this->periodStart())
             ->whereDate('order_date', '<=', $this->periodEnd())
             ->orderBy('order_date')

@@ -47,6 +47,8 @@ function checkInGuest(Hotel $hotel, int $nightlyRateMajor, int $nights): Folio
         departure: CarbonImmutable::parse('2026-11-10')->addDays($nights),
     );
 
+    test()->travelTo(CarbonImmutable::parse('2026-11-10 09:00'));
+
     return app(CheckInReservation::class)->execute($reservation)->folio;
 }
 

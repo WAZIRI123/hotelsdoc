@@ -9,7 +9,6 @@
             @php
                 $statusColor = match ($posOrder->status) {
                     'open' => 'bg-blue-600',
-                    'sent' => 'bg-yellow-500',
                     'billed' => 'bg-green-600',
                     'voided' => 'bg-zinc-500',
                     default => 'bg-zinc-500',
@@ -28,12 +27,38 @@
                     </a>
                 @endif
 
+                @if ($this->canVoid())
+                    <flux:button variant="danger" icon="no-symbol" wire:click="startVoid">
+                        {{ __('Void order') }}
+                    </flux:button>
+                @endif
+
                 <a href="{{ route('pos.terminal', $posOrder->outlet) }}" wire:navigate
                     class="inline-flex items-center rounded-md bg-sky-400 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-zinc-900">
                     {{ __('Back to terminal') }}
                 </a>
             </div>
         </div>
+
+        <flux:modal name="void-order" class="md:w-[480px]">
+            <form wire:submit="voidOrder" class="space-y-6">
+                <flux:heading size="lg">{{ __('Void order') }}</flux:heading>
+                <flux:text>{{ __('The charge is credited back on its bill and the items return to stock. If the order was paid, refund the guest from the bill.') }}</flux:text>
+                <flux:input wire:model="void_reason" :label="__('Reason')" required />
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                    </flux:modal.close>
+                    <flux:button type="submit" variant="danger">{{ __('Void order') }}</flux:button>
+                </div>
+            </form>
+        </flux:modal>
+
+        @if ($posOrder->void_reason)
+            <flux:callout variant="danger" icon="no-symbol" class="mt-4">
+                <flux:callout.text>{{ __('Voided') }}: {{ $posOrder->void_reason }}</flux:callout.text>
+            </flux:callout>
+        @endif
 
         <nav class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <a href="{{ route('pos.lobby') }}" wire:navigate

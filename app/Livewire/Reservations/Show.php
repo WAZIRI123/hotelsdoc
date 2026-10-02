@@ -6,8 +6,10 @@ namespace App\Livewire\Reservations;
 
 use App\Domain\Reservations\Actions\AddRoomOccupant;
 use App\Domain\Reservations\Actions\CancelReservation;
+use App\Domain\Reservations\Actions\ChangeReservationDates;
 use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CheckOutStay;
+use App\Domain\Reservations\Actions\MarkNoShow;
 use App\Domain\Reservations\Actions\MoveRoom;
 use App\Domain\Reservations\Actions\NameRoomOccupant;
 use App\Domain\Reservations\Actions\RemoveRoomOccupant;
@@ -78,6 +80,10 @@ class Show extends Component
     /** "reservation-room:{id}" or "room:{id}" */
     public string $transferTarget = '';
 
+    public string $newArrival = '';
+
+    public string $newDeparture = '';
+
     public function mount(Reservation $reservation): void
     {
         $this->reservation = $reservation;
@@ -130,6 +136,57 @@ class Show extends Component
         }
 
         Flux::toast(variant: 'success', text: 'Reservation cancelled.');
+        $this->reloadReservation();
+    }
+
+    public function markNoShow(MarkNoShow $action): void
+    {
+        try {
+            $action->execute($this->reservation);
+        } catch (RuntimeException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Marked as no-show; the room is free again.'));
+        $this->reloadReservation();
+    }
+
+    /**
+     * A confirmed booking can be marked a no-show from its arrival day on.
+     */
+    public function canMarkNoShow(): bool
+    {
+        return $this->reservation->status === 'confirmed'
+            && ! $this->reservation->arrival->isAfter(CarbonImmutable::today());
+    }
+
+    public function startChangingDates(): void
+    {
+        $this->newArrival = $this->reservation->arrival->toDateString();
+        $this->newDeparture = $this->reservation->departure->toDateString();
+        $this->resetErrorBag(['newArrival', 'newDeparture']);
+        Flux::modal('change-dates')->show();
+    }
+
+    public function changeDates(ChangeReservationDates $action): void
+    {
+        $this->validate([
+            'newArrival' => ['required', 'date'],
+            'newDeparture' => ['required', 'date', 'after:newArrival'],
+        ]);
+
+        try {
+            $action->execute($this->reservation, CarbonImmutable::parse($this->newArrival), CarbonImmutable::parse($this->newDeparture));
+        } catch (RuntimeException $e) {
+            $this->addError('newDeparture', $e->getMessage());
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Dates changed.'));
+        Flux::modal('change-dates')->close();
         $this->reloadReservation();
     }
 
@@ -419,7 +476,7 @@ class Show extends Component
     #[Computed]
     public function canChangeOccupancy(): bool
     {
-        return in_array($this->reservation->status, ['hold', 'confirmed', 'checked_in'], true)
+        return in_array($this->reservation->status, ['confirmed', 'checked_in'], true)
             && $this->reservation->departure->isAfter(CarbonImmutable::today());
     }
 
@@ -430,7 +487,7 @@ class Show extends Component
     #[Computed]
     public function canNameOccupants(): bool
     {
-        return in_array($this->reservation->status, ['hold', 'confirmed', 'checked_in'], true);
+        return in_array($this->reservation->status, ['confirmed', 'checked_in'], true);
     }
 
     /**

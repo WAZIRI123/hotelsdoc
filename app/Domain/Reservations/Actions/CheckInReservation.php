@@ -10,6 +10,7 @@ use App\Models\Folio;
 use App\Models\Reservation;
 use App\Models\Stay;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -39,8 +40,18 @@ final class CheckInReservation
                 throw new RuntimeException('Reservation is already checked in.');
             }
 
-            if (! in_array($reservation->status, ['confirmed', 'hold'], true)) {
+            if ($reservation->status !== 'confirmed') {
                 throw new RuntimeException("Cannot check in reservation in status [{$reservation->status}].");
+            }
+
+            if (CarbonImmutable::instance($reservation->arrival)->startOfDay()->isAfter(CarbonImmutable::today())) {
+                throw new RuntimeException('This reservation arrives on '.$reservation->arrival->format('d M Y').'; change its dates to check in early.');
+            }
+
+            foreach ($reservation->rooms as $reservationRoom) {
+                if ($reservationRoom->room?->status === 'occupied') {
+                    throw new RuntimeException("Room {$reservationRoom->room->number} is still occupied; check the previous guest out first.");
+                }
             }
 
             $stay = Stay::query()->create([

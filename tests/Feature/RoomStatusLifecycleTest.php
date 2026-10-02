@@ -21,6 +21,7 @@ beforeEach(function (): void {
     $this->roomType = RoomType::factory()->for($this->hotel)->create();
     $this->room = Room::factory()->for($this->hotel)->for($this->roomType)->create(['number' => '101']);
     $this->guest = Guest::factory()->for($this->hotel)->create();
+    $this->travelTo(CarbonImmutable::parse('2026-11-10 09:00'));
 });
 
 function bookRoom(Room $room, Guest $guest, string $arrival = '2026-11-10', string $departure = '2026-11-12'): Reservation

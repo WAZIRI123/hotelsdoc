@@ -35,7 +35,7 @@ class Reservation extends Model
     /** @use HasFactory<ReservationFactory> */
     use BelongsToTenant, HasFactory;
 
-    public const STATUSES = ['hold', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show'];
+    public const STATUSES = ['confirmed', 'checked_in', 'checked_out', 'cancelled', 'no_show'];
 
     protected $fillable = [
         'hotel_id',

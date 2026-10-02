@@ -2,13 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Domain\Folios\Actions\PostFolioCharge;
 use App\Domain\Payments\Actions\RecordPayment;
+use App\Domain\Reservations\Actions\CancelReservation;
 use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CreateReservation;
 use App\Livewire\Reports\CashUp;
 use App\Models\Expense;
 use App\Models\Folio;
 use App\Models\Guest;
+use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomType;
 use App\Support\Money;
@@ -165,4 +168,27 @@ it('takes expenses paid out off the collected total per method', function (): vo
         ->and($cashUp->methodSummary()['cash']['paid_out']->amount)->toBe(15_000_00)
         ->and($cashUp->methodSummary()['cash']['net']->amount)->toBe(35_000_00)
         ->and($cashUp->totalPaidOut()->amount)->toBe(15_000_00);
+});
+
+it('leaves cancelled bookings out and credits the room only with its share of payments', function (): void {
+    $roomType = RoomType::factory()->for($this->hotel)->create(['default_rate' => 100_000_00]);
+    $book = fn (): Reservation => app(CreateReservation::class)->execute(
+        guestId: Guest::factory()->for($this->hotel)->create()->id,
+        roomTypeId: $roomType->id,
+        roomId: Room::factory()->for($this->hotel)->for($roomType)->create()->id,
+        arrival: CarbonImmutable::parse('2026-09-14'),
+        departure: CarbonImmutable::parse('2026-09-15'),
+    );
+
+    app(CancelReservation::class)->execute($book());
+
+    $stay = app(CheckInReservation::class)->execute($book(), $this->user);
+    app(PostFolioCharge::class)->price($stay->folio, 'pos_order', null, 'Bar', Money::fromMajor(100_000));
+    app(RecordPayment::class)->execute($stay->folio->fresh(), 'cash', Money::fromMajor(100_000), receivedBy: $this->user);
+
+    $rows = Livewire::test(CashUp::class, ['date' => '2026-09-14'])->instance()->reservationRows();
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['paid']->toMajor())->toBe(50_000.0)
+        ->and($rows[0]['balance']->toMajor())->toBe(50_000.0);
 });

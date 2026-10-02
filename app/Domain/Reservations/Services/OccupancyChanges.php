@@ -51,7 +51,7 @@ final class OccupancyChanges
      */
     public function nightsToChange(Reservation $reservation): array
     {
-        if (in_array($reservation->status, ['hold', 'confirmed'], true)) {
+        if ($reservation->status === 'confirmed') {
             return $this->availability->nights($reservation->arrival, $reservation->departure);
         }
 

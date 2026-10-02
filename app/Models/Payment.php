@@ -28,6 +28,9 @@ use Illuminate\Support\Str;
  * @property string $status
  * @property array<string, mixed>|null $provider_payload
  * @property Carbon|null $confirmed_at
+ * @property Carbon|null $voided_at
+ * @property int|null $voided_by
+ * @property string|null $void_reason
  */
 class Payment extends Model
 {
@@ -47,6 +50,9 @@ class Payment extends Model
         'provider_payload',
         'received_by',
         'confirmed_at',
+        'voided_at',
+        'voided_by',
+        'void_reason',
     ];
 
     /**
@@ -58,6 +64,7 @@ class Payment extends Model
             'amount' => MoneyCast::class,
             'provider_payload' => 'array',
             'confirmed_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
     }
 

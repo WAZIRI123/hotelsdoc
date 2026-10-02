@@ -51,8 +51,42 @@
                     {{ __('Refund credit') }}
                 </flux:button>
             @endif
+
+            @if ($this->canVoid())
+                <flux:button variant="ghost" icon="no-symbol" wire:click="startVoidFolio">
+                    {{ __('Void folio') }}
+                </flux:button>
+            @endif
         </div>
     </div>
+
+    <flux:modal name="void-payment" class="md:w-[480px]">
+        <form wire:submit="voidPayment" class="space-y-6">
+            <flux:heading size="lg">{{ __('Void payment') }}</flux:heading>
+            <flux:text>{{ __('Use this for a payment recorded by mistake. It is removed from the cash-up and the folio balance.') }}</flux:text>
+            <flux:input wire:model="void_reason" :label="__('Reason')" required />
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="danger">{{ __('Void payment') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    <flux:modal name="void-folio" class="md:w-[480px]">
+        <form wire:submit="voidFolio" class="space-y-6">
+            <flux:heading size="lg">{{ __('Void folio') }}</flux:heading>
+            <flux:text>{{ __('Use this for a bill opened by mistake. Its charges leave the reports and POS orders on it are voided with their stock returned. Payments must be voided or refunded first.') }}</flux:text>
+            <flux:input wire:model="void_reason" :label="__('Reason')" required />
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="danger">{{ __('Void folio') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     <flux:modal name="add-discount" class="md:w-[480px]">
         <form wire:submit="applyDiscount" class="space-y-6">
@@ -132,6 +166,13 @@
         </form>
     </flux:modal>
 
+    @if ($folio->status === 'void')
+        <flux:callout variant="danger" icon="no-symbol" class="mb-6">
+            <flux:callout.heading>{{ __('Folio voided') }}</flux:callout.heading>
+            <flux:callout.text>{{ $folio->void_reason }} · {{ $folio->voided_at?->format('d M Y, H:i') }}</flux:callout.text>
+        </flux:callout>
+    @endif
+
     @if ($this->fiscalReceipt)
         <flux:callout variant="success" icon="receipt-percent" class="mb-6">
             <flux:callout.heading>{{ __('Fiscal receipt issued') }}</flux:callout.heading>
@@ -207,11 +248,19 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell>
-                            <flux:badge :color="$payment->status === 'confirmed' ? 'green' : 'yellow'" size="sm">
+                            <flux:badge :color="match ($payment->status) { 'confirmed' => 'green', 'voided' => 'zinc', default => 'yellow' }" size="sm">
                                 {{ ucfirst($payment->status) }}
                             </flux:badge>
+                            @if ($payment->void_reason)
+                                <div class="text-xs whitespace-normal text-zinc-500">{{ $payment->void_reason }}</div>
+                            @endif
                         </flux:table.cell>
-                        <flux:table.cell class="text-right font-mono">{{ $payment->amount->format() }}</flux:table.cell>
+                        <flux:table.cell @class(['text-right font-mono', 'line-through text-zinc-400' => $payment->status === 'voided'])>
+                            {{ $payment->amount->format() }}
+                            @if ($payment->status === 'confirmed' && $this->canVoid())
+                                <flux:button size="xs" variant="ghost" wire:click="startVoidPayment({{ $payment->id }})">{{ __('Void') }}</flux:button>
+                            @endif
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Reports;
 
+use App\Domain\Reports\FolioPaymentShare;
 use App\Domain\Reports\ReportCatalog;
 use App\Models\Expense;
 use App\Models\Payment;
@@ -95,7 +96,8 @@ class CashUp extends Component
     }
 
     /**
-     * Reservations in-house at any point in the selected range (arriving, staying or departing).
+     * Reservations in-house at any point in the selected range (arriving, staying or departing);
+     * cancelled bookings and no-shows are left out.
      *
      * @return array<int, array{customer: string, rooms: string, check_in: string, nights: int, per_night: Money, discount: Money, total: Money, paid_by: string, paid: Money, balance: Money, status: string}>
      */
@@ -105,6 +107,7 @@ class CashUp extends Component
 
         $reservations = Reservation::query()
             ->with(['guest', 'rooms.room', 'rooms.roomType', 'rooms.nights', 'stay.folio.charges', 'stay.folio.payments'])
+            ->whereNotIn('status', ['cancelled', 'no_show'])
             ->whereDate('arrival', '<=', $this->reportEnd()->toDateString())
             ->whereDate('departure', '>=', $this->reportDay()->toDateString())
             ->orderBy('arrival')
@@ -126,7 +129,8 @@ class CashUp extends Component
                 ->sum(fn ($charge): int => $charge->total->amount)));
             // Room rates are entered prices; when VAT is added on top the guest is billed more.
             $total = Vat::current()->split($roomTotal)['gross']->subtract($discount);
-            $paid = $folio === null ? Money::zero() : $folio->paid_total;
+            // The folio can also hold POS and extras, so the room bill is credited with its share of what was paid.
+            $paid = FolioPaymentShare::paid($folio, $total);
 
             return [
                 'customer' => $reservation->guest?->fullName() ?? '—',

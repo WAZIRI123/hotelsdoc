@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Domain\Folios\Actions;
 
 use App\Domain\Fiscal\Actions\IssueReceiptForFolio;
-use App\Models\FiscalReceipt;
 use App\Models\Folio;
 use App\Models\FolioCharge;
 use App\Support\Money;
@@ -86,15 +85,12 @@ final class PostFolioCharge
             'subtotal' => $subtotal,
             'tax_total' => $taxTotal,
             'total_amount' => $total,
-            'status' => $reopen ? ($folio->closed_at === null ? 'open' : 'closed') : $folio->status,
+            'status' => $reopen ? $folio->unsettledStatus() : $folio->status,
             'settled_at' => $reopen ? null : $folio->settled_at,
         ]);
 
         if ($wasSettled) {
-            FiscalReceipt::query()
-                ->where('folio_id', $folio->id)
-                ->where('status', 'issued')
-                ->update(['status' => 'superseded']);
+            $folio->supersedeReceipts();
 
             if (! $reopen) {
                 $this->issueReceipt->execute($folio);

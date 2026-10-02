@@ -83,7 +83,7 @@ class Terminal extends Component
     {
         return PosOrder::query()
             ->where('outlet_id', $this->outlet->id)
-            ->whereIn('status', ['billed', 'sent', 'voided'])
+            ->whereIn('status', ['billed', 'voided'])
             ->with(['folio.guest'])
             ->withCount('items')
             ->latest('id')
@@ -122,7 +122,7 @@ class Terminal extends Component
         $order = PosOrder::query()
             ->where('outlet_id', $this->outlet->id)
             ->where('opened_by', Auth::id())
-            ->whereIn('status', ['open', 'sent'])
+            ->where('status', 'open')
             ->latest('id')
             ->first();
 
@@ -383,7 +383,7 @@ class Terminal extends Component
 
     private function orderIsEditable(PosOrder $order): bool
     {
-        if (in_array($order->status, ['open', 'sent'], true)) {
+        if ($order->status === 'open') {
             return true;
         }
 

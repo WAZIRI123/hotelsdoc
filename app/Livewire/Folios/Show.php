@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Livewire\Folios;
 
 use App\Domain\Folios\Actions\ApplyFolioDiscount;
+use App\Domain\Folios\Actions\VoidFolio;
 use App\Domain\Notifications\BeemSmsClient;
 use App\Domain\Payments\Actions\RecordRefund;
+use App\Domain\Payments\Actions\VoidPayment;
 use App\Domain\Tenancy\TenantContext;
 use App\Mail\FolioBillMail;
 use App\Models\FiscalReceipt;
 use App\Models\Folio;
+use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Support\Money;
 use Flux\Flux;
@@ -43,6 +46,10 @@ class Show extends Component
     public ?int $refund_amount = null;
 
     public string $refund_reference = '';
+
+    public ?int $voidingPaymentId = null;
+
+    public string $void_reason = '';
 
     public ?int $discount_amount = null;
 
@@ -210,6 +217,73 @@ class Show extends Component
 
         Flux::toast(variant: 'success', text: __('Discount applied.'));
         Flux::modal('add-discount')->close();
+        $this->reloadFolio($this->folio);
+    }
+
+    public function canVoid(): bool
+    {
+        return (Auth::user()?->can('manage-payments') ?? false) && $this->folio->status !== 'void';
+    }
+
+    public function startVoidPayment(int $paymentId): void
+    {
+        abort_unless($this->canVoid(), 403);
+
+        $this->voidingPaymentId = $this->folio->payments()->whereKey($paymentId)->firstOrFail()->id;
+        $this->void_reason = '';
+        $this->resetErrorBag('void_reason');
+        Flux::modal('void-payment')->show();
+    }
+
+    public function voidPayment(VoidPayment $action): void
+    {
+        abort_unless($this->canVoid(), 403);
+
+        $this->validate(['void_reason' => ['required', 'string', 'max:255']]);
+
+        try {
+            $action->execute(
+                Payment::query()->where('folio_id', $this->folio->id)->findOrFail($this->voidingPaymentId),
+                $this->void_reason,
+                Auth::user(),
+            );
+        } catch (RuntimeException $e) {
+            $this->addError('void_reason', $e->getMessage());
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Payment voided.'));
+        Flux::modal('void-payment')->close();
+        $this->voidingPaymentId = null;
+        $this->reloadFolio($this->folio);
+    }
+
+    public function startVoidFolio(): void
+    {
+        abort_unless($this->canVoid(), 403);
+
+        $this->void_reason = '';
+        $this->resetErrorBag('void_reason');
+        Flux::modal('void-folio')->show();
+    }
+
+    public function voidFolio(VoidFolio $action): void
+    {
+        abort_unless($this->canVoid(), 403);
+
+        $this->validate(['void_reason' => ['required', 'string', 'max:255']]);
+
+        try {
+            $action->execute($this->folio, $this->void_reason, Auth::user());
+        } catch (RuntimeException $e) {
+            $this->addError('void_reason', $e->getMessage());
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Folio voided.'));
+        Flux::modal('void-folio')->close();
         $this->reloadFolio($this->folio);
     }
 

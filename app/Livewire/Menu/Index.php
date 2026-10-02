@@ -182,6 +182,12 @@ class Index extends Component
 
         $item = $this->editingItemId ? MenuItem::query()->findOrFail($this->editingItemId) : null;
 
+        if ($item?->track_stock && ! $this->itemTrackStock && $item->stock_quantity > 0) {
+            $this->addError('itemTrackStock', __(':count still in stock. Issue them under Manage Stock before you stop tracking this item.', ['count' => $item->stock_quantity]));
+
+            return;
+        }
+
         // Stock only moves through receipts, issues and sales so the stock report stays accurate:
         // opening stock for a newly tracked item is recorded as a stock entry, not written directly.
         $isNewlyTracked = $this->itemTrackStock && $item?->track_stock !== true;

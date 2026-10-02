@@ -28,13 +28,16 @@ use Illuminate\Support\Str;
  * @property Money $tax_total
  * @property Money $total_amount
  * @property Carbon|null $billed_at
+ * @property Carbon|null $voided_at
+ * @property int|null $voided_by
+ * @property string|null $void_reason
  */
 class PosOrder extends Model
 {
     /** @use HasFactory<PosOrderFactory> */
     use BelongsToTenant, HasFactory;
 
-    public const STATUSES = ['open', 'sent', 'billed', 'voided'];
+    public const STATUSES = ['open', 'billed', 'voided'];
 
     protected $fillable = [
         'hotel_id',
@@ -49,6 +52,9 @@ class PosOrder extends Model
         'total_amount',
         'notes',
         'billed_at',
+        'voided_at',
+        'voided_by',
+        'void_reason',
     ];
 
     /**
@@ -61,6 +67,7 @@ class PosOrder extends Model
             'tax_total' => MoneyCast::class,
             'total_amount' => MoneyCast::class,
             'billed_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
     }
 
@@ -94,5 +101,19 @@ class PosOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(PosOrderItem::class);
+    }
+
+    /**
+     * Put the stock taken by this order's items back on hand.
+     */
+    public function restoreStock(): void
+    {
+        $this->loadMissing('items.menuItem');
+
+        foreach ($this->items as $line) {
+            if ($line->menuItem?->track_stock) {
+                $line->menuItem->increment('stock_quantity', $line->quantity);
+            }
+        }
     }
 }

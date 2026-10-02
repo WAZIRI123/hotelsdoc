@@ -17,7 +17,7 @@
         'Checked In' => 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
         'Checked Out' => 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
         'Confirmed' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
-        'Hold' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+        'No Show' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
         default => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
     };
     $th = 'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400';

@@ -47,6 +47,7 @@ class ProfitLoss extends ReportComponent
             __('Food Sales') => $this->posSales(['restaurant', 'room_service']),
             __('Shop Sales') => $this->posSales(['shop']),
             __('Extras Sales') => $this->money((int) ExtraOrder::query()
+                ->whereDoesntHave('folio', fn (Builder $folio) => $folio->where('status', 'void'))
                 ->whereDate('order_date', '>=', $this->periodStart())
                 ->whereDate('order_date', '<=', $this->periodEnd())
                 ->sum(DB::raw('total_amount - tax_amount'))),

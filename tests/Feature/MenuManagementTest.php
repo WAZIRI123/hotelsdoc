@@ -46,3 +46,17 @@ it('rejects an item without a category', function (): void {
         ->call('saveItem')
         ->assertHasErrors('itemCategoryId');
 });
+
+it('will not stop tracking stock while items are still on hand', function (): void {
+    $category = MenuCategory::factory()->for($this->hotel)->for($this->outlet)->create();
+    $item = MenuItem::factory()->for($this->hotel)->for($this->outlet)->for($category, 'category')->create(['track_stock' => true, 'stock_quantity' => 4]);
+
+    Livewire::test(Index::class, ['outlet' => $this->outlet])
+        ->call('openEditItem', $item->id)
+        ->set('itemTrackStock', false)
+        ->call('saveItem')
+        ->assertHasErrors('itemTrackStock');
+
+    expect($item->fresh()->track_stock)->toBeTrue()
+        ->and($item->fresh()->stock_quantity)->toBe(4);
+});

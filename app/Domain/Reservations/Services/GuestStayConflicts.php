@@ -17,7 +17,7 @@ use RuntimeException;
 final class GuestStayConflicts
 {
     /** Reservation statuses in which someone is expected to be in the room. */
-    private const LIVE_STATUSES = ['hold', 'confirmed', 'checked_in'];
+    private const LIVE_STATUSES = ['confirmed', 'checked_in'];
 
     /**
      * Each guest's clashing occupancy on another reservation, keyed by guest id.
