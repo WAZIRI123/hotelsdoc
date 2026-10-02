@@ -59,6 +59,10 @@ final class CreateReservation
 
             $this->occupancy->assertFits($roomType, $adults, $children);
 
+            if ($room->isOutOfService()) {
+                throw new RuntimeException("Room {$room->number} is out of service.");
+            }
+
             if (! $this->availability->isRoomAvailable($room->id, $arrival, $departure)) {
                 throw new RuntimeException("Room {$room->number} is no longer available for the requested dates.");
             }

@@ -72,7 +72,7 @@ final class OccupancyChanges
      */
     public function assertRoomCanBeTaken(Room $room, array $nights): void
     {
-        if (! $room->is_active || in_array($room->status, ['maintenance', 'out_of_order'], true)) {
+        if ($room->isOutOfService()) {
             throw new RuntimeException("Room {$room->number} is out of service.");
         }
 

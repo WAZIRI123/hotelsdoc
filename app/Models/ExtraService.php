@@ -45,7 +45,7 @@ class ExtraService extends Model
     protected function casts(): array
     {
         return [
-            'price' => MoneyCast::class.':TZS',
+            'price' => MoneyCast::class,
             'is_active' => 'boolean',
         ];
     }

@@ -309,9 +309,9 @@
             <flux:input wire:model="entryDescription" :label="__('Description')" :placeholder="__('e.g. Invoice number')" />
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input type="number" min="1" step="1" wire:model="entryQuantity" :label="__('Quantity')" required />
-                <flux:input type="number" min="0" step="any" wire:model="entryUnitCost" :label="__('Unit cost (:currency)', ['currency' => $this->hotelCurrency()])" />
+                <flux:input type="number" min="0" step="any" wire:model="entryUnitCost" :label="__('Unit cost (:currency)', ['currency' => $this->hotelCurrency()])" required />
             </div>
-            <flux:text class="text-sm">{{ __('The quantity is added to the product stock on hand. Stock tracking is switched on if it was off.') }}</flux:text>
+            <flux:text class="text-sm">{{ __('The quantity is added to the product stock on hand. Stock tracking is switched on if it was off. Quantity × unit cost is counted as Stock Purchases in the Profit & Loss report, so do not also record this delivery as an expense.') }}</flux:text>
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close>

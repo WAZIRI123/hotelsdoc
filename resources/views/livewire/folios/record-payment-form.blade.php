@@ -11,7 +11,7 @@
             </flux:select>
 
             <flux:input wire:model.number="amount_tsh" type="number" min="1"
-                :label="__('Amount (TSh)')" required />
+                :label="__('Amount (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" required />
 
             @if ($this->selectedRequiresReference)
                 <flux:input wire:model="reference"

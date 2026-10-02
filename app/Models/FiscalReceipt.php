@@ -54,7 +54,7 @@ class FiscalReceipt extends Model
     protected function casts(): array
     {
         return [
-            'total_amount' => MoneyCast::class.':TZS',
+            'total_amount' => MoneyCast::class,
             'raw_response' => 'array',
             'issued_at' => 'datetime',
             'sequence' => 'integer',

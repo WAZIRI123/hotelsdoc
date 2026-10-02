@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Domain\Tenancy\Concerns\BelongsToTenant;
 use App\Support\Casts\MoneyCast;
+use App\Support\HotelCurrency;
 use App\Support\Money;
 use Database\Factories\FolioFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,7 +45,6 @@ class Folio extends Model
         'tax_total' => 0,
         'total_amount' => 0,
         'paid_total' => 0,
-        'currency' => 'TZS',
         'status' => 'open',
     ];
 
@@ -69,10 +69,10 @@ class Folio extends Model
     protected function casts(): array
     {
         return [
-            'subtotal' => MoneyCast::class.':TZS',
-            'tax_total' => MoneyCast::class.':TZS',
-            'total_amount' => MoneyCast::class.':TZS',
-            'paid_total' => MoneyCast::class.':TZS',
+            'subtotal' => MoneyCast::class,
+            'tax_total' => MoneyCast::class,
+            'total_amount' => MoneyCast::class,
+            'paid_total' => MoneyCast::class,
             'closed_at' => 'datetime',
             'settled_at' => 'datetime',
         ];
@@ -83,6 +83,7 @@ class Folio extends Model
         static::creating(function (Folio $folio): void {
             $folio->uuid ??= (string) Str::uuid();
             $folio->reference ??= 'F-'.strtoupper(Str::random(10));
+            $folio->currency ??= HotelCurrency::forHotel($folio->hotel_id);
         });
     }
 

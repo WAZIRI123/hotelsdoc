@@ -54,8 +54,8 @@ class RoomType extends Model
     protected function casts(): array
     {
         return [
-            'default_rate' => MoneyCast::class.':TZS',
-            'extra_guest_fee' => MoneyCast::class.':TZS',
+            'default_rate' => MoneyCast::class,
+            'extra_guest_fee' => MoneyCast::class,
             'is_active' => 'boolean',
             'base_occupancy' => 'integer',
             'max_occupancy' => 'integer',

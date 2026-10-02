@@ -5,16 +5,22 @@ declare(strict_types=1);
 namespace App\Livewire\Extras;
 
 use App\Domain\Extras\Actions\RecordExtraOrder;
-use App\Domain\Tenancy\TenantContext;
-use App\Livewire\Admin\Hotels\Create as AdminHotelsCreate;
+use App\Domain\Payments\Actions\RecordPayment;
+use App\Domain\Payments\PaymentGatewayManager;
+use App\Models\ExtraOrder;
 use App\Models\ExtraService;
+use App\Models\PaymentMethod;
 use App\Models\Stay;
+use App\Support\HotelCurrency;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -28,9 +34,12 @@ class Create extends Component
     /** Either self::WALK_IN or the id of an in-house stay. */
     public string $customer = '';
 
-    public string $currency = '';
-
     public string $orderDate = '';
+
+    /** Payment method code a walk-in customer pays with. */
+    public string $paymentMethod = '';
+
+    public string $paymentReference = '';
 
     /** @var list<array{extra_service_id: string, quantity: string, price: string}> */
     public array $lines = [];
@@ -39,7 +48,6 @@ class Create extends Component
     {
         abort_unless(Auth::user()?->can('manage-folios') ?? false, 403);
 
-        $this->currency = app(TenantContext::class)->current()->currency;
         $this->orderDate = now()->toDateString();
         $this->lines = [$this->blankLine()];
     }
@@ -67,12 +75,26 @@ class Create extends Component
     }
 
     /**
-     * @return list<string>
+     * @return Collection<int, PaymentMethod>
      */
     #[Computed]
-    public function currencies(): array
+    public function paymentMethods(): Collection
     {
-        return AdminHotelsCreate::CURRENCIES;
+        return PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get();
+    }
+
+    #[Computed]
+    public function paymentRequiresReference(): bool
+    {
+        if ($this->paymentMethod === '') {
+            return false;
+        }
+
+        try {
+            return app(PaymentGatewayManager::class)->for($this->paymentMethod)->requiresReference();
+        } catch (InvalidArgumentException) {
+            return false;
+        }
     }
 
     public function addLine(): void
@@ -112,7 +134,7 @@ class Create extends Component
         }
     }
 
-    public function save(RecordExtraOrder $recordExtraOrder): void
+    public function save(RecordExtraOrder $recordExtraOrder, RecordPayment $recordPayment): void
     {
         abort_unless(Auth::user()?->can('manage-folios') ?? false, 403);
 
@@ -127,14 +149,17 @@ class Create extends Component
 
         $this->validate([
             'customer' => ['required', 'string'],
-            'currency' => ['required', 'in:'.implode(',', $this->currencies())],
             'orderDate' => ['required', 'date'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.extra_service_id' => ['required', 'integer', 'exists:extra_services,id'],
             'lines.*.quantity' => ['required', 'integer', 'min:1'],
             'lines.*.price' => ['required', 'numeric', 'min:0'],
+            'paymentMethod' => [Rule::requiredIf($this->customer === self::WALK_IN), 'nullable', Rule::in($this->paymentMethods()->pluck('code')->all())],
+            'paymentReference' => [Rule::requiredIf($this->customer === self::WALK_IN && $this->paymentRequiresReference()), 'nullable', 'string', 'max:100'],
         ], [
             'customer.required' => __('Select a customer.'),
+            'paymentMethod.required' => __('Select how the customer paid.'),
+            'paymentReference.required' => __('Enter the payment reference.'),
             'lines.*.extra_service_id.required' => __('Select an extra item.'),
         ]);
 
@@ -150,18 +175,34 @@ class Create extends Component
         }
 
         try {
-            $order = $recordExtraOrder->execute(
-                stay: $stay,
-                currency: $this->currency,
-                orderDate: CarbonImmutable::parse($this->orderDate),
-                lines: array_map(fn (array $line): array => [
-                    'extra_service_id' => (int) $line['extra_service_id'],
-                    'quantity' => (int) $line['quantity'],
-                    'unit_price' => Money::fromMajor((float) $line['price'], $this->currency)->amount,
-                ], $this->lines),
-                createdBy: Auth::user(),
-            );
-        } catch (RuntimeException $e) {
+            $order = DB::transaction(function () use ($recordExtraOrder, $recordPayment, $stay): ExtraOrder {
+                $currency = HotelCurrency::current();
+
+                $order = $recordExtraOrder->execute(
+                    stay: $stay,
+                    currency: $currency,
+                    orderDate: CarbonImmutable::parse($this->orderDate),
+                    lines: array_map(fn (array $line): array => [
+                        'extra_service_id' => (int) $line['extra_service_id'],
+                        'quantity' => (int) $line['quantity'],
+                        'unit_price' => Money::fromMajor((float) $line['price'], $currency)->amount,
+                    ], $this->lines),
+                    createdBy: Auth::user(),
+                );
+
+                if ($order->isWalkIn() && $order->total_amount > 0) {
+                    $recordPayment->execute(
+                        folio: $order->folio,
+                        methodCode: $this->paymentMethod,
+                        amount: $order->total(),
+                        reference: $this->paymentReference ?: null,
+                        receivedBy: Auth::user(),
+                    );
+                }
+
+                return $order;
+            });
+        } catch (RuntimeException|InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
 
             return;
@@ -169,7 +210,7 @@ class Create extends Component
 
         Flux::toast(variant: 'success', text: __('Extras order :reference saved.', ['reference' => $order->reference]));
 
-        $this->customer = '';
+        $this->reset(['customer', 'paymentMethod', 'paymentReference']);
         $this->lines = [$this->blankLine()];
     }
 

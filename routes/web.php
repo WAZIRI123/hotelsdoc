@@ -2,8 +2,6 @@
 
 use App\Domain\Tenancy\TenantContext;
 use App\Http\Controllers\SwitchHotelController;
-use App\Livewire\Admin\Currencies\Create as AdminCurrenciesCreate;
-use App\Livewire\Admin\Currencies\Index as AdminCurrenciesIndex;
 use App\Livewire\Admin\Hotels\Create as AdminHotelsCreate;
 use App\Livewire\Admin\Hotels\Index as AdminHotelsIndex;
 use App\Livewire\Admin\Hotels\Show as AdminHotelsShow;
@@ -56,66 +54,78 @@ Route::redirect('/', '/login')->name('home');
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 
-    Route::view('room-settings', 'room-settings')->name('room-settings');
-    Route::livewire('room-types', RoomTypesIndex::class)->name('room-types.index');
-    Route::livewire('meal-plans', MealPlansIndex::class)->name('meal-plans.index');
-    Route::livewire('rate-plans', RatePlansIndex::class)->name('rate-plans.index');
-    Route::livewire('rate-plans/{ratePlan}/calendar', RatePlansCalendar::class)->name('rate-plans.calendar');
-    Route::livewire('rooms', RoomsIndex::class)->name('rooms.index');
+    Route::middleware('can:manage-rooms')->group(function () {
+        Route::view('room-settings', 'room-settings')->name('room-settings');
+        Route::livewire('meal-plans', MealPlansIndex::class)->name('meal-plans.index');
+        Route::livewire('rate-plans', RatePlansIndex::class)->name('rate-plans.index');
+        Route::livewire('rate-plans/{ratePlan}/calendar', RatePlansCalendar::class)->name('rate-plans.calendar');
+        Route::livewire('rooms', RoomsIndex::class)->name('rooms.index');
+    });
+    Route::livewire('room-types', RoomTypesIndex::class)->middleware('can:manage-room-types')->name('room-types.index');
 
-    Route::livewire('guests', GuestsIndex::class)->name('guests.index');
-    Route::livewire('guests/register', GuestsRegister::class)->name('guests.register');
-    Route::livewire('guests/list', GuestsList::class)->name('guests.list');
+    Route::middleware('can:manage-guests')->group(function () {
+        Route::livewire('guests', GuestsIndex::class)->name('guests.index');
+        Route::livewire('guests/register', GuestsRegister::class)->name('guests.register');
+        Route::livewire('guests/list', GuestsList::class)->name('guests.list');
+    });
 
-    Route::livewire('agents', AgentsIndex::class)->name('agents.index');
-    Route::livewire('agents/register', AgentsRegister::class)->name('agents.register');
-    Route::livewire('agents/{agent}/edit', AgentsRegister::class)->name('agents.edit');
+    Route::middleware('can:manage-reservations')->group(function () {
+        Route::livewire('agents', AgentsIndex::class)->name('agents.index');
+        Route::livewire('agents/register', AgentsRegister::class)->name('agents.register');
+        Route::livewire('agents/{agent}/edit', AgentsRegister::class)->name('agents.edit');
 
-    Route::livewire('reservations', ReservationsIndex::class)->name('reservations.index');
-    Route::livewire('reservations/new', ReservationsCreate::class)->name('reservations.create');
-    Route::livewire('reservations/{reservation}', ReservationsShow::class)->name('reservations.show');
+        Route::livewire('reservations', ReservationsIndex::class)->name('reservations.index');
+        Route::livewire('reservations/new', ReservationsCreate::class)->name('reservations.create');
+        Route::livewire('reservations/{reservation}', ReservationsShow::class)->name('reservations.show');
+    });
 
-    Route::livewire('folios/{folio}', FolioShow::class)->name('folios.show');
-    Route::get('folios/{folio}/print', function (Folio $folio) {
-        $folio->load(['charges', 'payments', 'guest', 'stay.reservation.rooms.roomType']);
+    Route::middleware('can:manage-folios')->group(function () {
+        Route::livewire('folios/{folio}', FolioShow::class)->name('folios.show');
+        Route::get('folios/{folio}/print', function (Folio $folio) {
+            $folio->load(['charges', 'payments', 'guest', 'stay.reservation.rooms.roomType']);
 
-        return view('folios.print', [
-            'folio' => $folio,
-            'hotel' => app(TenantContext::class)->current(),
-        ]);
-    })->name('folios.print');
+            return view('folios.print', [
+                'folio' => $folio,
+                'hotel' => app(TenantContext::class)->current(),
+            ]);
+        })->name('folios.print');
 
-    Route::livewire('extras', ExtrasCreate::class)->name('extras.create');
-    Route::livewire('extras/orders', ExtrasOrders::class)->name('extras.orders');
-    Route::livewire('extras/services', ExtrasServices::class)->name('extras.services');
+        Route::livewire('extras', ExtrasCreate::class)->name('extras.create');
+        Route::livewire('extras/orders', ExtrasOrders::class)->name('extras.orders');
+    });
+    Route::livewire('extras/services', ExtrasServices::class)->middleware('can:manage-hotel')->name('extras.services');
 
-    Route::get('manage-stock', fn () => view('manage-stock', [
-        'outlets' => Outlet::query()->orderByDesc('is_active')->orderBy('name')->get(),
-    ]))->name('manage-stock');
-    Route::get('manage-stock/{outlet}', fn (Outlet $outlet) => view('manage-stock-outlet', [
-        'outlet' => $outlet,
-    ]))->name('manage-stock.outlet');
-    Route::livewire('manage-stock/{outlet}/issue', StockIssue::class)->name('manage-stock.issue');
-    Route::livewire('suppliers', SuppliersIndex::class)->name('suppliers.index');
-    Route::livewire('suppliers/new', SuppliersRegister::class)->name('suppliers.create');
-    Route::livewire('suppliers/{supplier}/edit', SuppliersRegister::class)->name('suppliers.edit');
-    Route::livewire('stock-types', StockTypesIndex::class)->name('stock-types.index');
-    Route::livewire('stock-types/new', StockTypesRegister::class)->name('stock-types.create');
-    Route::livewire('stock-types/{stockType}/edit', StockTypesRegister::class)->name('stock-types.edit');
-    Route::livewire('outlets', OutletsIndex::class)->name('outlets.index');
-    Route::livewire('outlets/{outlet}/menu', MenuIndex::class)->name('menu.index');
+    Route::middleware('can:manage-stock')->group(function () {
+        Route::get('manage-stock', fn () => view('manage-stock', [
+            'outlets' => Outlet::query()->orderByDesc('is_active')->orderBy('name')->get(),
+        ]))->name('manage-stock');
+        Route::get('manage-stock/{outlet}', fn (Outlet $outlet) => view('manage-stock-outlet', [
+            'outlet' => $outlet,
+        ]))->name('manage-stock.outlet');
+        Route::livewire('manage-stock/{outlet}/issue', StockIssue::class)->name('manage-stock.issue');
+        Route::livewire('suppliers', SuppliersIndex::class)->name('suppliers.index');
+        Route::livewire('suppliers/new', SuppliersRegister::class)->name('suppliers.create');
+        Route::livewire('suppliers/{supplier}/edit', SuppliersRegister::class)->name('suppliers.edit');
+        Route::livewire('stock-types', StockTypesIndex::class)->name('stock-types.index');
+        Route::livewire('stock-types/new', StockTypesRegister::class)->name('stock-types.create');
+        Route::livewire('stock-types/{stockType}/edit', StockTypesRegister::class)->name('stock-types.edit');
+    });
+    Route::livewire('outlets', OutletsIndex::class)->middleware('can:manage-outlets')->name('outlets.index');
+    Route::livewire('outlets/{outlet}/menu', MenuIndex::class)->middleware('can:manage-menu')->name('menu.index');
 
-    Route::livewire('pos', PosLobby::class)->name('pos.lobby');
-    Route::livewire('pos/transactions/{posOrder}', PosTransaction::class)->name('pos.transactions.show');
-    Route::get('pos/transactions/{posOrder}/print', function (PosOrder $posOrder) {
-        $posOrder->load(['outlet', 'items', 'folio.guest', 'folio.payments']);
+    Route::middleware('can:operate-pos')->group(function () {
+        Route::livewire('pos', PosLobby::class)->name('pos.lobby');
+        Route::livewire('pos/transactions/{posOrder}', PosTransaction::class)->name('pos.transactions.show');
+        Route::get('pos/transactions/{posOrder}/print', function (PosOrder $posOrder) {
+            $posOrder->load(['outlet', 'items', 'folio.guest', 'folio.payments']);
 
-        return view('pos.transactions.print', [
-            'order' => $posOrder,
-            'hotel' => app(TenantContext::class)->current(),
-        ]);
-    })->name('pos.transactions.print');
-    Route::livewire('pos/{outlet}', PosTerminal::class)->name('pos.terminal');
+            return view('pos.transactions.print', [
+                'order' => $posOrder,
+                'hotel' => app(TenantContext::class)->current(),
+            ]);
+        })->name('pos.transactions.print');
+        Route::livewire('pos/{outlet}', PosTerminal::class)->name('pos.terminal');
+    });
 
     Route::livewire('reports', ReportsIndex::class)->name('reports.index');
     Route::livewire('reports/cash-up', CashUp::class)->name('reports.cash-up');
@@ -137,8 +147,6 @@ Route::post('hotels/{hotel}/switch', SwitchHotelController::class)
 Route::middleware(['auth', 'verified', 'super-admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::view('organization', 'admin.organization')->name('organization');
     Route::livewire('organization/system-control', AdminSystemControl::class)->name('organization.system-control');
-    Route::livewire('currencies', AdminCurrenciesIndex::class)->name('currencies.index');
-    Route::livewire('currencies/new', AdminCurrenciesCreate::class)->name('currencies.create');
     Route::livewire('invoice-footers', AdminInvoiceFootersIndex::class)->name('invoice-footers.index');
     Route::livewire('invoice-footers/new', AdminInvoiceFootersCreate::class)->name('invoice-footers.create');
     Route::livewire('hotels', AdminHotelsIndex::class)->name('hotels.index');

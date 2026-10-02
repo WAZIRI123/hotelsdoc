@@ -94,7 +94,7 @@ class StockProducts extends ReportComponent
             'entryExpiry' => ['nullable', 'date', 'after_or_equal:entryDate'],
             'entryDescription' => ['nullable', 'string', 'max:255'],
             'entryQuantity' => ['required', 'integer', 'min:1', 'max:1000000'],
-            'entryUnitCost' => ['nullable', 'numeric', 'min:0', 'max:1000000000'],
+            'entryUnitCost' => ['required', 'numeric', 'min:0', 'max:1000000000'],
         ], attributes: [
             'entrySupplier' => __('supplier'),
             'entryUnitCost' => __('unit cost'),
@@ -108,7 +108,7 @@ class StockProducts extends ReportComponent
             description: $validated['entryDescription'] ?: null,
             recordedBy: Auth::user(),
             supplier: $validated['entrySupplier'] ? $this->suppliers()->findOrFail((int) $validated['entrySupplier']) : null,
-            unitCost: ($validated['entryUnitCost'] ?? '') !== '' ? Money::fromMajor((float) $validated['entryUnitCost'])->amount : null,
+            unitCost: Money::fromMajor((float) $validated['entryUnitCost'])->amount,
         );
 
         Flux::modal('stock-entry-form')->close();

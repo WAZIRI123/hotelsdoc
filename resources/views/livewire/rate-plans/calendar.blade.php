@@ -85,7 +85,7 @@
             </div>
 
             <flux:input wire:model.number="price_tsh" type="number" min="0"
-                :label="__('Override price (TSh per night)')" :placeholder="__('Leave empty for base rate')" />
+                :label="__('Override price (:currency per night)', ['currency' => \App\Support\HotelCurrency::current()])" :placeholder="__('Leave empty for base rate')" />
 
             <flux:input wire:model.number="min_stay" type="number" min="1" max="60"
                 :label="__('Minimum stay (nights)')" :placeholder="__('None')" />

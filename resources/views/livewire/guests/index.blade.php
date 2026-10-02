@@ -78,6 +78,14 @@
                                 aria-label="{{ __('Reserve room') }} {{ $roomLabel }}">
                                 <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
                             </a>
+                        @elseif ($room->status === 'cleaning')
+                            <button type="button" wire:click="markClean({{ $room->id }})"
+                                wire:confirm="{{ __('Mark room :number as clean and available?', ['number' => $room->number]) }}"
+                                class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
+                                title="{{ __('Mark clean') }}"
+                                aria-label="{{ __('Mark room clean') }} {{ $roomLabel }}">
+                                <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
+                            </button>
                         @elseif ($isOccupiedWithFolio)
                             <a href="{{ route('folios.show', $activeFolio) }}"
                                 wire:navigate

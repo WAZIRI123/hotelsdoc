@@ -20,6 +20,7 @@ use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -132,9 +133,26 @@ class Show extends Component
         return timezone_identifiers_list();
     }
 
+    /**
+     * Every amount a hotel stores is in its currency, so once money has been
+     * recorded, changing the currency would silently relabel all of it.
+     */
+    #[Computed]
+    public function currencyIsLocked(): bool
+    {
+        return collect(['folios', 'pos_orders', 'extra_orders', 'expenses'])
+            ->contains(fn (string $table): bool => DB::table($table)->where('hotel_id', $this->hotel->id)->exists());
+    }
+
     public function saveDetails(): void
     {
         $this->guardSuperAdmin();
+
+        if ($this->currency !== $this->hotel->currency && $this->currencyIsLocked()) {
+            $this->addError('currency', __('The currency cannot be changed once the hotel has recorded sales or expenses.'));
+
+            return;
+        }
 
         $validated = $this->validate([
             'name' => 'required|string|max:120',

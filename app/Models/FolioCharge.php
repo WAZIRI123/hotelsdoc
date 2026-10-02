@@ -50,9 +50,9 @@ class FolioCharge extends Model
     protected function casts(): array
     {
         return [
-            'unit_price' => MoneyCast::class.':TZS',
-            'tax_amount' => MoneyCast::class.':TZS',
-            'total' => MoneyCast::class.':TZS',
+            'unit_price' => MoneyCast::class,
+            'tax_amount' => MoneyCast::class,
+            'total' => MoneyCast::class,
             'posted_at' => 'datetime',
             'quantity' => 'integer',
         ];

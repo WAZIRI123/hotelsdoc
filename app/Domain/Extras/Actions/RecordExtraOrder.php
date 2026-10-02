@@ -6,6 +6,7 @@ namespace App\Domain\Extras\Actions;
 
 use App\Models\ExtraOrder;
 use App\Models\ExtraService;
+use App\Models\Folio;
 use App\Models\Stay;
 use App\Models\User;
 use App\Support\Money;
@@ -16,9 +17,10 @@ use RuntimeException;
 /**
  * Records a sale of extra services.
  *
- * For an in-house guest the order total is posted as a single charge on the
- * stay's folio (mirroring BillPosOrderToFolio). Walk-in orders are kept as
- * standalone records.
+ * The order total is posted as a single charge on a folio (mirroring
+ * BillPosOrderToFolio): the stay's folio for an in-house guest, or a fresh
+ * walk-in folio for a walk-in customer, which the caller then settles with
+ * RecordPayment so the sale reaches the cash-up.
  */
 final class RecordExtraOrder
 {
@@ -37,9 +39,13 @@ final class RecordExtraOrder
         }
 
         return DB::transaction(function () use ($stay, $currency, $orderDate, $lines, $createdBy): ExtraOrder {
-            $folio = null;
+            if ($stay === null) {
+                $folio = Folio::query()->create(['status' => 'open']);
 
-            if ($stay !== null) {
+                if ($folio->currency !== $currency) {
+                    throw new RuntimeException("Walk-in extras are paid in {$folio->currency}; record the extras in {$folio->currency}.");
+                }
+            } else {
                 if ($stay->checked_out_at !== null) {
                     throw new RuntimeException('This guest has already checked out.');
                 }
@@ -62,7 +68,7 @@ final class RecordExtraOrder
 
             $order = ExtraOrder::query()->create([
                 'stay_id' => $stay?->id,
-                'folio_id' => $folio?->id,
+                'folio_id' => $folio->id,
                 'created_by' => $createdBy?->id,
                 'currency' => $currency,
                 'order_date' => $orderDate->toDateString(),
@@ -89,28 +95,26 @@ final class RecordExtraOrder
 
             $order->update(['total_amount' => $total]);
 
-            if ($folio !== null) {
-                $amount = new Money($total, $currency);
+            $amount = new Money($total, $currency);
 
-                $folio->charges()->create([
-                    'source_type' => 'extra_order',
-                    'source_id' => $order->id,
-                    'description' => "Extras — order {$order->reference}",
-                    'quantity' => 1,
-                    'unit_price' => $amount,
-                    'tax_amount' => Money::zero($currency),
-                    'total' => $amount,
-                    'posted_at' => now(),
-                ]);
+            $folio->charges()->create([
+                'source_type' => 'extra_order',
+                'source_id' => $order->id,
+                'description' => "Extras — order {$order->reference}",
+                'quantity' => 1,
+                'unit_price' => $amount,
+                'tax_amount' => Money::zero($currency),
+                'total' => $amount,
+                'posted_at' => now(),
+            ]);
 
-                $folio->refresh();
-                $newSubtotal = $folio->subtotal->add($amount);
+            $folio->refresh();
+            $newSubtotal = $folio->subtotal->add($amount);
 
-                $folio->update([
-                    'subtotal' => $newSubtotal,
-                    'total_amount' => $newSubtotal->add($folio->tax_total),
-                ]);
-            }
+            $folio->update([
+                'subtotal' => $newSubtotal,
+                'total_amount' => $newSubtotal->add($folio->tax_total),
+            ]);
 
             return $order->load('items');
         });

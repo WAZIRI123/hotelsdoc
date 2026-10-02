@@ -52,9 +52,9 @@ class RatePlan extends Model
     protected function casts(): array
     {
         return [
-            'price' => MoneyCast::class.':TZS',
-            'extra_adult_price' => MoneyCast::class.':TZS',
-            'extra_child_price' => MoneyCast::class.':TZS',
+            'price' => MoneyCast::class,
+            'extra_adult_price' => MoneyCast::class,
+            'extra_child_price' => MoneyCast::class,
             'valid_from' => 'date:Y-m-d',
             'valid_to' => 'date:Y-m-d',
             'is_active' => 'boolean',

@@ -14,18 +14,6 @@
                 'color' => 'bg-[#BC8F8F]',
             ],
             [
-                'route' => 'admin.currencies.create',
-                'label' => __('Add Currency'),
-                'icon' => 'banknotes',
-                'color' => 'bg-[#5F9EA0]',
-            ],
-            [
-                'route' => 'admin.currencies.index',
-                'label' => __('View Currency'),
-                'icon' => 'currency-dollar',
-                'color' => 'bg-[#6495ED]',
-            ],
-            [
                 'route' => 'admin.invoice-footers.create',
                 'label' => __('Add Invoice Footer'),
                 'icon' => 'pencil',

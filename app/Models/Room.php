@@ -29,6 +29,21 @@ class Room extends Model
 
     public const STATUSES = ['available', 'occupied', 'cleaning', 'maintenance', 'out_of_order'];
 
+    /**
+     * Statuses staff set by hand. 'occupied' is owned by check-in, check-out
+     * and room moves, so it is never chosen manually.
+     *
+     * @var list<string>
+     */
+    public const MANUAL_STATUSES = ['available', 'cleaning', 'maintenance', 'out_of_order'];
+
+    /**
+     * Statuses that take a room off sale until it is set back to available.
+     *
+     * @var list<string>
+     */
+    public const OUT_OF_SERVICE_STATUSES = ['maintenance', 'out_of_order'];
+
     protected $fillable = [
         'hotel_id',
         'room_type_id',
@@ -46,6 +61,15 @@ class Room extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Whether the room can be booked or slept in at all: inactive rooms and
+     * rooms under maintenance or out of order cannot.
+     */
+    public function isOutOfService(): bool
+    {
+        return ! $this->is_active || in_array($this->status, self::OUT_OF_SERVICE_STATUSES, true);
     }
 
     /**

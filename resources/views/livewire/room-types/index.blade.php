@@ -104,7 +104,7 @@
             </div>
 
             <flux:input wire:model.number="default_rate_tsh" type="number" min="0"
-                :label="__('Default rate (TSh per night)')" required />
+                :label="__('Default rate (:currency per night)', ['currency' => \App\Support\HotelCurrency::current()])" required />
 
             <flux:switch wire:model="is_active" :label="__('Active')" />
 

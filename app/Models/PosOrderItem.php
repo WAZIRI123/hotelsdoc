@@ -48,9 +48,9 @@ class PosOrderItem extends Model
     protected function casts(): array
     {
         return [
-            'unit_price' => MoneyCast::class.':TZS',
-            'tax_amount' => MoneyCast::class.':TZS',
-            'line_total' => MoneyCast::class.':TZS',
+            'unit_price' => MoneyCast::class,
+            'tax_amount' => MoneyCast::class,
+            'line_total' => MoneyCast::class,
             'modifiers' => 'array',
             'quantity' => 'integer',
         ];

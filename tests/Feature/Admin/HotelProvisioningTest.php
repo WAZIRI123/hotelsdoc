@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Livewire\Admin\Hotels\Create;
 use App\Livewire\Admin\Hotels\Index;
 use App\Livewire\Admin\Hotels\Show;
+use App\Models\Expense;
 use App\Models\Hotel;
 use App\Models\PaymentMethod;
 use App\Models\User;
@@ -127,6 +128,28 @@ it('updates hotel details from the manage page', function (): void {
         ->and($hotel->phone)->toBeNull();
 });
 
+it('locks the hotel currency once money has been recorded', function (): void {
+    $hotel = Hotel::factory()->create(['currency' => 'TZS']);
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    Livewire::test(Show::class, ['hotel' => $hotel])
+        ->set('currency', 'USD')
+        ->call('saveDetails')
+        ->assertHasNoErrors();
+
+    expect($hotel->fresh()->currency)->toBe('USD');
+
+    Expense::factory()->for($hotel)->create(['currency' => 'USD']);
+
+    Livewire::test(Show::class, ['hotel' => $hotel->fresh()])
+        ->assertSet('currency', 'USD')
+        ->set('currency', 'TZS')
+        ->call('saveDetails')
+        ->assertHasErrors('currency');
+
+    expect($hotel->fresh()->currency)->toBe('USD');
+});
+
 it('adds, re-roles and removes hotel users from the manage page', function (): void {
     $hotel = Hotel::factory()->create();
     $this->actingAs(User::factory()->superAdmin()->create());
@@ -189,8 +212,8 @@ it('shows the organization dashboard to a super-admin', function (): void {
         ->assertSee('Organization Dashboard')
         ->assertSee('System Control')
         ->assertSee('View Details')
-        ->assertSee('Add Currency')
-        ->assertSee('View Currency')
+        ->assertDontSee('Add Currency')
+        ->assertDontSee('View Currency')
         ->assertSee('Add Invoice Footer')
         ->assertSee('View Invoice Footer')
         ->assertSee(route('admin.hotels.index'));

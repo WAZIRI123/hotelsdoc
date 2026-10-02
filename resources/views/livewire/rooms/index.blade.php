@@ -79,6 +79,11 @@
                         <flux:dropdown align="end">
                             <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
                             <flux:menu>
+                                @if ($room->status === 'cleaning')
+                                    <flux:menu.item icon="sparkles" wire:click="markClean({{ $room->id }})">
+                                        {{ __('Mark clean') }}
+                                    </flux:menu.item>
+                                @endif
                                 <flux:menu.item icon="pencil-square" wire:click="openEdit({{ $room->id }})">
                                     {{ __('Edit') }}
                                 </flux:menu.item>
@@ -120,13 +125,20 @@
 
             <flux:input wire:model="number" :label="__('Room number')" required autofocus />
 
-            <flux:select wire:model="status" :label="__('Status')" required>
-                <flux:select.option value="available">{{ __('Available') }}</flux:select.option>
-                <flux:select.option value="occupied">{{ __('Occupied') }}</flux:select.option>
-                <flux:select.option value="cleaning">{{ __('Cleaning') }}</flux:select.option>
-                <flux:select.option value="maintenance">{{ __('Maintenance') }}</flux:select.option>
-                <flux:select.option value="out_of_order">{{ __('Out of order') }}</flux:select.option>
-            </flux:select>
+            @if ($isOccupied)
+                <flux:select :label="__('Status')" disabled
+                    :description:trailing="__('Guests are in this room. The status changes at check-out or when they move rooms.')">
+                    <flux:select.option value="occupied" selected>{{ __('Occupied') }}</flux:select.option>
+                </flux:select>
+            @else
+                <flux:select wire:model="status" :label="__('Status')" required
+                    :description:trailing="__('Maintenance and Out of order take the room off sale until it is set back to Available.')">
+                    <flux:select.option value="available">{{ __('Available') }}</flux:select.option>
+                    <flux:select.option value="cleaning">{{ __('Cleaning') }}</flux:select.option>
+                    <flux:select.option value="maintenance">{{ __('Maintenance') }}</flux:select.option>
+                    <flux:select.option value="out_of_order">{{ __('Out of order') }}</flux:select.option>
+                </flux:select>
+            @endif
 
             <flux:textarea wire:model="notes" :label="__('Notes')" rows="2" />
             <flux:switch wire:model="is_active" :label="__('Active')" />

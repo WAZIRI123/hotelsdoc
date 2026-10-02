@@ -120,7 +120,6 @@ class Expenses extends ReportComponent
     {
         return Expense::query()
             ->with('recorder')
-            ->where('currency', $this->hotelCurrency())
             ->whereDate('expense_date', '>=', $this->periodStart())
             ->whereDate('expense_date', '<=', $this->periodEnd())
             ->when($this->category !== '', fn (Builder $query) => $query->where('category', $this->category))

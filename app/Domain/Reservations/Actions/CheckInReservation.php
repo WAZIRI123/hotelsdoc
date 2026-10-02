@@ -61,6 +61,10 @@ final class CheckInReservation
                     throw new RuntimeException('Reservation has a room slot with no assigned room.');
                 }
 
+                if ($reservationRoom->room->isOutOfService()) {
+                    throw new RuntimeException("Room {$reservationRoom->room->number} is out of service; move the guests to another room before check-in.");
+                }
+
                 $lineTotal = $reservationRoom->nights->isNotEmpty()
                     ? $reservationRoom->totalRate()
                     : $reservationRoom->nightly_rate->multiply($nightCount);

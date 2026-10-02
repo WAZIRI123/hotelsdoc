@@ -43,7 +43,7 @@ class RateCalendar extends Model
     {
         return [
             'date' => 'date:Y-m-d',
-            'price' => MoneyCast::class.':TZS',
+            'price' => MoneyCast::class,
             'min_stay' => 'integer',
             'stop_sell' => 'boolean',
         ];

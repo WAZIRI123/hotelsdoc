@@ -34,7 +34,7 @@
                 'color' => 'bg-red-500',
             ],
             [
-                'permission' => 'manage-outlets',
+                'permission' => 'manage-stock',
                 'route' => 'manage-stock',
                 'label' => __('Manage Stock'),
                 'icon' => 'archive-box',

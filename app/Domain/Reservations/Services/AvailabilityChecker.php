@@ -16,6 +16,8 @@ use InvalidArgumentException;
  *
  * Source of truth is the room_availability table — one row per (room, date).
  * A row with status='booked' or 'blocked' makes that night unavailable.
+ * Rooms that are out of service (inactive, maintenance, out of order) are
+ * never available, whatever the dates.
  *
  * Range semantics: arrival is inclusive, departure is exclusive (industry standard
  * "night of arrival" — checking out on the 5th means you slept the 4th but not the 5th).
@@ -47,6 +49,7 @@ final class AvailabilityChecker
         return Room::query()
             ->when($roomTypeId, fn ($q, int $id) => $q->where('room_type_id', $id))
             ->where('is_active', true)
+            ->whereNotIn('status', Room::OUT_OF_SERVICE_STATUSES)
             ->whereNotIn('id', $bookedRoomIds)
             ->orderBy('number')
             ->get();
@@ -59,6 +62,10 @@ final class AvailabilityChecker
         ?int $excludeReservationId = null,
     ): bool {
         $nights = $this->nights($arrival, $departure);
+
+        if (Room::query()->find($roomId)?->isOutOfService() ?? true) {
+            return false;
+        }
 
         return ! RoomAvailability::query()
             ->where('room_id', $roomId)

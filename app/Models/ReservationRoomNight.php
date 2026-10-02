@@ -36,7 +36,7 @@ class ReservationRoomNight extends Model
     {
         return [
             'date' => 'date:Y-m-d',
-            'rate' => MoneyCast::class.':TZS',
+            'rate' => MoneyCast::class,
         ];
     }
 

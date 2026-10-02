@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Domain\Authorization\Listeners\SeedHotelRoles;
 use App\Domain\Tenancy\Listeners\SeedDefaultHotelData;
+use App\Support\HotelCurrency;
 use Database\Factories\HotelFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -100,6 +101,8 @@ class Hotel extends Model
             app(SeedDefaultHotelData::class)->handle($hotel);
             app(SeedHotelRoles::class)->handle($hotel);
         });
+
+        static::saved(fn () => HotelCurrency::flush());
     }
 
     /**

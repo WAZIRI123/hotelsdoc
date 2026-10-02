@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Casts;
 
+use App\Support\HotelCurrency;
 use App\Support\Money;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
@@ -14,14 +15,18 @@ use InvalidArgumentException;
  *
  * Usage on a model:
  *   protected $casts = [
- *       'total_amount' => MoneyCast::class.':TZS',
+ *       'total_amount' => MoneyCast::class,
  *   ];
+ *
+ * The currency is the row's own `currency` column when it has one, otherwise
+ * the currency of the hotel the row belongs to. A fixed currency may still be
+ * passed as a cast argument (MoneyCast::class.':USD').
  *
  * @implements CastsAttributes<Money, Money|int>
  */
 final class MoneyCast implements CastsAttributes
 {
-    public function __construct(private readonly string $currency = 'TZS') {}
+    public function __construct(private readonly ?string $currency = null) {}
 
     /**
      * @param  array<string, mixed>  $attributes
@@ -32,7 +37,7 @@ final class MoneyCast implements CastsAttributes
             return null;
         }
 
-        return new Money((int) $value, $this->currency);
+        return new Money((int) $value, $this->currencyFor($attributes));
     }
 
     /**
@@ -49,12 +54,30 @@ final class MoneyCast implements CastsAttributes
             return [$key => $value];
         }
 
-        if ($value->currency !== $this->currency) {
+        $currency = $this->currencyFor($attributes);
+
+        if ($value->currency !== $currency) {
             throw new InvalidArgumentException(
-                "Currency mismatch on {$key}: expected {$this->currency}, got {$value->currency}",
+                "Currency mismatch on {$key}: expected {$currency}, got {$value->currency}",
             );
         }
 
         return [$key => $value->amount];
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function currencyFor(array $attributes): string
+    {
+        if ($this->currency !== null) {
+            return $this->currency;
+        }
+
+        if (is_string($attributes['currency'] ?? null) && $attributes['currency'] !== '') {
+            return $attributes['currency'];
+        }
+
+        return HotelCurrency::forHotel(isset($attributes['hotel_id']) ? (int) $attributes['hotel_id'] : null);
     }
 }

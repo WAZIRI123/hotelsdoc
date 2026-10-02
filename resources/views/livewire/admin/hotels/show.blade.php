@@ -80,7 +80,8 @@
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
-                <flux:select wire:model="currency" :label="__('Currency')">
+                <flux:select wire:model="currency" :label="__('Currency')" :disabled="$this->currencyIsLocked"
+                    :description:trailing="$this->currencyIsLocked ? __('Locked: the hotel already has sales or expenses in this currency.') : null">
                     @foreach (\App\Livewire\Admin\Hotels\Create::CURRENCIES as $code)
                         <flux:select.option value="{{ $code }}">{{ $code }}</flux:select.option>
                     @endforeach

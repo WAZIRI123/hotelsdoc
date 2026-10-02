@@ -78,9 +78,11 @@
                     {{ __('Dashboard') }}
                 </flux:sidebar.item>
 
-                <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*') || request()->routeIs('reservations.*')" wire:navigate>
-                    {{ __('Guest Book') }}
-                </flux:sidebar.item>
+                @can('manage-guests')
+                    <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*') || request()->routeIs('reservations.*')" wire:navigate>
+                        {{ __('Guest Book') }}
+                    </flux:sidebar.item>
+                @endcan
                 @can('manage-reservations')
                     <flux:sidebar.item icon="briefcase" :href="route('agents.index')" :current="request()->routeIs('agents.*')" wire:navigate>
                         {{ __('Agents') }}
@@ -92,16 +94,22 @@
                     </flux:sidebar.item>
                 @endcan
 
-                <flux:sidebar.item icon="building-office-2" :href="route('room-settings')" :current="request()->routeIs('room-settings', 'rooms.*', 'room-types.*', 'meal-plans.*', 'rate-plans.*')" wire:navigate>
-                    {{ __('Manage Rooms') }}
-                </flux:sidebar.item>
+                @can('manage-rooms')
+                    <flux:sidebar.item icon="building-office-2" :href="route('room-settings')" :current="request()->routeIs('room-settings', 'rooms.*', 'room-types.*', 'meal-plans.*', 'rate-plans.*')" wire:navigate>
+                        {{ __('Manage Rooms') }}
+                    </flux:sidebar.item>
+                @endcan
 
-                <flux:sidebar.item icon="computer-desktop" :href="route('pos.lobby')" :current="request()->routeIs('pos.*')" wire:navigate>
-                    {{ __('Point of Sale') }}
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="archive-box" :href="route('manage-stock')" :current="request()->routeIs('manage-stock', 'manage-stock.*', 'outlets.*', 'menu.*', 'suppliers.*', 'stock-types.*')" wire:navigate>
-                    {{ __('Manage Stock') }}
-                </flux:sidebar.item>
+                @can('operate-pos')
+                    <flux:sidebar.item icon="computer-desktop" :href="route('pos.lobby')" :current="request()->routeIs('pos.*')" wire:navigate>
+                        {{ __('Point of Sale') }}
+                    </flux:sidebar.item>
+                @endcan
+                @can('manage-stock')
+                    <flux:sidebar.item icon="archive-box" :href="route('manage-stock')" :current="request()->routeIs('manage-stock', 'manage-stock.*', 'outlets.*', 'menu.*', 'suppliers.*', 'stock-types.*')" wire:navigate>
+                        {{ __('Manage Stock') }}
+                    </flux:sidebar.item>
+                @endcan
 
                 <flux:sidebar.item icon="chart-bar" :href="route('reports.index')" :current="request()->routeIs('reports.*')" wire:navigate>
                     {{ __('Get Reports') }}

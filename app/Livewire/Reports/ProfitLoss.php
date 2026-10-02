@@ -8,16 +8,22 @@ use App\Models\Expense;
 use App\Models\ExtraOrder;
 use App\Models\FolioCharge;
 use App\Models\PosOrder;
+use App\Models\StockEntry;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 
 /**
  * Income (room charges, POS and extras sales, other folio charges, net of
- * discounts and tax) against recorded expenses for the period, in the
- * hotel's currency.
+ * discounts and tax) against recorded expenses and stock purchases for the
+ * period. A hotel runs in a single currency, so every row is counted; none
+ * are filtered out.
+ *
+ * Stock is costed when it is received (quantity × unit cost on the entry
+ * date), so wastage and internal use are already inside Stock Purchases.
  */
 #[Title('Profit & Loss Report')]
 class ProfitLoss extends ReportComponent
@@ -41,7 +47,6 @@ class ProfitLoss extends ReportComponent
             __('Food Sales') => $this->posSales(['restaurant', 'room_service']),
             __('Shop Sales') => $this->posSales(['shop']),
             __('Extras Sales') => $this->money((int) ExtraOrder::query()
-                ->where('currency', $this->hotelCurrency())
                 ->whereDate('order_date', '>=', $this->periodStart())
                 ->whereDate('order_date', '<=', $this->periodEnd())
                 ->sum('total_amount')),
@@ -75,13 +80,14 @@ class ProfitLoss extends ReportComponent
     }
 
     /**
+     * Recorded expenses by category, plus stock received in the period.
+     *
      * @return array<string, Money>
      */
     #[Computed]
     public function expenses(): array
     {
-        return Expense::query()
-            ->where('currency', $this->hotelCurrency())
+        $expenses = Expense::query()
             ->whereDate('expense_date', '>=', $this->periodStart())
             ->whereDate('expense_date', '<=', $this->periodEnd())
             ->groupBy('category')
@@ -90,6 +96,28 @@ class ProfitLoss extends ReportComponent
             ->pluck('total', 'category')
             ->map(fn (mixed $total): Money => $this->money((int) $total))
             ->all();
+
+        $stockPurchases = $this->stockPurchases();
+
+        if ($stockPurchases->isPositive()) {
+            $expenses[__('Stock Purchases')] = $stockPurchases;
+            uasort($expenses, fn (Money $a, Money $b): int => $b->amount <=> $a->amount);
+        }
+
+        return $expenses;
+    }
+
+    /**
+     * Cost of stock received in the period: quantity × unit cost per entry.
+     */
+    #[Computed]
+    public function stockPurchases(): Money
+    {
+        return $this->money((int) StockEntry::query()
+            ->whereNotNull('unit_cost')
+            ->whereDate('entry_date', '>=', $this->periodStart())
+            ->whereDate('entry_date', '<=', $this->periodEnd())
+            ->sum(DB::raw('quantity * unit_cost')));
     }
 
     #[Computed]
@@ -121,9 +149,7 @@ class ProfitLoss extends ReportComponent
     {
         $query = FolioCharge::query()
             ->whereBetween('posted_at', [$this->periodStart(), $this->periodEnd()])
-            ->whereHas('folio', fn (Builder $folio) => $folio
-                ->where('currency', $this->hotelCurrency())
-                ->where('status', '!=', 'void'));
+            ->whereHas('folio', fn (Builder $folio) => $folio->where('status', '!=', 'void'));
 
         return $this->money((int) $scope($query)->sum('total'));
     }

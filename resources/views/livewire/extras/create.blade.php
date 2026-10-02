@@ -28,7 +28,7 @@
 
         <form wire:submit="save" class="space-y-6">
             <div class="grid gap-6 md:grid-cols-3">
-                <flux:select wire:model="customer" :label="__('Customer:')">
+                <flux:select wire:model.live="customer" :label="__('Customer:')">
                     <flux:select.option value="">{{ __('Select Customer') }}</flux:select.option>
                     <flux:select.option value="{{ \App\Livewire\Extras\Create::WALK_IN }}">{{ __('Walk-in Customer') }}</flux:select.option>
                     @foreach ($this->inHouseStays as $stay)
@@ -39,14 +39,22 @@
                     @endforeach
                 </flux:select>
 
-                <flux:select wire:model="currency" :label="__('Currency:')">
-                    @foreach ($this->currencies as $code)
-                        <flux:select.option value="{{ $code }}">{{ $code }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-
                 <flux:input type="date" wire:model="orderDate" :label="__('Date:')" />
             </div>
+
+            @if ($customer === \App\Livewire\Extras\Create::WALK_IN)
+                <div class="grid gap-6 md:grid-cols-3">
+                    <flux:select wire:model.live="paymentMethod" :label="__('Paid by:')">
+                        <flux:select.option value="">{{ __('Select payment method') }}</flux:select.option>
+                        @foreach ($this->paymentMethods as $method)
+                            <flux:select.option :value="$method->code">{{ $method->label }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:input wire:model="paymentReference"
+                        :label="$this->paymentRequiresReference ? __('Reference / transaction ID:') : __('Reference (optional):')" />
+                </div>
+            @endif
 
             <div>
                 <button type="submit"
@@ -74,7 +82,7 @@
                             <th class="w-12 border border-zinc-200 p-3 font-semibold dark:border-zinc-700">{{ __('No') }}</th>
                             <th class="border border-zinc-200 p-3 font-semibold dark:border-zinc-700">{{ __('Extra item') }}</th>
                             <th class="border border-zinc-200 p-3 font-semibold dark:border-zinc-700">{{ __('Quantity') }}</th>
-                            <th class="border border-zinc-200 p-3 font-semibold dark:border-zinc-700">{{ __('Price') }}</th>
+                            <th class="border border-zinc-200 p-3 font-semibold dark:border-zinc-700">{{ __('Price (:currency)', ['currency' => \App\Support\HotelCurrency::current()]) }}</th>
                             <th class="w-24 border border-zinc-200 p-3 dark:border-zinc-700">
                                 <button type="button" wire:click="addLine" title="{{ __('Add row') }}"
                                     class="inline-flex items-center rounded-md bg-sky-600 px-4 py-2 text-white shadow-sm transition hover:bg-sky-700">

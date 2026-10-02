@@ -94,9 +94,9 @@ class ExtrasSales extends ReportComponent
     /**
      * One row per order with what was paid towards it.
      *
-     * Extras carry no discount. Walk-in extras are sold over the counter with
-     * no folio, so they count as paid in full; extras posted to a guest folio
-     * are credited per FolioPaymentShare.
+     * Extras carry no discount. Orders are credited per FolioPaymentShare;
+     * legacy walk-in orders recorded before walk-ins were paid through a folio
+     * have none, so they count as paid in full.
      *
      * @return array<int, array{order: ExtraOrder, customer: string|null, currency: string, total: Money, discount: Money, grand_total: Money, paid_by: string, paid: Money, balance: Money}>
      */

@@ -57,9 +57,9 @@ class PosOrder extends Model
     protected function casts(): array
     {
         return [
-            'subtotal' => MoneyCast::class.':TZS',
-            'tax_total' => MoneyCast::class.':TZS',
-            'total_amount' => MoneyCast::class.':TZS',
+            'subtotal' => MoneyCast::class,
+            'tax_total' => MoneyCast::class,
+            'total_amount' => MoneyCast::class,
             'billed_at' => 'datetime',
         ];
     }

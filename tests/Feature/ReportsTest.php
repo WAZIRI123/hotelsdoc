@@ -224,6 +224,7 @@ it('lets an accountant record stock received and adds it to the stock on hand', 
         ->set('entryExpiry', '2027-01-31')
         ->set('entryDescription', 'Invoice 1042')
         ->set('entryQuantity', '48')
+        ->set('entryUnitCost', '900')
         ->call('save')
         ->assertHasNoErrors()
         ->assertSee('Invoice 1042');
@@ -231,6 +232,7 @@ it('lets an accountant record stock received and adds it to the stock on hand', 
     $entry = StockEntry::query()->sole();
 
     expect($entry->quantity)->toBe(48)
+        ->and($entry->unit_cost)->toBe(900_00)
         ->and($entry->expiry_date?->toDateString())->toBe('2027-01-31')
         ->and($entry->recorded_by)->toBe($this->user->id)
         ->and($soda->fresh()->track_stock)->toBeTrue()
@@ -248,7 +250,7 @@ it('validates stock entries', function (): void {
         ->set('entryExpiry', '2000-01-01')
         ->set('entryQuantity', '0')
         ->call('save')
-        ->assertHasErrors(['entryItem', 'entryExpiry', 'entryQuantity']);
+        ->assertHasErrors(['entryItem', 'entryExpiry', 'entryQuantity', 'entryUnitCost' => 'required']);
 });
 
 it('hides stock recording from roles without manage-stock', function (): void {
@@ -421,6 +423,38 @@ it('nets income against expenses in the profit and loss report', function (): vo
         ->and($component->instance()->salesColumns()['food_drinks']->toMajor())->toBe(22_000.0)
         ->and($component->instance()->salesColumns()['accommodation']->toMajor())->toBe(160_000.0)
         ->and($component->instance()->salesColumns()['extras']->toMajor())->toBe(15_000.0);
+});
+
+it('counts stock received in the period as stock purchases in the profit and loss report', function (): void {
+    $beer = menuItemAt($this->hotel, 'bar', 'Safari', 4_000);
+    StockEntry::factory()->for($this->hotel)->for($beer)->create(['entry_date' => '2026-09-05', 'quantity' => 24, 'unit_cost' => 2_500_00]);
+    StockEntry::factory()->for($this->hotel)->for($beer)->create(['entry_date' => '2026-09-20', 'quantity' => 10, 'unit_cost' => 2_600_00]);
+    StockEntry::factory()->for($this->hotel)->for($beer)->create(['entry_date' => '2026-08-30', 'quantity' => 50, 'unit_cost' => 2_500_00]);
+    Expense::factory()->for($this->hotel)->create(['expense_date' => '2026-09-14', 'category' => 'Utilities', 'amount' => 50_000_00]);
+
+    $component = Livewire::test(ProfitLoss::class, ['from' => '2026-09-01', 'to' => '2026-09-30'])
+        ->assertSeeInOrder(['Stock Purchases:', '86,000', 'Utilities:', '50,000']);
+
+    expect($component->instance()->stockPurchases()->toMajor())->toBe(24 * 2_500.0 + 10 * 2_600.0)
+        ->and($component->instance()->totalExpenses()->toMajor())->toBe(136_000.0)
+        ->and($component->instance()->netProfit()->toMajor())->toBe(-136_000.0);
+});
+
+it('counts every row of a hotel that runs in a currency other than TZS', function (): void {
+    [$hotel] = actingAsTenantUser(Hotel::factory()->create(['currency' => 'KES']));
+
+    $folio = Folio::factory()->for($hotel)->create();
+    $folio->charges()->create(['source_type' => 'room', 'description' => 'Room 1', 'total' => Money::fromMajor(8_000), 'posted_at' => '2026-09-14 12:00']);
+    ExtraOrder::factory()->for($hotel)->create(['order_date' => '2026-09-14', 'currency' => 'KES', 'total_amount' => 1_500_00]);
+    Expense::factory()->for($hotel)->create(['expense_date' => '2026-09-14', 'category' => 'Utilities', 'currency' => 'KES', 'amount' => 2_000_00]);
+
+    $component = Livewire::test(ProfitLoss::class, ['from' => '2026-09-01', 'to' => '2026-09-30']);
+
+    expect($folio->currency)->toBe('KES')
+        ->and($component->instance()->income()['Room Revenue']->toMajor())->toBe(8_000.0)
+        ->and($component->instance()->income()['Extras Sales']->toMajor())->toBe(1_500.0)
+        ->and($component->instance()->totalExpenses()->toMajor())->toBe(2_000.0)
+        ->and($component->instance()->netProfit()->format())->toBe('KES 7,500');
 });
 
 it('blocks report pages for roles without access', function (string $role, string $routeName): void {

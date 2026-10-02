@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Livewire\Guests;
 
+use App\Domain\Reservations\Actions\MarkRoomClean;
 use App\Models\Folio;
 use App\Models\Reservation;
 use App\Models\ReservationRoom;
 use App\Models\Room;
+use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -16,6 +18,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use RuntimeException;
 
 #[Title('Guests')]
 class Index extends Component
@@ -49,6 +52,23 @@ class Index extends Component
             ->where('is_active', true)
             ->orderBy('number')
             ->get();
+    }
+
+    /**
+     * Housekeeping marks a room left for cleaning as ready to sell again.
+     */
+    public function markClean(int $roomId, MarkRoomClean $markRoomClean): void
+    {
+        try {
+            $room = $markRoomClean->execute(Room::query()->findOrFail($roomId));
+        } catch (RuntimeException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Room :number is clean and available.', ['number' => $room->number]));
+        unset($this->rooms);
     }
 
     /**

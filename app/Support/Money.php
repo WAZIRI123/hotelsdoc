@@ -12,27 +12,32 @@ use Stringable;
  * Immutable money value object.
  *
  * Stores amounts as integer minor units (cents) to avoid floating-point error.
- * Default currency is TSh (Tanzanian Shilling), which has no subunit in practice
- * but we still use a 2-decimal representation internally for arithmetic safety.
+ * When no currency is given, the active hotel's currency is used (see
+ * HotelCurrency); amounts keep a 2-decimal representation internally for
+ * arithmetic safety even for currencies like TSh with no subunit in practice.
  */
 final readonly class Money implements JsonSerializable, Stringable
 {
+    public string $currency;
+
     public function __construct(
         public int $amount,
-        public string $currency = 'TZS',
-    ) {}
+        ?string $currency = null,
+    ) {
+        $this->currency = $currency ?? HotelCurrency::current();
+    }
 
-    public static function fromMinor(int $amount, string $currency = 'TZS'): self
+    public static function fromMinor(int $amount, ?string $currency = null): self
     {
         return new self($amount, $currency);
     }
 
-    public static function fromMajor(int|float $amount, string $currency = 'TZS'): self
+    public static function fromMajor(int|float $amount, ?string $currency = null): self
     {
         return new self((int) round($amount * 100), $currency);
     }
 
-    public static function zero(string $currency = 'TZS'): self
+    public static function zero(?string $currency = null): self
     {
         return new self(0, $currency);
     }

@@ -51,7 +51,7 @@ class MenuItem extends Model
     protected function casts(): array
     {
         return [
-            'price' => MoneyCast::class.':TZS',
+            'price' => MoneyCast::class,
             'is_active' => 'boolean',
             'track_stock' => 'boolean',
             'stock_quantity' => 'integer',

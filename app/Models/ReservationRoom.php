@@ -46,7 +46,7 @@ class ReservationRoom extends Model
     protected function casts(): array
     {
         return [
-            'nightly_rate' => MoneyCast::class.':TZS',
+            'nightly_rate' => MoneyCast::class,
         ];
     }
 

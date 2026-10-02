@@ -142,7 +142,7 @@
 
             <flux:input wire:model="itemName" :label="__('Name')" required />
             <flux:textarea wire:model="itemDescription" :label="__('Description')" rows="2" />
-            <flux:input wire:model.number="itemPriceTsh" type="number" min="0" :label="__('Price (TSh)')" required />
+            <flux:input wire:model.number="itemPriceTsh" type="number" min="0" :label="__('Price (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" required />
             <flux:switch wire:model.live="itemTrackStock" :label="__('Track stock')"
                 :description="__('Block adding to orders once the counter hits zero.')" />
             @if ($itemTrackStock)

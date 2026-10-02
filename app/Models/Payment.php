@@ -51,7 +51,7 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
-            'amount' => MoneyCast::class.':TZS',
+            'amount' => MoneyCast::class,
             'provider_payload' => 'array',
             'confirmed_at' => 'datetime',
         ];

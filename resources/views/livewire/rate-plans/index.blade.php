@@ -128,13 +128,13 @@
             </div>
 
             <flux:input wire:model.number="price_tsh" type="number" min="0"
-                :label="__('Base rate (TSh per night)')" required />
+                :label="__('Base rate (:currency per night)', ['currency' => \App\Support\HotelCurrency::current()])" required />
 
             <div class="grid grid-cols-2 gap-4">
                 <flux:input wire:model.number="extra_adult_price_tsh" type="number" min="0"
-                    :label="__('Extra adult (TSh)')" />
+                    :label="__('Extra adult (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" />
                 <flux:input wire:model.number="extra_child_price_tsh" type="number" min="0"
-                    :label="__('Extra child (TSh)')" />
+                    :label="__('Extra child (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
