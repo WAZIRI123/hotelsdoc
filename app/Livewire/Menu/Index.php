@@ -129,8 +129,15 @@ class Index extends Component
 
     public function deleteCategory(int $id): void
     {
-        MenuCategory::query()->findOrFail($id)->delete();
-        Flux::toast(variant: 'success', text: 'Category deleted.');
+        $category = MenuCategory::query()->findOrFail($id);
+
+        if ($category->hasHistory()) {
+            $category->update(['is_active' => false]);
+            Flux::toast(text: __('Items in this category have sales or stock history, so it was deactivated instead of deleted.'));
+        } else {
+            $category->delete();
+            Flux::toast(variant: 'success', text: 'Category deleted.');
+        }
         unset($this->categories);
     }
 
@@ -218,8 +225,15 @@ class Index extends Component
 
     public function deleteItem(int $id): void
     {
-        MenuItem::query()->findOrFail($id)->delete();
-        Flux::toast(variant: 'success', text: 'Item deleted.');
+        $item = MenuItem::query()->findOrFail($id);
+
+        if ($item->hasHistory()) {
+            $item->update(['is_active' => false]);
+            Flux::toast(text: __('This item has sales or stock history, so it was deactivated instead of deleted.'));
+        } else {
+            $item->delete();
+            Flux::toast(variant: 'success', text: 'Item deleted.');
+        }
         unset($this->categories);
     }
 

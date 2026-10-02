@@ -151,7 +151,7 @@ final class OccupancyChanges
 
         $folio = $reservation->stay?->folio;
 
-        if (! $folio instanceof Folio || ! in_array($folio->status, ['open', 'closed'], true)) {
+        if (! $folio instanceof Folio || ! $folio->acceptsCharges()) {
             throw new RuntimeException('This stay has no open folio to post the room adjustment to.');
         }
 

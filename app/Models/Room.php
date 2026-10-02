@@ -79,4 +79,27 @@ class Room extends Model
     {
         return $this->belongsTo(RoomType::class);
     }
+
+    /**
+     * Whether a reservation holds this room tonight or on a later night.
+     */
+    public function hasUpcomingBookings(): bool
+    {
+        return RoomAvailability::query()
+            ->where('room_id', $this->id)
+            ->whereNotNull('reservation_id')
+            ->whereDate('date', '>=', today())
+            ->exists();
+    }
+
+    /**
+     * Whether any reservation or room move has ever used this room.
+     */
+    public function hasHistory(): bool
+    {
+        return ReservationRoom::query()->where('room_id', $this->id)->exists()
+            || RoomMove::query()
+                ->where(fn ($query) => $query->where('from_room_id', $this->id)->orWhere('to_room_id', $this->id))
+                ->exists();
+    }
 }

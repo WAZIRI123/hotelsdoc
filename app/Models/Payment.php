@@ -65,6 +65,14 @@ class Payment extends Model
     }
 
     /**
+     * A refund is recorded as a payment with a negative amount.
+     */
+    public function isRefund(): bool
+    {
+        return $this->amount->isNegative();
+    }
+
+    /**
      * @return BelongsTo<Folio, $this>
      */
     public function folio(): BelongsTo

@@ -79,4 +79,13 @@ class RoomType extends Model
     {
         return $this->hasMany(RatePlan::class);
     }
+
+    /**
+     * Whether rooms or bookings point at this room type; deleting it would delete them too.
+     */
+    public function isInUse(): bool
+    {
+        return $this->rooms()->exists()
+            || ReservationRoom::query()->where('room_type_id', $this->id)->exists();
+    }
 }

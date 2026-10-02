@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CreateReservation;
 use App\Livewire\POS\Terminal;
+use App\Models\Folio;
 use App\Models\Guest;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
@@ -69,8 +70,42 @@ it('settles directly with cash by creating a walk-in folio and recording payment
         ->and($billed->folio->status)->toBe('settled')
         ->and($billed->folio->payments()->where('status', 'confirmed')->count())->toBe(1);
 
-    expect($component->instance()->order())->not->toBeNull()
-        ->and($component->instance()->order()->id)->not->toBe($billed->id);
+    expect($component->instance()->order())->toBeNull()
+        ->and(PosOrder::query()->where('status', 'open')->count())->toBe(0);
+});
+
+it('does not create an order until the first item is added', function (): void {
+    Livewire::test(Terminal::class, ['outlet' => $this->outlet]);
+    Livewire::test(Terminal::class, ['outlet' => $this->outlet]);
+
+    expect(PosOrder::query()->count())->toBe(0);
+});
+
+it('resumes the cashier\'s unfinished order when the terminal is reopened', function (): void {
+    $first = Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->set('tableNo', 'T4')
+        ->call('addItem', $this->beer->id);
+    $orderId = $first->instance()->orderId;
+
+    $reopened = Livewire::test(Terminal::class, ['outlet' => $this->outlet]);
+
+    expect($reopened->instance()->orderId)->toBe($orderId)
+        ->and($reopened->instance()->tableNo)->toBe('T4')
+        ->and(PosOrder::query()->count())->toBe(1);
+});
+
+it('leaves the order open and unbilled when the counter payment fails', function (): void {
+    $component = Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->beer->id)
+        ->call('openSettle')
+        ->set('settleMethod', 'not-a-gateway')
+        ->call('settleDirect');
+
+    $order = PosOrder::query()->findOrFail($component->instance()->orderId);
+
+    expect($order->status)->toBe('open')
+        ->and($order->folio_id)->toBeNull()
+        ->and(Folio::query()->count())->toBe(0);
 });
 
 it('bills an order to an in-house guest folio', function (): void {

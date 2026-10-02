@@ -50,4 +50,12 @@ class MenuCategory extends Model
     {
         return $this->hasMany(MenuItem::class);
     }
+
+    /**
+     * Whether any item in this category has sales or stock history.
+     */
+    public function hasHistory(): bool
+    {
+        return $this->items()->get()->contains(fn (MenuItem $item): bool => $item->hasHistory());
+    }
 }

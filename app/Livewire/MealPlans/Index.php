@@ -107,8 +107,15 @@ class Index extends Component
 
     public function delete(int $id): void
     {
-        MealPlan::query()->findOrFail($id)->delete();
-        Flux::toast(variant: 'success', text: 'Meal plan deleted.');
+        $mealPlan = MealPlan::query()->findOrFail($id);
+
+        if ($mealPlan->isInUse()) {
+            $mealPlan->update(['is_active' => false]);
+            Flux::toast(text: __('Rate plans include this meal plan, so it was deactivated instead of deleted.'));
+        } else {
+            $mealPlan->delete();
+            Flux::toast(variant: 'success', text: 'Meal plan deleted.');
+        }
         unset($this->mealPlans);
     }
 

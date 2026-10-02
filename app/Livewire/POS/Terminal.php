@@ -47,7 +47,7 @@ class Terminal extends Component
     public function mount(Outlet $outlet): void
     {
         $this->outlet = $outlet;
-        $this->startNewOrder();
+        $this->resumeOpenOrder();
     }
 
     /**
@@ -113,7 +113,36 @@ class Terminal extends Component
         return PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get();
     }
 
-    public function startNewOrder(): void
+    /**
+     * Pick up this cashier's unfinished order at this outlet, so leaving the
+     * page never strands an order (and the stock its items hold).
+     */
+    public function resumeOpenOrder(): void
+    {
+        $order = PosOrder::query()
+            ->where('outlet_id', $this->outlet->id)
+            ->where('opened_by', Auth::id())
+            ->whereIn('status', ['open', 'sent'])
+            ->latest('id')
+            ->first();
+
+        $this->orderId = $order?->id;
+        $this->tableNo = $order->table_no ?? '';
+        unset($this->order);
+    }
+
+    /**
+     * Clear the screen for the next customer. The order itself is created
+     * when its first item is added, so no empty orders are left behind.
+     */
+    public function finishOrder(): void
+    {
+        $this->orderId = null;
+        $this->tableNo = '';
+        unset($this->order);
+    }
+
+    private function openOrder(): PosOrder
     {
         $order = PosOrder::query()->create([
             'outlet_id' => $this->outlet->id,
@@ -123,8 +152,9 @@ class Terminal extends Component
         ]);
 
         $this->orderId = $order->id;
-        $this->tableNo = '';
         unset($this->order);
+
+        return $order;
     }
 
     public function updatedTableNo(): void
@@ -139,11 +169,8 @@ class Terminal extends Component
     {
         $item = MenuItem::query()->where('outlet_id', $this->outlet->id)->findOrFail($menuItemId);
         $order = $this->order();
-        if ($order === null) {
-            return;
-        }
 
-        if (! $this->orderIsEditable($order)) {
+        if ($order !== null && ! $this->orderIsEditable($order)) {
             return;
         }
 
@@ -152,6 +179,8 @@ class Terminal extends Component
 
             return;
         }
+
+        $order ??= $this->openOrder();
 
         DB::transaction(function () use ($item, $order): void {
             if ($item->track_stock) {
@@ -247,8 +276,7 @@ class Terminal extends Component
         });
 
         Flux::toast(variant: 'success', text: 'Order voided.');
-        $this->orderId = null;
-        $this->startNewOrder();
+        $this->finishOrder();
     }
 
     public function openSettle(): void
@@ -299,8 +327,7 @@ class Terminal extends Component
 
         Flux::toast(variant: 'success', text: "Billed to {$stay->guest?->fullName()}.");
         Flux::modal('pos-settle')->close();
-        $this->orderId = null;
-        $this->startNewOrder();
+        $this->finishOrder();
     }
 
     public function settleDirect(BillPosOrderToFolio $billAction, RecordPayment $payAction): void
@@ -324,14 +351,17 @@ class Terminal extends Component
         }
 
         try {
-            $folio = $billAction->settleAsWalkIn($order);
-            $payAction->execute(
-                folio: $folio,
-                methodCode: $this->settleMethod,
-                amount: $folio->total_amount,
-                reference: $this->settleReference ?: null,
-                receivedBy: Auth::user(),
-            );
+            // One transaction: if the payment fails the order is not left billed onto an unpaid walk-in folio.
+            DB::transaction(function () use ($billAction, $payAction, $order): void {
+                $folio = $billAction->settleAsWalkIn($order);
+                $payAction->execute(
+                    folio: $folio,
+                    methodCode: $this->settleMethod,
+                    amount: $folio->total_amount,
+                    reference: $this->settleReference ?: null,
+                    receivedBy: Auth::user(),
+                );
+            });
         } catch (RuntimeException|\InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
 
@@ -343,8 +373,7 @@ class Terminal extends Component
         Flux::toast(variant: 'success', text: 'Payment received.');
         Flux::modal('pos-settle')->close();
         $this->dispatch('open-print', url: $printUrl);
-        $this->orderId = null;
-        $this->startNewOrder();
+        $this->finishOrder();
     }
 
     public function render(): View

@@ -39,8 +39,42 @@
                     {{ __('Record payment') }}
                 </flux:button>
             @endif
+
+            @if ($this->canRefund())
+                <flux:button variant="primary" icon="arrow-uturn-left" wire:click="openRefund">
+                    {{ __('Refund credit') }}
+                </flux:button>
+            @endif
         </div>
     </div>
+
+    <flux:modal name="refund-credit" class="md:w-[480px]">
+        <form wire:submit="refund" class="space-y-6">
+            <flux:heading size="lg">{{ __('Refund guest credit') }}</flux:heading>
+            <flux:text>
+                {{ __('The guest has paid :amount more than they owe.', ['amount' => $this->creditBalance->format()]) }}
+            </flux:text>
+
+            <flux:select wire:model="refund_method" :label="__('Refunded by')" required>
+                <flux:select.option value="">{{ __('Choose method…') }}</flux:select.option>
+                @foreach ($this->refundMethods as $method)
+                    <flux:select.option :value="$method->code">{{ $method->label }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:input wire:model.number="refund_amount" type="number" min="1"
+                :label="__('Amount (:currency)', ['currency' => $folio->currency])" required />
+
+            <flux:input wire:model="refund_reference" :label="__('Reference (optional)')" />
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">{{ __('Record refund') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     <flux:modal name="send-bill-email" class="md:w-[480px]">
         <form wire:submit="sendByEmail" class="space-y-6">
@@ -132,7 +166,12 @@
             <flux:table.rows>
                 @forelse ($folio->payments as $payment)
                     <flux:table.row :key="$payment->id">
-                        <flux:table.cell variant="strong">{{ str_replace('_', ' ', ucfirst($payment->method_code)) }}</flux:table.cell>
+                        <flux:table.cell variant="strong">
+                            @if ($payment->isRefund())
+                                <flux:badge color="red" size="sm">{{ __('Refund') }}</flux:badge>
+                            @endif
+                            {{ str_replace('_', ' ', ucfirst($payment->method_code)) }}
+                        </flux:table.cell>
                         <flux:table.cell class="font-mono text-sm">{{ $payment->reference ?? '—' }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge :color="$payment->status === 'confirmed' ? 'green' : 'yellow'" size="sm">
@@ -172,12 +211,21 @@
                 <span class="font-mono">{{ $folio->paid_total->format() }}</span>
             </div>
             <flux:separator />
-            <div class="flex justify-between text-lg">
-                <flux:heading size="sm">{{ __('Balance due') }}</flux:heading>
-                <span class="font-mono font-semibold">
-                    {{ $folio->total_amount->subtract($folio->paid_total)->format() }}
-                </span>
-            </div>
+            @if ($this->creditBalance->isPositive())
+                <div class="flex justify-between text-lg">
+                    <flux:heading size="sm">{{ __('Credit due to guest') }}</flux:heading>
+                    <span class="font-mono font-semibold text-red-600 dark:text-red-400">
+                        {{ $this->creditBalance->format() }}
+                    </span>
+                </div>
+            @else
+                <div class="flex justify-between text-lg">
+                    <flux:heading size="sm">{{ __('Balance due') }}</flux:heading>
+                    <span class="font-mono font-semibold">
+                        {{ $folio->total_amount->subtract($folio->paid_total)->format() }}
+                    </span>
+                </div>
+            @endif
         </div>
     </flux:card>
 

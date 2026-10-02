@@ -143,8 +143,15 @@ class Index extends Component
 
     public function delete(int $id): void
     {
-        RatePlan::query()->findOrFail($id)->delete();
-        Flux::toast(variant: 'success', text: 'Rate plan deleted.');
+        $ratePlan = RatePlan::query()->findOrFail($id);
+
+        if ($ratePlan->isInUse()) {
+            $ratePlan->update(['is_active' => false]);
+            Flux::toast(text: __('Bookings are priced on this rate plan, so it was deactivated instead of deleted.'));
+        } else {
+            $ratePlan->delete();
+            Flux::toast(variant: 'success', text: 'Rate plan deleted.');
+        }
         unset($this->ratePlans);
     }
 

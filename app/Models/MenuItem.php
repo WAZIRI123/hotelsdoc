@@ -95,4 +95,17 @@ class MenuItem extends Model
     {
         return $this->belongsTo(StockType::class);
     }
+
+    /**
+     * Whether the item has been sold or has stock movements; deleting it would
+     * break sales history and drop its stock purchases from the reports.
+     */
+    public function hasHistory(): bool
+    {
+        return PosOrderItem::query()->where('menu_item_id', $this->id)->exists()
+            || StockEntry::query()->where('menu_item_id', $this->id)->exists()
+            || StockIssue::query()
+                ->where(fn ($query) => $query->where('menu_item_id', $this->id)->orWhere('to_menu_item_id', $this->id))
+                ->exists();
+    }
 }

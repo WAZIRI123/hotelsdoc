@@ -88,3 +88,23 @@ it('settles a walk-in order by creating a fresh folio', function (): void {
     expect($order->fresh()->status)->toBe('billed')
         ->and($order->fresh()->folio_id)->toBe($folio->id);
 });
+
+it('bills onto a fully paid folio and reopens it for the new balance', function (): void {
+    $folio = Folio::query()->create([
+        'hotel_id' => $this->hotel->id,
+        'status' => 'settled',
+        'subtotal' => 100_000_00,
+        'total_amount' => 100_000_00,
+        'paid_total' => 100_000_00,
+        'settled_at' => now(),
+    ]);
+
+    $order = makeOrderWith(2, $this->hotel->id, $this->outlet->id, $this->item->id, 5_000_00);
+
+    app(BillPosOrderToFolio::class)->execute($order, $folio);
+
+    $folio->refresh();
+    expect($folio->status)->toBe('open')
+        ->and($folio->settled_at)->toBeNull()
+        ->and($folio->total_amount->amount)->toBe(110_000_00);
+});

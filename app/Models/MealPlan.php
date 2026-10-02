@@ -67,4 +67,12 @@ class MealPlan extends Model
             + (int) $this->includes_lunch
             + (int) $this->includes_dinner;
     }
+
+    /**
+     * Whether any rate plan includes this meal plan.
+     */
+    public function isInUse(): bool
+    {
+        return $this->ratePlans()->exists();
+    }
 }

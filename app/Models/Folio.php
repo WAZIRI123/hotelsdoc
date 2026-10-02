@@ -88,6 +88,15 @@ class Folio extends Model
     }
 
     /**
+     * Whether new charges may be posted. A settled folio still can: posting
+     * onto it reopens it, so a guest who paid up front can keep spending.
+     */
+    public function acceptsCharges(): bool
+    {
+        return in_array($this->status, ['open', 'closed', 'settled'], true);
+    }
+
+    /**
      * @return BelongsTo<Stay, $this>
      */
     public function stay(): BelongsTo

@@ -77,4 +77,12 @@ class RatePlan extends Model
     {
         return $this->belongsTo(MealPlan::class);
     }
+
+    /**
+     * Whether any booked room is priced on this rate plan.
+     */
+    public function isInUse(): bool
+    {
+        return ReservationRoom::query()->where('rate_plan_id', $this->id)->exists();
+    }
 }

@@ -35,7 +35,7 @@ final class BillPosOrderToFolio
                 );
             }
 
-            if (! in_array($folio->status, ['open', 'closed'], true)) {
+            if (! $folio->acceptsCharges()) {
                 throw new RuntimeException(
                     "Cannot bill onto a folio in status [{$folio->status}].",
                 );

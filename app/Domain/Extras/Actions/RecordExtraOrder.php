@@ -56,7 +56,7 @@ final class RecordExtraOrder
 
                 $folio = $stay->folio;
 
-                if ($folio === null || ! in_array($folio->status, ['open', 'closed'], true)) {
+                if ($folio === null || ! $folio->acceptsCharges()) {
                     throw new RuntimeException('This guest has no open folio.');
                 }
 

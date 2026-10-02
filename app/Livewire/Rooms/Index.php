@@ -173,8 +173,21 @@ class Index extends Component
 
     public function delete(int $id): void
     {
-        Room::query()->findOrFail($id)->delete();
-        Flux::toast(variant: 'success', text: 'Room deleted.');
+        $room = Room::query()->findOrFail($id);
+
+        if ($room->hasUpcomingBookings()) {
+            Flux::toast(variant: 'danger', text: __('Room :number has current or upcoming bookings. Move them to another room first.', ['number' => $room->number]));
+
+            return;
+        }
+
+        if ($room->hasHistory()) {
+            $room->update(['is_active' => false]);
+            Flux::toast(text: __('This room has booking history, so it was deactivated instead of deleted.'));
+        } else {
+            $room->delete();
+            Flux::toast(variant: 'success', text: 'Room deleted.');
+        }
         unset($this->rooms);
     }
 

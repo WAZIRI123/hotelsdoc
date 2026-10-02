@@ -5,18 +5,25 @@ declare(strict_types=1);
 namespace App\Livewire\Folios;
 
 use App\Domain\Notifications\BeemSmsClient;
+use App\Domain\Payments\Actions\RecordRefund;
 use App\Domain\Tenancy\TenantContext;
 use App\Mail\FolioBillMail;
 use App\Models\FiscalReceipt;
 use App\Models\Folio;
+use App\Models\PaymentMethod;
+use App\Support\Money;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use RuntimeException;
 use Throwable;
 
 #[Title('Folio')]
@@ -29,6 +36,12 @@ class Show extends Component
 
     #[Validate('required|string|max:32')]
     public string $recipient_phone = '';
+
+    public string $refund_method = '';
+
+    public ?int $refund_amount = null;
+
+    public string $refund_reference = '';
 
     public function mount(Folio $folio): void
     {
@@ -86,6 +99,73 @@ class Show extends Component
         Flux::modal('send-bill-sms')->close();
     }
 
+    /**
+     * What the guest has paid beyond what they owe.
+     */
+    #[Computed]
+    public function creditBalance(): Money
+    {
+        $credit = $this->folio->paid_total->subtract($this->folio->total_amount);
+
+        return $credit->isPositive() ? $credit : Money::zero($credit->currency);
+    }
+
+    public function canRefund(): bool
+    {
+        return (Auth::user()?->can('manage-payments') ?? false)
+            && $this->folio->status !== 'void'
+            && $this->creditBalance()->isPositive();
+    }
+
+    /**
+     * @return Collection<int, PaymentMethod>
+     */
+    #[Computed]
+    public function refundMethods(): Collection
+    {
+        return PaymentMethod::query()->where('is_active', true)->orderBy('sort_order')->get();
+    }
+
+    public function openRefund(): void
+    {
+        abort_unless($this->canRefund(), 403);
+
+        $this->refund_method = '';
+        $this->refund_reference = '';
+        $this->refund_amount = (int) $this->creditBalance()->toMajor();
+        $this->resetErrorBag(['refund_method', 'refund_amount', 'refund_reference']);
+        Flux::modal('refund-credit')->show();
+    }
+
+    public function refund(RecordRefund $action): void
+    {
+        abort_unless($this->canRefund(), 403);
+
+        $this->validate([
+            'refund_method' => ['required', Rule::in($this->refundMethods()->pluck('code')->all())],
+            'refund_amount' => ['required', 'integer', 'min:1'],
+            'refund_reference' => ['nullable', 'string', 'max:80'],
+        ]);
+
+        try {
+            $action->execute(
+                folio: $this->folio,
+                methodCode: $this->refund_method,
+                amount: Money::fromMajor((int) $this->refund_amount, $this->folio->currency),
+                reference: $this->refund_reference ?: null,
+                refundedBy: Auth::user(),
+            );
+        } catch (RuntimeException $e) {
+            $this->addError('refund_amount', $e->getMessage());
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Refund recorded.'));
+        Flux::modal('refund-credit')->close();
+        $this->reloadFolio($this->folio);
+    }
+
     #[On('payment-recorded')]
     public function onPaymentRecorded(): void
     {
@@ -104,6 +184,8 @@ class Show extends Component
 
     private function reloadFolio(Folio $folio): void
     {
+        unset($this->creditBalance);
+
         $this->folio = $folio->fresh(['charges', 'payments', 'guest', 'stay.reservation'])
             ?? $folio->load(['charges', 'payments', 'guest', 'stay.reservation']);
     }

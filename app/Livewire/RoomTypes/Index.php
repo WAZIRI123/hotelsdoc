@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\RoomTypes;
 
+use App\Domain\Tenancy\TenantContext;
 use App\Models\RoomType;
 use App\Support\Money;
 use Flux\Flux;
@@ -83,7 +84,7 @@ class Index extends Component
             'code' => [
                 'required', 'string', 'max:10',
                 Rule::unique('room_types', 'code')
-                    ->where('hotel_id', app(\App\Domain\Tenancy\TenantContext::class)->id())
+                    ->where('hotel_id', app(TenantContext::class)->id())
                     ->ignore($this->editingId),
             ],
         ]);
@@ -118,8 +119,15 @@ class Index extends Component
 
     public function delete(int $id): void
     {
-        RoomType::query()->findOrFail($id)->delete();
-        Flux::toast(variant: 'success', text: 'Room type deleted.');
+        $roomType = RoomType::query()->findOrFail($id);
+
+        if ($roomType->isInUse()) {
+            $roomType->update(['is_active' => false]);
+            Flux::toast(text: __('This room type has rooms or bookings, so it was deactivated instead of deleted.'));
+        } else {
+            $roomType->delete();
+            Flux::toast(variant: 'success', text: 'Room type deleted.');
+        }
         unset($this->roomTypes);
     }
 
