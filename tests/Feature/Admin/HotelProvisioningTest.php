@@ -44,7 +44,7 @@ it('lists every hotel for a super-admin', function (): void {
 it('sends a super-admin without a hotel to the platform admin instead of a 403', function (): void {
     $this->actingAs(User::factory()->superAdmin()->create());
 
-    $this->get(route('dashboard'))->assertRedirect(route('admin.hotels.index'));
+    $this->get(route('dashboard'))->assertRedirect(route('admin.organization'));
 });
 
 it('provisions a hotel with defaults and a new admin user', function (): void {
@@ -179,4 +179,25 @@ it('creates a new super-admin user from the console', function (): void {
     $user = User::query()->where('email', 'root@platform.test')->firstOrFail();
     expect($user->is_super_admin)->toBeTrue()
         ->and($user->email_verified_at)->not->toBeNull();
+});
+
+it('shows the organization dashboard to a super-admin', function (): void {
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    $this->get(route('admin.organization'))
+        ->assertOk()
+        ->assertSee('Organization Dashboard')
+        ->assertSee('System Control')
+        ->assertSee('View Details')
+        ->assertSee('Add Currency')
+        ->assertSee('View Currency')
+        ->assertSee('Add Invoice Footer')
+        ->assertSee('View Invoice Footer')
+        ->assertSee(route('admin.hotels.index'));
+});
+
+it('forbids hotel staff from the organization dashboard', function (): void {
+    actingAsTenantUser(role: 'admin');
+
+    $this->get(route('admin.organization'))->assertForbidden();
 });

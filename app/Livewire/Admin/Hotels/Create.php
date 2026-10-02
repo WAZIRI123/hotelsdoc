@@ -13,10 +13,14 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 #[Title('New hotel')]
 class Create extends Component
 {
+    use WithFileUploads;
+
     /** @var list<string> */
     public const CURRENCIES = ['TZS', 'USD', 'KES', 'UGX', 'RWF', 'EUR', 'GBP'];
 
@@ -30,9 +34,15 @@ class Create extends Component
 
     public string $phone = '';
 
+    public string $fax = '';
+
     public string $email = '';
 
     public string $address = '';
+
+    public string $street = '';
+
+    public ?TemporaryUploadedFile $logo = null;
 
     public string $tin = '';
 
@@ -95,8 +105,11 @@ class Create extends Component
             'currency' => 'required|in:'.implode(',', self::CURRENCIES),
             'timezone' => 'required|timezone:all',
             'phone' => 'nullable|string|max:32',
+            'fax' => 'nullable|string|max:32',
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string|max:255',
+            'street' => 'nullable|string|max:255',
+            'logo' => 'nullable|image|max:2048',
             'tin' => 'nullable|string|max:32',
             'vrn' => 'nullable|string|max:32',
             'adminName' => $adminExists ? 'nullable|string|max:120' : 'required|string|max:120',
@@ -111,8 +124,10 @@ class Create extends Component
                 'currency' => $validated['currency'],
                 'timezone' => $validated['timezone'],
                 'phone' => $validated['phone'] ?: null,
+                'fax' => $validated['fax'] ?: null,
                 'email' => $validated['email'] ?: null,
                 'address' => $validated['address'] ?: null,
+                'street' => $validated['street'] ?: null,
                 'tin' => $validated['tin'] ?: null,
                 'vrn' => $validated['vrn'] ?: null,
             ],
@@ -122,6 +137,11 @@ class Create extends Component
                 'password' => $validated['adminPassword'] ?: null,
             ],
         );
+
+        $hotel->forceFill([
+            'approved_by' => Auth::id(),
+            'logo_path' => $this->logo?->store('hotel-logos', 'public'),
+        ])->save();
 
         Flux::toast(variant: 'success', text: __('Hotel :name created.', ['name' => $hotel->name]));
 

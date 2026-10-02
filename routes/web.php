@@ -2,9 +2,14 @@
 
 use App\Domain\Tenancy\TenantContext;
 use App\Http\Controllers\SwitchHotelController;
+use App\Livewire\Admin\Currencies\Create as AdminCurrenciesCreate;
+use App\Livewire\Admin\Currencies\Index as AdminCurrenciesIndex;
 use App\Livewire\Admin\Hotels\Create as AdminHotelsCreate;
 use App\Livewire\Admin\Hotels\Index as AdminHotelsIndex;
 use App\Livewire\Admin\Hotels\Show as AdminHotelsShow;
+use App\Livewire\Admin\InvoiceFooters\Create as AdminInvoiceFootersCreate;
+use App\Livewire\Admin\InvoiceFooters\Index as AdminInvoiceFootersIndex;
+use App\Livewire\Admin\Organization\SystemControl as AdminSystemControl;
 use App\Livewire\Agents\Index as AgentsIndex;
 use App\Livewire\Agents\Register as AgentsRegister;
 use App\Livewire\Extras\Create as ExtrasCreate;
@@ -110,6 +115,12 @@ Route::post('hotels/{hotel}/switch', SwitchHotelController::class)
 
 // Platform (cross-tenant) admin — deliberately outside the 'tenant' middleware.
 Route::middleware(['auth', 'verified', 'super-admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::view('organization', 'admin.organization')->name('organization');
+    Route::livewire('organization/system-control', AdminSystemControl::class)->name('organization.system-control');
+    Route::livewire('currencies', AdminCurrenciesIndex::class)->name('currencies.index');
+    Route::livewire('currencies/new', AdminCurrenciesCreate::class)->name('currencies.create');
+    Route::livewire('invoice-footers', AdminInvoiceFootersIndex::class)->name('invoice-footers.index');
+    Route::livewire('invoice-footers/new', AdminInvoiceFootersCreate::class)->name('invoice-footers.create');
     Route::livewire('hotels', AdminHotelsIndex::class)->name('hotels.index');
     Route::livewire('hotels/new', AdminHotelsCreate::class)->name('hotels.create');
     Route::livewire('hotels/{hotel}', AdminHotelsShow::class)->name('hotels.show');

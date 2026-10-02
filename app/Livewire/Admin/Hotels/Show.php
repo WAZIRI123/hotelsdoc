@@ -21,13 +21,18 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use Spatie\Permission\PermissionRegistrar;
 
 class Show extends Component
 {
+    use WithFileUploads;
+
     public Hotel $hotel;
 
     public string $name = '';
@@ -40,9 +45,15 @@ class Show extends Component
 
     public string $phone = '';
 
+    public string $fax = '';
+
     public string $email = '';
 
     public string $address = '';
+
+    public string $street = '';
+
+    public ?TemporaryUploadedFile $logo = null;
 
     public string $tin = '';
 
@@ -131,16 +142,34 @@ class Show extends Component
             'currency' => 'required|in:'.implode(',', Create::CURRENCIES),
             'timezone' => 'required|timezone:all',
             'phone' => 'nullable|string|max:32',
+            'fax' => 'nullable|string|max:32',
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string|max:255',
+            'street' => 'nullable|string|max:255',
             'tin' => 'nullable|string|max:32',
             'vrn' => 'nullable|string|max:32',
+            'logo' => 'nullable|image|max:2048',
         ]);
+        unset($validated['logo']);
 
-        $this->hotel->update(array_map(
+        $this->hotel->fill(array_map(
             fn (string $value): ?string => $value === '' ? null : $value,
             $validated,
         ));
+        $this->hotel->forceFill(['edited_by' => Auth::id()]);
+
+        if ($this->logo !== null) {
+            $previousLogo = $this->hotel->logo_path;
+            $this->hotel->forceFill(['logo_path' => $this->logo->store('hotel-logos', 'public')]);
+
+            if ($previousLogo !== null) {
+                Storage::disk('public')->delete($previousLogo);
+            }
+
+            $this->logo = null;
+        }
+
+        $this->hotel->save();
 
         Flux::toast(variant: 'success', text: __('Hotel details saved.'));
     }
@@ -299,8 +328,10 @@ class Show extends Component
         $this->currency = $this->hotel->currency;
         $this->timezone = $this->hotel->timezone;
         $this->phone = $this->hotel->phone ?? '';
+        $this->fax = $this->hotel->fax ?? '';
         $this->email = $this->hotel->email ?? '';
         $this->address = $this->hotel->address ?? '';
+        $this->street = $this->hotel->street ?? '';
         $this->tin = $this->hotel->tin ?? '';
         $this->vrn = $this->hotel->vrn ?? '';
     }

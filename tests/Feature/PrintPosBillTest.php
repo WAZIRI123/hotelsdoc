@@ -6,6 +6,7 @@ use App\Domain\POS\Actions\BillPosOrderToFolio;
 use App\Domain\POS\Actions\RecalculatePosOrderTotals;
 use App\Models\Folio;
 use App\Models\Guest;
+use App\Models\InvoiceFooter;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Outlet;
@@ -100,6 +101,23 @@ it('shows the folio reference on a receipt billed to a guest room', function ():
         ->assertOk()
         ->assertSee('Charged to folio')
         ->assertSee($folio->reference);
+});
+
+it('prints the hotel invoice footer on the POS receipt', function (): void {
+    $order = billedWalkInOrder($this->hotel->id, $this->outlet->id, $this->item->id);
+
+    $this->get(route('pos.transactions.print', $order))
+        ->assertOk()
+        ->assertDontSee('Lipa Namba: 123456');
+
+    InvoiceFooter::factory()->create([
+        'hotel_id' => $this->hotel->id,
+        'content' => 'Lipa Namba: 123456',
+    ]);
+
+    $this->get(route('pos.transactions.print', $order))
+        ->assertOk()
+        ->assertSeeInOrder(['Thank you for your visit.', 'Lipa Namba: 123456', $order->reference]);
 });
 
 it('requires authentication to view a POS receipt', function (): void {

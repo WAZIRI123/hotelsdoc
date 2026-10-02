@@ -53,7 +53,7 @@
                             @if ($switchableHotels->isNotEmpty())
                                 <flux:menu.separator />
                             @endif
-                            <flux:menu.item icon="arrow-uturn-left" :href="route('admin.hotels.index')" wire:navigate>
+                            <flux:menu.item icon="arrow-uturn-left" :href="route('admin.organization')" wire:navigate>
                                 {{ __('Back to platform') }}
                             </flux:menu.item>
                         @endif
@@ -69,8 +69,8 @@
             <flux:sidebar.nav class="mt-3">
                 @if (auth()->user()->isSuperAdmin())
                     <flux:sidebar.group :heading="__('Platform')" class="grid">
-                        <flux:sidebar.item icon="building-office" :href="route('admin.hotels.index')" :current="request()->routeIs('admin.hotels.*')" wire:navigate>
-                            {{ __('Hotels') }}
+                        <flux:sidebar.item icon="building-office" :href="route('admin.organization')" :current="request()->routeIs('admin.organization', 'admin.hotels.*')" wire:navigate>
+                            {{ __('Organization') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif
@@ -98,7 +98,7 @@
 
                 <flux:sidebar.group :heading="__('Inventory')" class="grid">
                     <flux:sidebar.item icon="building-office-2" :href="route('rooms.index')" :current="request()->routeIs('rooms.*')" wire:navigate>
-                        {{ __('Rooms') }}
+                        {{ __('Manage Rooms') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="rectangle-stack" :href="route('room-types.index')" :current="request()->routeIs('room-types.*')" wire:navigate>
                         {{ __('Room types') }}

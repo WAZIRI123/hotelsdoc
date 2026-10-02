@@ -92,12 +92,27 @@
                 </flux:select>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-3">
                 <flux:input wire:model="phone" :label="__('Phone')" />
                 <flux:input wire:model="email" type="email" :label="__('Email')" />
+                <flux:input wire:model="fax" :label="__('Fax')" />
             </div>
 
-            <flux:input wire:model="address" :label="__('Address')" />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <flux:input wire:model="address" :label="__('Address')" />
+                <flux:input wire:model="street" :label="__('Street')" />
+            </div>
+
+            <div class="flex flex-wrap items-end gap-4">
+                @if ($logo)
+                    <img src="{{ $logo->temporaryUrl() }}" alt="" class="h-16 w-auto rounded border border-zinc-200 bg-white p-1 dark:border-zinc-700" />
+                @elseif (isset($hotel) && $hotel->logoUrl())
+                    <img src="{{ $hotel->logoUrl() }}" alt="{{ $hotel->name }}" class="h-16 w-auto rounded border border-zinc-200 bg-white p-1 dark:border-zinc-700" />
+                @endif
+                <div class="min-w-64 flex-1">
+                    <flux:input type="file" wire:model="logo" accept="image/*" :label="__('Logo')" :description="__('PNG or JPG, up to 2 MB.')" />
+                </div>
+            </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="tin" :label="__('TIN')" />

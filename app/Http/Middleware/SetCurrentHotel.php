@@ -38,7 +38,7 @@ final class SetCurrentHotel
 
         if ($hotel === null) {
             if ($user->isSuperAdmin()) {
-                return redirect()->route('admin.hotels.index');
+                return redirect()->route('admin.organization');
             }
 
             $message = $user->hotels()->exists()

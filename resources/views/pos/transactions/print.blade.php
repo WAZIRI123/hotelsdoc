@@ -194,6 +194,7 @@
             margin-bottom: 4px;
         }
         .footer .ref { margin-top: 6px; font-family: 'Courier New', monospace; }
+        .footer .note { margin-top: 6px; white-space: pre-line; color: #374151; }
 
         @media print {
             body { background: #fff; }
@@ -324,6 +325,9 @@
         <div class="footer">
             <div class="thanks">{{ __('Asante sana!') }}</div>
             <div>{{ __('Thank you for your visit.') }}</div>
+            @if ($hotel->invoiceFooter)
+                <div class="note">{{ $hotel->invoiceFooter->content }}</div>
+            @endif
             <div class="ref">{{ $order->reference }}</div>
         </div>
     </div>

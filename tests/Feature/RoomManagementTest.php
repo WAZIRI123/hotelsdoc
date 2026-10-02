@@ -59,3 +59,13 @@ it('updates and deletes a room', function (): void {
     Livewire::test(Index::class)->call('delete', $room->id);
     expect(Room::find($room->id))->toBeNull();
 });
+
+it('labels the sidebar item and dashboard card as Manage Rooms', function (): void {
+    actingAsTenantUser();
+
+    $response = $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee(route('rooms.index'), false);
+
+    expect(substr_count($response->getContent(), 'Manage Rooms'))->toBeGreaterThanOrEqual(2);
+});

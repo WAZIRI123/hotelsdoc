@@ -24,7 +24,7 @@ use Spatie\Permission\PermissionRegistrar;
 final class ProvisionHotel
 {
     /**
-     * @param  array{name: string, slug: string, currency: string, timezone: string, phone?: string|null, email?: string|null, address?: string|null, tin?: string|null, vrn?: string|null}  $hotelAttributes
+     * @param  array{name: string, slug: string, currency: string, timezone: string, phone?: string|null, fax?: string|null, email?: string|null, address?: string|null, street?: string|null, tin?: string|null, vrn?: string|null}  $hotelAttributes
      * @param  array{name: string, email: string, password?: string|null}  $adminAttributes
      */
     public function execute(array $hotelAttributes, array $adminAttributes): Hotel

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Folio;
 use App\Models\Guest;
+use App\Models\InvoiceFooter;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
@@ -71,6 +72,21 @@ it('flags the bill as paid in full when balance is zero', function (): void {
         ->assertOk()
         ->assertSee('Paid in full')
         ->assertDontSee('Balance due');
+});
+
+it('prints the hotel invoice footer at the bottom of the bill', function (): void {
+    $this->get(route('folios.print', $this->folio))
+        ->assertOk()
+        ->assertDontSee('Bank: CRDB');
+
+    InvoiceFooter::factory()->create([
+        'hotel_id' => $this->hotel->id,
+        'content' => 'Bank: CRDB · Account 0150-123456',
+    ]);
+
+    $this->get(route('folios.print', $this->folio))
+        ->assertOk()
+        ->assertSee('Bank: CRDB · Account 0150-123456');
 });
 
 it('requires authentication to view a bill', function (): void {

@@ -22,7 +22,7 @@
             [
                 'permission' => 'manage-rooms',
                 'route' => 'rooms.index',
-                'label' => __('Rooms'),
+                'label' => __('Manage Rooms'),
                 'icon' => 'building-office-2',
                 'color' => 'bg-indigo-500',
             ],

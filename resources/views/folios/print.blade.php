@@ -457,6 +457,9 @@
 
         <div class="footer">
             <div class="thanks">{{ __('Thank you for your stay!') }}</div>
+            @if ($hotel->invoiceFooter)
+                <div class="custom" style="white-space: pre-line; color: #374151; margin-bottom: 6px;">{{ $hotel->invoiceFooter->content }}</div>
+            @endif
             <div>{{ __('This bill was generated on') }} {{ now()->format('d M Y H:i') }} · {{ $folio->reference }}</div>
         </div>
     </div>
