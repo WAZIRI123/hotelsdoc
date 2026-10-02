@@ -99,8 +99,8 @@
                 <flux:sidebar.item icon="computer-desktop" :href="route('pos.lobby')" :current="request()->routeIs('pos.*')" wire:navigate>
                     {{ __('Point of Sale') }}
                 </flux:sidebar.item>
-                <flux:sidebar.item icon="building-storefront" :href="route('outlets.index')" :current="request()->routeIs('outlets.*') || request()->routeIs('menu.*')" wire:navigate>
-                    {{ __('Outlets & menus') }}
+                <flux:sidebar.item icon="archive-box" :href="route('manage-stock')" :current="request()->routeIs('manage-stock', 'manage-stock.*', 'outlets.*', 'menu.*', 'suppliers.*', 'stock-types.*')" wire:navigate>
+                    {{ __('Manage Stock') }}
                 </flux:sidebar.item>
 
                 <flux:sidebar.item icon="chart-bar" :href="route('reports.index')" :current="request()->routeIs('reports.*')" wire:navigate>

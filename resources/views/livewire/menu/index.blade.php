@@ -146,8 +146,22 @@
             <flux:switch wire:model.live="itemTrackStock" :label="__('Track stock')"
                 :description="__('Block adding to orders once the counter hits zero.')" />
             @if ($itemTrackStock)
-                <flux:input wire:model.number="itemStockQuantity" type="number" min="0"
-                    :label="__('Stock on hand')" required />
+                @if ($itemWasTracked)
+                    <flux:field>
+                        <flux:label>{{ __('Stock on hand') }}</flux:label>
+                        <flux:text class="font-mono">{{ $itemStockQuantity }}</flux:text>
+                        <flux:description>{{ __('Change it with Receive Stock or Issue Products under Manage Stock.') }}</flux:description>
+                    </flux:field>
+                @else
+                    <flux:input wire:model.number="itemStockQuantity" type="number" min="0"
+                        :label="__('Opening stock')" required />
+                @endif
+                <flux:select wire:model="itemStockTypeId" :label="__('Stock type')">
+                    <flux:select.option value="">{{ __('None') }}</flux:select.option>
+                    @foreach ($this->stockTypes as $stockType)
+                        <flux:select.option :value="$stockType->id">{{ $stockType->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
             @endif
             <flux:switch wire:model="itemIsActive" :label="__('Active')" />
 

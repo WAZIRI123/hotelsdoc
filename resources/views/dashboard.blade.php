@@ -35,9 +35,9 @@
             ],
             [
                 'permission' => 'manage-outlets',
-                'route' => 'outlets.index',
-                'label' => __('Outlets & menus'),
-                'icon' => 'building-storefront',
+                'route' => 'manage-stock',
+                'label' => __('Manage Stock'),
+                'icon' => 'archive-box',
                 'color' => 'bg-orange-500',
             ],
             [

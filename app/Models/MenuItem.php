@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $hotel_id
  * @property int $outlet_id
  * @property int $menu_category_id
+ * @property int|null $stock_type_id
  * @property string $name
  * @property string|null $description
  * @property Money $price
@@ -34,6 +35,7 @@ class MenuItem extends Model
         'hotel_id',
         'outlet_id',
         'menu_category_id',
+        'stock_type_id',
         'name',
         'description',
         'price',
@@ -84,5 +86,13 @@ class MenuItem extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(MenuCategory::class, 'menu_category_id');
+    }
+
+    /**
+     * @return BelongsTo<StockType, $this>
+     */
+    public function stockType(): BelongsTo
+    {
+        return $this->belongsTo(StockType::class);
     }
 }

@@ -41,7 +41,13 @@ use App\Livewire\Reservations\Index as ReservationsIndex;
 use App\Livewire\Reservations\Show as ReservationsShow;
 use App\Livewire\Rooms\Index as RoomsIndex;
 use App\Livewire\RoomTypes\Index as RoomTypesIndex;
+use App\Livewire\Stock\Issue as StockIssue;
+use App\Livewire\StockTypes\Index as StockTypesIndex;
+use App\Livewire\StockTypes\Register as StockTypesRegister;
+use App\Livewire\Suppliers\Index as SuppliersIndex;
+use App\Livewire\Suppliers\Register as SuppliersRegister;
 use App\Models\Folio;
+use App\Models\Outlet;
 use App\Models\PosOrder;
 use Illuminate\Support\Facades\Route;
 
@@ -83,6 +89,19 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::livewire('extras/orders', ExtrasOrders::class)->name('extras.orders');
     Route::livewire('extras/services', ExtrasServices::class)->name('extras.services');
 
+    Route::get('manage-stock', fn () => view('manage-stock', [
+        'outlets' => Outlet::query()->orderByDesc('is_active')->orderBy('name')->get(),
+    ]))->name('manage-stock');
+    Route::get('manage-stock/{outlet}', fn (Outlet $outlet) => view('manage-stock-outlet', [
+        'outlet' => $outlet,
+    ]))->name('manage-stock.outlet');
+    Route::livewire('manage-stock/{outlet}/issue', StockIssue::class)->name('manage-stock.issue');
+    Route::livewire('suppliers', SuppliersIndex::class)->name('suppliers.index');
+    Route::livewire('suppliers/new', SuppliersRegister::class)->name('suppliers.create');
+    Route::livewire('suppliers/{supplier}/edit', SuppliersRegister::class)->name('suppliers.edit');
+    Route::livewire('stock-types', StockTypesIndex::class)->name('stock-types.index');
+    Route::livewire('stock-types/new', StockTypesRegister::class)->name('stock-types.create');
+    Route::livewire('stock-types/{stockType}/edit', StockTypesRegister::class)->name('stock-types.edit');
     Route::livewire('outlets', OutletsIndex::class)->name('outlets.index');
     Route::livewire('outlets/{outlet}/menu', MenuIndex::class)->name('menu.index');
 

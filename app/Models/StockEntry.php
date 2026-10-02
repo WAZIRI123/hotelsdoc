@@ -17,11 +17,13 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $hotel_id
  * @property int $menu_item_id
+ * @property int|null $supplier_id
  * @property int|null $recorded_by
  * @property Carbon $entry_date
  * @property Carbon|null $expiry_date
  * @property string|null $description
  * @property int $quantity
+ * @property int|null $unit_cost Minor units in the hotel's currency
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -33,11 +35,13 @@ class StockEntry extends Model
     protected $fillable = [
         'hotel_id',
         'menu_item_id',
+        'supplier_id',
         'recorded_by',
         'entry_date',
         'expiry_date',
         'description',
         'quantity',
+        'unit_cost',
     ];
 
     /**
@@ -49,7 +53,24 @@ class StockEntry extends Model
             'entry_date' => 'date',
             'expiry_date' => 'date',
             'quantity' => 'integer',
+            'unit_cost' => 'integer',
         ];
+    }
+
+    /**
+     * Unit cost times quantity in minor units, or null when no cost was recorded.
+     */
+    public function totalCost(): ?int
+    {
+        return $this->unit_cost === null ? null : $this->unit_cost * $this->quantity;
+    }
+
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     /**
