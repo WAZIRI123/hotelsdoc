@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Reports;
 
 use App\Domain\Reports\ReportCatalog;
+use App\Models\Expense;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\ReservationRoom;
@@ -90,7 +91,7 @@ class CashUp extends Component
             'to' => ['required', 'date', 'after_or_equal:date'],
         ]);
 
-        unset($this->reservationRows, $this->payments);
+        unset($this->reservationRows, $this->payments, $this->expensesPaidOut);
     }
 
     /**
@@ -206,6 +207,58 @@ class CashUp extends Component
             $payment->receivedBy === null ? 'unknown' : (string) $payment->receivedBy->id,
             $payment->receivedBy === null ? __('Unknown') : $payment->receivedBy->name,
         ]);
+    }
+
+    /**
+     * Money in and out per payment method: payments collected less expenses
+     * paid out with that method. Expenses with no method get their own row.
+     *
+     * @return array<string, array{label: string, count: int, collected: Money, paid_out: Money, net: Money}>
+     */
+    #[Computed]
+    public function methodSummary(): array
+    {
+        $rows = [];
+
+        foreach ($this->totalsByMethod() as $code => $group) {
+            $rows[$code] = ['label' => $group['label'], 'count' => $group['count'], 'collected' => $group['total'], 'paid_out' => Money::zero(), 'net' => $group['total']];
+        }
+
+        foreach ($this->expensesPaidOut() as $expense) {
+            $code = $expense->method_code ?? '';
+            $rows[$code] ??= [
+                'label' => $code === '' ? __('Method not recorded') : ucwords(str_replace('_', ' ', $code)),
+                'count' => 0,
+                'collected' => Money::zero(),
+                'paid_out' => Money::zero(),
+                'net' => Money::zero(),
+            ];
+            $rows[$code]['paid_out'] = $rows[$code]['paid_out']->add($expense->money());
+            $rows[$code]['net'] = $rows[$code]['collected']->subtract($rows[$code]['paid_out']);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return Collection<int, Expense>
+     */
+    #[Computed]
+    public function expensesPaidOut(): Collection
+    {
+        return Expense::query()
+            ->whereDate('expense_date', '>=', $this->reportDay()->toDateString())
+            ->whereDate('expense_date', '<=', $this->reportEnd()->toDateString())
+            ->get();
+    }
+
+    #[Computed]
+    public function totalPaidOut(): Money
+    {
+        return $this->expensesPaidOut()->reduce(
+            fn (Money $carry, Expense $expense): Money => $carry->add($expense->money()),
+            Money::zero(),
+        );
     }
 
     #[Computed]

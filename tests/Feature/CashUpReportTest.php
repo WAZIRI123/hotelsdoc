@@ -6,6 +6,7 @@ use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CreateReservation;
 use App\Livewire\Reports\CashUp;
+use App\Models\Expense;
 use App\Models\Folio;
 use App\Models\Guest;
 use App\Models\Room;
@@ -144,4 +145,24 @@ it('defaults the to date to the from date and rejects a to date before it', func
         ->set('to', '2026-09-10')
         ->call('getReport')
         ->assertHasErrors(['to']);
+});
+
+it('takes expenses paid out off the collected total per method', function (): void {
+    $folio = Folio::query()->create(['hotel_id' => $this->hotel->id, 'total_amount' => 200_000_00, 'status' => 'open']);
+    app(RecordPayment::class)->execute($folio, 'cash', Money::fromMajor(50_000), receivedBy: $this->user);
+    Expense::factory()->for($this->hotel)->create([
+        'expense_date' => today()->toDateString(),
+        'method_code' => 'cash',
+        'payee' => 'Market',
+        'amount' => 15_000_00,
+    ]);
+
+    $cashUp = Livewire::test(CashUp::class, ['view' => 'general'])
+        ->assertSee('Paid out')
+        ->instance();
+
+    expect($cashUp->methodSummary()['cash']['collected']->amount)->toBe(50_000_00)
+        ->and($cashUp->methodSummary()['cash']['paid_out']->amount)->toBe(15_000_00)
+        ->and($cashUp->methodSummary()['cash']['net']->amount)->toBe(35_000_00)
+        ->and($cashUp->totalPaidOut()->amount)->toBe(15_000_00);
 });

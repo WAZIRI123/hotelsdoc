@@ -40,6 +40,12 @@
                 </flux:button>
             @endif
 
+            @if ($this->canDiscount())
+                <flux:button variant="ghost" icon="receipt-percent" wire:click="openDiscount">
+                    {{ __('Add discount') }}
+                </flux:button>
+            @endif
+
             @if ($this->canRefund())
                 <flux:button variant="primary" icon="arrow-uturn-left" wire:click="openRefund">
                     {{ __('Refund credit') }}
@@ -47,6 +53,25 @@
             @endif
         </div>
     </div>
+
+    <flux:modal name="add-discount" class="md:w-[480px]">
+        <form wire:submit="applyDiscount" class="space-y-6">
+            <flux:heading size="lg">{{ __('Add discount') }}</flux:heading>
+            <flux:text>{{ __('The amount comes straight off what the guest pays.') }}</flux:text>
+
+            <flux:input wire:model.number="discount_amount" type="number" min="1"
+                :label="__('Amount (:currency)', ['currency' => $folio->currency])" required />
+
+            <flux:input wire:model="discount_reason" :label="__('Reason')" required />
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">{{ __('Apply discount') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     <flux:modal name="refund-credit" class="md:w-[480px]">
         <form wire:submit="refund" class="space-y-6">
@@ -172,7 +197,15 @@
                             @endif
                             {{ str_replace('_', ' ', ucfirst($payment->method_code)) }}
                         </flux:table.cell>
-                        <flux:table.cell class="font-mono text-sm">{{ $payment->reference ?? '—' }}</flux:table.cell>
+                        <flux:table.cell class="text-sm">
+                            <span class="font-mono">{{ $payment->reference ?? '—' }}</span>
+                            @if ($payment->payer_phone)
+                                <div class="text-xs text-zinc-500">{{ __('Payer') }}: {{ $payment->payer_phone }}</div>
+                            @endif
+                            @if ($payment->note)
+                                <div class="text-xs whitespace-normal text-zinc-500">{{ $payment->note }}</div>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge :color="$payment->status === 'confirmed' ? 'green' : 'yellow'" size="sm">
                                 {{ ucfirst($payment->status) }}

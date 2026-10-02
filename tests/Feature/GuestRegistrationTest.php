@@ -125,3 +125,25 @@ it('filters the guest list by caller name', function (): void {
         ->assertSee('Grace Hopper')
         ->assertDontSee('Alan Turing');
 });
+
+it('edits an existing guest', function (): void {
+    $guest = Guest::factory()->for($this->hotel)->create(['first_name' => 'Ada', 'last_name' => 'Byron', 'phone' => null]);
+
+    $this->get(route('guests.edit', $guest))->assertOk();
+
+    Livewire::test(Register::class, ['guest' => $guest])
+        ->assertSet('guest_names', 'Ada Byron')
+        ->assertSee('Edit Guest')
+        ->set('guest_names', 'Ada Lovelace')
+        ->set('phone', '0712000000')
+        ->set('id_type', 'passport')
+        ->set('id_number', 'P998')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $guest->refresh();
+    expect($guest->last_name)->toBe('Lovelace')
+        ->and($guest->phone)->toBe('0712000000')
+        ->and($guest->id_number)->toBe('P998')
+        ->and(Guest::query()->count())->toBe(1);
+});

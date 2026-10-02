@@ -63,13 +63,15 @@ final class RecordPayment
             note: $note,
         ));
 
-        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy): Payment {
+        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy, $payerPhone, $note): Payment {
             $payment = Payment::query()->create([
                 'folio_id' => $folio->id,
                 'method_code' => $methodCode,
                 'amount' => $amount,
                 'currency' => $amount->currency,
                 'reference' => $result->reference,
+                'payer_phone' => $payerPhone,
+                'note' => $note,
                 'status' => $result->status->value,
                 'provider_payload' => $result->providerPayload,
                 'received_by' => $receivedBy?->id,

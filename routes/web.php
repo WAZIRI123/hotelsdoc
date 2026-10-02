@@ -68,6 +68,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::livewire('guests', GuestsIndex::class)->name('guests.index');
         Route::livewire('guests/register', GuestsRegister::class)->name('guests.register');
         Route::livewire('guests/list', GuestsList::class)->name('guests.list');
+        Route::livewire('guests/{guest}/edit', GuestsRegister::class)->name('guests.edit');
     });
 
     Route::middleware('can:manage-reservations')->group(function () {

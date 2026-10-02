@@ -16,6 +16,8 @@ use Livewire\Component;
 #[Title('Register Guest')]
 class Register extends Component
 {
+    public ?Guest $guest = null;
+
     #[Validate('required|string|max:160')]
     public string $guest_names = '';
 
@@ -42,6 +44,22 @@ class Register extends Component
     #[Validate('nullable|string|max:500')]
     public string $address = '';
 
+    public function mount(?Guest $guest = null): void
+    {
+        if ($guest?->exists) {
+            $this->guest = $guest;
+            $this->guest_names = $guest->fullName();
+            $this->gender = $guest->gender ?? '';
+            $this->caller_name = $guest->caller_name ?? '';
+            $this->phone = $guest->phone ?? '';
+            $this->email = $guest->email ?? '';
+            $this->nationality = $guest->nationality ?? '';
+            $this->id_type = $guest->id_type ?? '';
+            $this->id_number = $guest->id_number ?? '';
+            $this->address = $guest->address ?? '';
+        }
+    }
+
     /**
      * @return array<string, array<int, mixed>>
      */
@@ -58,7 +76,7 @@ class Register extends Component
 
         [$firstName, $lastName] = array_pad(preg_split('/\s+/', trim($this->guest_names), 2) ?: [], 2, null);
 
-        $guest = Guest::query()->create([
+        $attributes = [
             'first_name' => $firstName,
             'last_name' => $lastName,
             'gender' => $this->gender ?: null,
@@ -69,9 +87,15 @@ class Register extends Component
             'id_type' => $this->id_type ?: null,
             'id_number' => $this->id_type !== '' && $this->id_number !== '' ? $this->id_number : null,
             'address' => $this->address ?: null,
-        ]);
+        ];
 
-        Flux::toast(variant: 'success', text: 'Guest '.$guest->fullName().' registered.');
+        if ($this->guest) {
+            $this->guest->update($attributes);
+            Flux::toast(variant: 'success', text: 'Guest '.$this->guest->fullName().' updated.');
+        } else {
+            $guest = Guest::query()->create($attributes);
+            Flux::toast(variant: 'success', text: 'Guest '.$guest->fullName().' registered.');
+        }
 
         $this->redirectRoute('guests.list', navigate: true);
     }

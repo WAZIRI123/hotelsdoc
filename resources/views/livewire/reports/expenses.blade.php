@@ -49,6 +49,8 @@
                     <th class="{{ $th }} text-left">{{ __('Item') }}</th>
                     <th class="{{ $th }} text-left">{{ __('Category') }}</th>
                     <th class="{{ $th }} text-left">{{ __('Quantity') }}</th>
+                    <th class="{{ $th }} text-left">{{ __('Paid to') }}</th>
+                    <th class="{{ $th }} text-left">{{ __('Paid by') }}</th>
                     <th class="{{ $th }} text-right">{{ __('Amount') }}</th>
                     @if ($canRecord)
                         <th class="{{ $th }} print:hidden"></th>
@@ -63,6 +65,8 @@
                         <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $expense->description }}</td>
                         <td class="{{ $td }}">{{ __($expense->category) }}</td>
                         <td class="{{ $td }} tabular-nums">{{ $expense->quantity !== null ? $quantity($expense->quantity) : '—' }}</td>
+                        <td class="{{ $td }}">{{ $expense->payee ?? '—' }}</td>
+                        <td class="{{ $td }}">{{ $expense->method_code !== null ? ucwords(str_replace('_', ' ', $expense->method_code)) : '—' }}</td>
                         <td class="{{ $td }} text-right tabular-nums">{{ $amount($expense->money()) }}</td>
                         @if ($canRecord)
                             <td class="{{ $td }} text-right print:hidden">
@@ -73,14 +77,14 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ $canRecord ? 7 : 6 }}" class="px-4 py-12 text-center text-zinc-500">{{ __('No expenses in this period.') }}</td>
+                        <td colspan="{{ $canRecord ? 9 : 8 }}" class="px-4 py-12 text-center text-zinc-500">{{ __('No expenses in this period.') }}</td>
                     </tr>
                 @endforelse
             </tbody>
             <tfoot class="border-t-2 border-zinc-200 bg-zinc-50 font-semibold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100">
                 <tr>
                     <td class="{{ $td }}"></td>
-                    <td colspan="4" class="{{ $td }} text-base">{{ __('Total') }}</td>
+                    <td colspan="6" class="{{ $td }} text-base">{{ __('Total') }}</td>
                     <td class="{{ $td }} text-right tabular-nums">{{ $amount($this->grandTotal) }}</td>
                     @if ($canRecord)
                         <td class="print:hidden"></td>

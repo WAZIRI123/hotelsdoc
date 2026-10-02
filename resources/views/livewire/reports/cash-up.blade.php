@@ -29,11 +29,18 @@
             [__('Paid'), $amount($this->reservationTotals['paid']), 'text-green-600 dark:text-green-400'],
             [__('Balance'), $amount($this->reservationTotals['balance']), $this->reservationTotals['balance']->isPositive() ? 'text-red-600 dark:text-red-400' : 'text-zinc-900 dark:text-zinc-100'],
         ]
-        : [
-            [__('Payments'), $this->payments->count(), 'text-zinc-900 dark:text-zinc-100'],
-            [$view === 'staff' ? __('Staff') : __('Methods'), count($view === 'staff' ? $this->totalsByStaff : $this->totalsByMethod), 'text-zinc-900 dark:text-zinc-100'],
-            [__('Collected'), $amount($this->grandTotal), 'text-green-600 dark:text-green-400'],
-        ];
+        : ($view === 'staff'
+            ? [
+                [__('Payments'), $this->payments->count(), 'text-zinc-900 dark:text-zinc-100'],
+                [__('Staff'), count($this->totalsByStaff), 'text-zinc-900 dark:text-zinc-100'],
+                [__('Collected'), $amount($this->grandTotal), 'text-green-600 dark:text-green-400'],
+            ]
+            : [
+                [__('Payments'), $this->payments->count(), 'text-zinc-900 dark:text-zinc-100'],
+                [__('Collected'), $amount($this->grandTotal), 'text-green-600 dark:text-green-400'],
+                [__('Paid out'), $amount($this->totalPaidOut), 'text-red-600 dark:text-red-400'],
+                [__('Net'), $amount($this->grandTotal->subtract($this->totalPaidOut)), 'text-zinc-900 dark:text-zinc-100'],
+            ]);
 @endphp
 
 <section class="w-full space-y-3">
@@ -153,11 +160,50 @@
                             </tr>
                         </tfoot>
                     @endif
-                @else
-                    @php($groups = $view === 'staff' ? $this->totalsByStaff : $this->totalsByMethod)
+                @elseif ($view === 'general')
                     <thead class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
                         <tr>
-                            <th class="{{ $th }} text-left">{{ $view === 'staff' ? __('Staff') : __('Payment Method') }}</th>
+                            <th class="{{ $th }} text-left">{{ __('Payment Method') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Payments') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Collected') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Paid out') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Net') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @forelse ($this->methodSummary as $key => $row)
+                            <tr wire:key="method-{{ $key }}" class="transition hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                                <td class="{{ $td }} font-medium text-zinc-900 dark:text-zinc-100">{{ $row['label'] }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $row['count'] }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($row['collected']) }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($row['paid_out']) }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($row['net']) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-4 py-12 text-center text-zinc-500">
+                                    <flux:icon.banknotes class="mx-auto mb-2 size-8 text-zinc-300 dark:text-zinc-600" />
+                                    {{ __('No payments or expenses in this period.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if (count($this->methodSummary) > 0)
+                        <tfoot class="border-t-2 border-zinc-200 bg-zinc-50 font-semibold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100">
+                            <tr>
+                                <td class="{{ $td }}">{{ __('Total') }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $this->payments->count() }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($this->grandTotal) }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($this->totalPaidOut) }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($this->grandTotal->subtract($this->totalPaidOut)) }}</td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                @else
+                    @php($groups = $this->totalsByStaff)
+                    <thead class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                        <tr>
+                            <th class="{{ $th }} text-left">{{ __('Staff') }}</th>
                             <th class="{{ $th }} text-right">{{ __('Payments') }}</th>
                             <th class="{{ $th }} text-right">{{ __('Total') }}</th>
                         </tr>

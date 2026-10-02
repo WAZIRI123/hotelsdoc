@@ -43,6 +43,7 @@
                 <flux:table.column>{{ __('Email') }}</flux:table.column>
                 <flux:table.column>{{ __('Nationality') }}</flux:table.column>
                 <flux:table.column>{{ __('Reservations') }}</flux:table.column>
+                <flux:table.column></flux:table.column>
             </flux:table.columns>
 
             <flux:table.rows>
@@ -55,10 +56,15 @@
                         <flux:table.cell>{{ $guest->email ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->nationality ?: '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $guest->reservations_count }}</flux:table.cell>
+                        <flux:table.cell class="text-right">
+                            <flux:button size="sm" variant="ghost" icon="pencil-square" :href="route('guests.edit', $guest)" wire:navigate>
+                                {{ __('Edit') }}
+                            </flux:button>
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="7" class="text-center text-zinc-500">
+                        <flux:table.cell colspan="8" class="text-center text-zinc-500">
                             {{ __('No guests found.') }}
                         </flux:table.cell>
                     </flux:table.row>

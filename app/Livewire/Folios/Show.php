@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Folios;
 
+use App\Domain\Folios\Actions\ApplyFolioDiscount;
 use App\Domain\Notifications\BeemSmsClient;
 use App\Domain\Payments\Actions\RecordRefund;
 use App\Domain\Tenancy\TenantContext;
@@ -42,6 +43,10 @@ class Show extends Component
     public ?int $refund_amount = null;
 
     public string $refund_reference = '';
+
+    public ?int $discount_amount = null;
+
+    public string $discount_reason = '';
 
     public function mount(Folio $folio): void
     {
@@ -163,6 +168,48 @@ class Show extends Component
 
         Flux::toast(variant: 'success', text: __('Refund recorded.'));
         Flux::modal('refund-credit')->close();
+        $this->reloadFolio($this->folio);
+    }
+
+    public function canDiscount(): bool
+    {
+        return (Auth::user()?->can('manage-payments') ?? false)
+            && $this->folio->acceptsCharges()
+            && $this->folio->total_amount->isPositive();
+    }
+
+    public function openDiscount(): void
+    {
+        abort_unless($this->canDiscount(), 403);
+
+        $this->reset(['discount_amount', 'discount_reason']);
+        $this->resetErrorBag(['discount_amount', 'discount_reason']);
+        Flux::modal('add-discount')->show();
+    }
+
+    public function applyDiscount(ApplyFolioDiscount $action): void
+    {
+        abort_unless($this->canDiscount(), 403);
+
+        $this->validate([
+            'discount_amount' => ['required', 'integer', 'min:1'],
+            'discount_reason' => ['required', 'string', 'max:120'],
+        ]);
+
+        try {
+            $action->execute(
+                $this->folio,
+                Money::fromMajor((int) $this->discount_amount, $this->folio->currency),
+                $this->discount_reason,
+            );
+        } catch (RuntimeException $e) {
+            $this->addError('discount_amount', $e->getMessage());
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('Discount applied.'));
+        Flux::modal('add-discount')->close();
         $this->reloadFolio($this->folio);
     }
 

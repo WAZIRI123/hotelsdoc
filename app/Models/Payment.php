@@ -23,6 +23,8 @@ use Illuminate\Support\Str;
  * @property Money $amount
  * @property string $currency
  * @property string|null $reference
+ * @property string|null $payer_phone
+ * @property string|null $note
  * @property string $status
  * @property array<string, mixed>|null $provider_payload
  * @property Carbon|null $confirmed_at
@@ -39,6 +41,8 @@ class Payment extends Model
         'amount',
         'currency',
         'reference',
+        'payer_phone',
+        'note',
         'status',
         'provider_payload',
         'received_by',
