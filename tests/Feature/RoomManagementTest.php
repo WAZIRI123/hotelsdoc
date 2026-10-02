@@ -65,7 +65,20 @@ it('labels the sidebar item and dashboard card as Manage Rooms', function (): vo
 
     $response = $this->get(route('dashboard'))
         ->assertOk()
-        ->assertSee(route('rooms.index'), false);
+        ->assertSee(route('room-settings'), false)
+        ->assertDontSee(route('rate-plans.index'), false)
+        ->assertDontSee(route('meal-plans.index'), false);
 
     expect(substr_count($response->getContent(), 'Manage Rooms'))->toBeGreaterThanOrEqual(2);
+});
+
+it('shows the room setting blocks on the Manage Rooms hub', function (): void {
+    $this->get(route('room-settings'))
+        ->assertOk()
+        ->assertSee('Room Setting')
+        ->assertSee('Add rates')
+        ->assertSee(route('rate-plans.index'), false)
+        ->assertSee(route('meal-plans.index'), false)
+        ->assertSee(route('room-types.index'), false)
+        ->assertSee(route('rooms.index'), false);
 });

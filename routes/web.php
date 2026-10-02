@@ -50,6 +50,7 @@ Route::redirect('/', '/login')->name('home');
 Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 
+    Route::view('room-settings', 'room-settings')->name('room-settings');
     Route::livewire('room-types', RoomTypesIndex::class)->name('room-types.index');
     Route::livewire('meal-plans', MealPlansIndex::class)->name('meal-plans.index');
     Route::livewire('rate-plans', RatePlansIndex::class)->name('rate-plans.index');

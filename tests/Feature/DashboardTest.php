@@ -16,3 +16,22 @@ test('authenticated users can visit the dashboard', function () {
     $response = $this->get(route('dashboard'));
     $response->assertOk();
 });
+
+test('dashboard shows the point of sale block', function () {
+    actingAsTenantUser();
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Point of Sale')
+        ->assertDontSee('POS terminal');
+});
+
+test('dashboard and sidebar show the manage users link instead of settings', function () {
+    actingAsTenantUser();
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Manage Users')
+        ->assertDontSee('Roles &amp; permissions', false)
+        ->assertDontSee('Roles and permissions');
+});

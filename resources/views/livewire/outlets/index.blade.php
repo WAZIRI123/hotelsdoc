@@ -17,7 +17,7 @@
 
         <nav class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <a href="{{ route('pos.lobby') }}" wire:navigate
-                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('POS terminal') }}</a>
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Point of Sale') }}</a>
             <span class="text-zinc-400 dark:text-zinc-600">|</span>
             <a href="{{ route('reports.cash-up') }}" wire:navigate
                 class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Cash-up report') }}</a>

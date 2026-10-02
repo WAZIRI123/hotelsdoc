@@ -23,7 +23,7 @@
                 class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Meal plans') }}</a>
             <span class="text-zinc-400 dark:text-zinc-600">|</span>
             <a href="{{ route('rate-plans.index') }}" wire:navigate
-                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Rate plans') }}</a>
+                class="text-sky-600 hover:underline dark:text-sky-400">{{ __('Add rates') }}</a>
         </nav>
 
         <hr class="my-5 border-zinc-200 dark:border-zinc-700" />

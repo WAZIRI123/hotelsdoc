@@ -26,7 +26,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 use RuntimeException;
 
-#[Title('POS terminal')]
+#[Title('Point of Sale')]
 class Terminal extends Component
 {
     public Outlet $outlet;

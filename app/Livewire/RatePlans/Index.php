@@ -16,7 +16,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
-#[Title('Rate plans')]
+#[Title('Add rates')]
 class Index extends Component
 {
     public ?int $editingId = null;

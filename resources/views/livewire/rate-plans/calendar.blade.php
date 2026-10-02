@@ -8,7 +8,7 @@
         </div>
 
         <flux:button variant="ghost" icon="arrow-left" :href="route('rate-plans.index')" wire:navigate>
-            {{ __('Back to rate plans') }}
+            {{ __('Back to rates') }}
         </flux:button>
     </div>
 

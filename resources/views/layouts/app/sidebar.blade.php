@@ -68,11 +68,9 @@
 
             <flux:sidebar.nav class="mt-3">
                 @if (auth()->user()->isSuperAdmin())
-                    <flux:sidebar.group :heading="__('Platform')" class="grid">
-                        <flux:sidebar.item icon="building-office" :href="route('admin.organization')" :current="request()->routeIs('admin.organization', 'admin.hotels.*')" wire:navigate>
-                            {{ __('Organization') }}
-                        </flux:sidebar.item>
-                    </flux:sidebar.group>
+                    <flux:sidebar.item icon="building-office" :href="route('admin.organization')" :current="request()->routeIs('admin.organization', 'admin.hotels.*')" wire:navigate>
+                        {{ __('Organization') }}
+                    </flux:sidebar.item>
                 @endif
 
                 @if ($belongsToHotel)
@@ -80,61 +78,40 @@
                     {{ __('Dashboard') }}
                 </flux:sidebar.item>
 
-                <flux:sidebar.group :heading="__('Front desk')" class="grid">
-                    <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*') || request()->routeIs('reservations.*')" wire:navigate>
-                             {{ __('Guest Book') }}
+                <flux:sidebar.item icon="user-group" :href="route('guests.index')" :current="request()->routeIs('guests.*') || request()->routeIs('reservations.*')" wire:navigate>
+                    {{ __('Guest Book') }}
+                </flux:sidebar.item>
+                @can('manage-reservations')
+                    <flux:sidebar.item icon="briefcase" :href="route('agents.index')" :current="request()->routeIs('agents.*')" wire:navigate>
+                        {{ __('Agents') }}
                     </flux:sidebar.item>
-                    @can('manage-reservations')
-                        <flux:sidebar.item icon="briefcase" :href="route('agents.index')" :current="request()->routeIs('agents.*')" wire:navigate>
-                            {{ __('Agents') }}
-                        </flux:sidebar.item>
-                    @endcan
-                    @can('manage-folios')
-                        <flux:sidebar.item icon="cube" :href="route('extras.create')" :current="request()->routeIs('extras.*')" wire:navigate>
-                            {{ __('Extras services') }}
-                        </flux:sidebar.item>
-                    @endcan
-                </flux:sidebar.group>
+                @endcan
+                @can('manage-folios')
+                    <flux:sidebar.item icon="cube" :href="route('extras.create')" :current="request()->routeIs('extras.*')" wire:navigate>
+                        {{ __('Extras services') }}
+                    </flux:sidebar.item>
+                @endcan
 
-                <flux:sidebar.group :heading="__('Inventory')" class="grid">
-                    <flux:sidebar.item icon="building-office-2" :href="route('rooms.index')" :current="request()->routeIs('rooms.*')" wire:navigate>
-                        {{ __('Manage Rooms') }}
-                    </flux:sidebar.item>
-                    <flux:sidebar.item icon="rectangle-stack" :href="route('room-types.index')" :current="request()->routeIs('room-types.*')" wire:navigate>
-                        {{ __('Room types') }}
-                    </flux:sidebar.item>
-                    <flux:sidebar.item icon="cake" :href="route('meal-plans.index')" :current="request()->routeIs('meal-plans.*')" wire:navigate>
-                        {{ __('Meal plans') }}
-                    </flux:sidebar.item>
-                    <flux:sidebar.item icon="tag" :href="route('rate-plans.index')" :current="request()->routeIs('rate-plans.*')" wire:navigate>
-                        {{ __('Rate plans') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
+                <flux:sidebar.item icon="building-office-2" :href="route('room-settings')" :current="request()->routeIs('room-settings', 'rooms.*', 'room-types.*', 'meal-plans.*', 'rate-plans.*')" wire:navigate>
+                    {{ __('Manage Rooms') }}
+                </flux:sidebar.item>
 
-                <flux:sidebar.group :heading="__('Bar & restaurant')" class="grid">
-                    <flux:sidebar.item icon="computer-desktop" :href="route('pos.lobby')" :current="request()->routeIs('pos.*')" wire:navigate>
-                        {{ __('POS terminal') }}
-                    </flux:sidebar.item>
-                    <flux:sidebar.item icon="building-storefront" :href="route('outlets.index')" :current="request()->routeIs('outlets.*') || request()->routeIs('menu.*')" wire:navigate>
-                        {{ __('Outlets & menus') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
+                <flux:sidebar.item icon="computer-desktop" :href="route('pos.lobby')" :current="request()->routeIs('pos.*')" wire:navigate>
+                    {{ __('Point of Sale') }}
+                </flux:sidebar.item>
+                <flux:sidebar.item icon="building-storefront" :href="route('outlets.index')" :current="request()->routeIs('outlets.*') || request()->routeIs('menu.*')" wire:navigate>
+                    {{ __('Outlets & menus') }}
+                </flux:sidebar.item>
 
-                <flux:sidebar.group :heading="__('Reports')" class="grid">
-                    <flux:sidebar.item icon="chart-bar" :href="route('reports.index')" :current="request()->routeIs('reports.*')" wire:navigate>
-                        {{ __('Get Reports') }}
-                    </flux:sidebar.item>
-                </flux:sidebar.group>
+                <flux:sidebar.item icon="chart-bar" :href="route('reports.index')" :current="request()->routeIs('reports.*')" wire:navigate>
+                    {{ __('Get Reports') }}
+                </flux:sidebar.item>
 
-                @canany(['manage-users', 'manage-roles'])
-                    <flux:sidebar.group expandable icon="cog-6-tooth" :heading="__('Settings')" class="grid">
-                        @can('manage-users')
-                            <flux:sidebar.item :href="route('users.index')" :current="request()->routeIs('users.index')" wire:navigate>
-                                {{ __('Roles and permissions') }}
-                            </flux:sidebar.item>
-                        @endcan
-                    </flux:sidebar.group>
-                @endcanany
+                @can('manage-users')
+                    <flux:sidebar.item icon="key" :href="route('users.index')" :current="request()->routeIs('users.index')" wire:navigate>
+                        {{ __('Manage Users') }}
+                    </flux:sidebar.item>
+                @endcan
                 @endif
             </flux:sidebar.nav>
 
