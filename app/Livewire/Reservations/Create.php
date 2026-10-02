@@ -26,6 +26,12 @@ use Livewire\Attributes\Validate;
 use Livewire\Component;
 use RuntimeException;
 
+/**
+ * @property-read Collection<int, RoomType> $roomTypes
+ * @property-read RoomType|null $selectedRoomType
+ * @property-read Collection<int, RatePlan> $availableRatePlans
+ * @property-read RatePlan|null $selectedRatePlan
+ */
 #[Title('New reservation')]
 class Create extends Component
 {

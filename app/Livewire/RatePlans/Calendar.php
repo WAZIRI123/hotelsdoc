@@ -66,7 +66,7 @@ class Calendar extends Component
                 'dow' => $cursor->format('D'),
                 'isWeekend' => $cursor->isWeekend(),
                 'entry' => $entry,
-                'effectivePrice' => $entry?->price ?? $this->ratePlan->price,
+                'effectivePrice' => $entry->price ?? $this->ratePlan->price,
             ];
         }
 
@@ -97,7 +97,7 @@ class Calendar extends Component
         $this->editingDate = $date;
         $this->price_tsh = $entry?->price !== null ? (int) $entry->price->toMajor() : null;
         $this->min_stay = $entry?->min_stay;
-        $this->stop_sell = $entry?->stop_sell ?? false;
+        $this->stop_sell = $entry->stop_sell ?? false;
         $this->resetValidation();
         Flux::modal('rate-calendar-form')->show();
     }

@@ -14,6 +14,10 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
+/**
+ * @property-read Collection<int, Hotel> $hotels
+ * @property-read Hotel|null $deletingHotel
+ */
 #[Title('System Control')]
 class SystemControl extends Component
 {

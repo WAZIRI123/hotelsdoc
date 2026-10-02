@@ -25,7 +25,7 @@ class StockEntryFactory extends Factory
             'hotel_id' => Hotel::factory(),
             'menu_item_id' => MenuItem::factory(),
             'entry_date' => fake()->dateTimeBetween('-1 month')->format('Y-m-d'),
-            'expiry_date' => fake()->optional()->dateTimeBetween('+1 month', '+1 year')?->format('Y-m-d'),
+            'expiry_date' => fake()->boolean() ? fake()->dateTimeBetween('+1 month', '+1 year')->format('Y-m-d') : null,
             'description' => fake()->optional()->sentence(3),
             'quantity' => fake()->numberBetween(6, 48),
         ];

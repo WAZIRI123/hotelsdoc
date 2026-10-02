@@ -39,7 +39,7 @@ final class RatePricingService
 
         $rates = [];
         foreach ($nights as $night) {
-            $baseForNight = $calendar[$night]?->price ?? $ratePlan->price;
+            $baseForNight = $calendar[$night]->price ?? $ratePlan->price;
             $rates[$night] = $baseForNight->add($extraGuestSurcharge);
         }
 

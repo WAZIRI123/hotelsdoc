@@ -19,6 +19,9 @@ use Livewire\Component;
 /**
  * Adds or edits the bill footer of one hotel. A hotel has at most one
  * footer, so picking a hotel that already has one loads it for editing.
+ *
+ * @property-read Collection<int, Hotel> $hotels
+ * @property-read InvoiceFooter|null $existingFooter
  */
 #[Title('Add Invoice Footer')]
 class Create extends Component
@@ -85,7 +88,7 @@ class Create extends Component
     private function loadFooter(): void
     {
         unset($this->existingFooter);
-        $this->content = $this->existingFooter?->content ?? '';
+        $this->content = $this->existingFooter->content ?? '';
     }
 
     private function guardSuperAdmin(): void

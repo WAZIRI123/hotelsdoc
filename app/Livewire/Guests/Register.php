@@ -56,7 +56,7 @@ class Register extends Component
     {
         $this->validate();
 
-        [$firstName, $lastName] = array_pad(preg_split('/\s+/', trim($this->guest_names), 2), 2, null);
+        [$firstName, $lastName] = array_pad(preg_split('/\s+/', trim($this->guest_names), 2) ?: [], 2, null);
 
         $guest = Guest::query()->create([
             'first_name' => $firstName,

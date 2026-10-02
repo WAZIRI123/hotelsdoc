@@ -33,8 +33,8 @@ class Show extends Component
     public function mount(Folio $folio): void
     {
         $this->reloadFolio($folio);
-        $this->recipient_email = $folio->guest?->email ?? '';
-        $this->recipient_phone = $folio->guest?->phone ?? '';
+        $this->recipient_email = $folio->guest->email ?? '';
+        $this->recipient_phone = $folio->guest->phone ?? '';
     }
 
     public function openPayment(): void

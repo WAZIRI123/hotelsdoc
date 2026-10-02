@@ -210,7 +210,7 @@ class Show extends Component
         $this->quickNamingOccupantId = $occupant->id;
         // The booker is replaced by whoever actually sleeps here, never renamed.
         $this->quickName = $isBooker ? '' : ($occupant->guest?->fullName() ?? '');
-        $this->quickGender = $isBooker ? '' : ($occupant->guest?->gender ?? '');
+        $this->quickGender = $isBooker ? '' : ($occupant->guest->gender ?? '');
     }
 
     public function cancelQuickNaming(): void
