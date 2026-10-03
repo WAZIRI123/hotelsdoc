@@ -22,6 +22,8 @@ use Livewire\Livewire;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-10-01 09:00'));
 });
 
 function checkedInStay(Hotel $hotel, $user): Stay

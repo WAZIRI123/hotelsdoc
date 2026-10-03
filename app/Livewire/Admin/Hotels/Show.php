@@ -150,9 +150,26 @@ class Show extends Component
             ->contains(fn (string $table): bool => DB::table($table)->where('hotel_id', $this->hotel->id)->exists());
     }
 
+    /**
+     * Hotel records are timestamped on the hotel's clock, so once bookings or
+     * sales exist, changing the timezone would shift every one of them.
+     */
+    #[Computed]
+    public function timezoneIsLocked(): bool
+    {
+        return collect(['reservations', 'folios', 'pos_orders', 'extra_orders', 'expenses', 'stock_entries'])
+            ->contains(fn (string $table): bool => DB::table($table)->where('hotel_id', $this->hotel->id)->exists());
+    }
+
     public function saveDetails(): void
     {
         $this->guardSuperAdmin();
+
+        if ($this->timezone !== $this->hotel->timezone && $this->timezoneIsLocked()) {
+            $this->addError('timezone', __('The timezone cannot be changed once the hotel has recorded bookings, sales or stock.'));
+
+            return;
+        }
 
         if ($this->currency !== $this->hotel->currency && $this->currencyIsLocked()) {
             $this->addError('currency', __('The currency cannot be changed once the hotel has recorded sales or expenses.'));

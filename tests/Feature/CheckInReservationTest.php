@@ -13,6 +13,8 @@ use Carbon\CarbonImmutable;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-07-10 09:00'));
     $this->roomType = RoomType::factory()->for($this->hotel)->create(['default_rate' => 100_000_00]);
     $this->room = Room::factory()->for($this->hotel)->for($this->roomType)->create(['number' => '201']);
     $this->guest = Guest::factory()->for($this->hotel)->create();

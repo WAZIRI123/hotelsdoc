@@ -16,6 +16,8 @@ use Livewire\Livewire;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-09-01 09:00'));
     $this->roomType = RoomType::factory()->for($this->hotel)->create(['default_rate' => 120_000_00]);
     $this->room = Room::factory()->for($this->hotel)->for($this->roomType)->create(['number' => '301']);
     $this->guest = Guest::factory()->for($this->hotel)->create();
@@ -205,4 +207,17 @@ it('checks a guest in from the Show page and creates a folio', function (): void
     expect($reservation->status)->toBe('checked_in')
         ->and($reservation->stay)->not->toBeNull()
         ->and($reservation->stay->folio)->not->toBeNull();
+});
+
+it('refuses a booking that arrives in the past', function (): void {
+    Livewire::test(Create::class)
+        ->set('arrival', '2026-08-31')
+        ->set('departure', '2026-09-02')
+        ->call('selectGuest', $this->guest->id)
+        ->set('room_type_id', $this->roomType->id)
+        ->set('room_id', $this->room->id)
+        ->call('save')
+        ->assertHasErrors(['arrival' => 'after_or_equal']);
+
+    expect(Reservation::query()->count())->toBe(0);
 });

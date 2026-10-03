@@ -90,6 +90,11 @@ class Index extends Component
     public function save(): void
     {
         $this->validate([
+            ...$this->getRules(),
+            'room_type_id' => [
+                'required', 'integer',
+                Rule::exists('room_types', 'id')->where('hotel_id', app(TenantContext::class)->id()),
+            ],
             'number' => [
                 'required', 'string', 'max:20',
                 Rule::unique('rooms', 'number')

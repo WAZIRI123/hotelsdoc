@@ -32,6 +32,10 @@ final class NameRoomOccupant
             return $occupant;
         }
 
+        if (! Guest::query()->whereKey($guestId)->exists()) {
+            throw new RuntimeException('Unknown guest.');
+        }
+
         $alreadyInHouse = $occupant->reservationRoom->reservation->occupants()
             ->whereNull('room_occupants.checked_out_at')
             ->where('room_occupants.guest_id', $guestId)
@@ -94,11 +98,16 @@ final class NameRoomOccupant
     }
 
     /**
-     * Whether nothing but this occupant row refers to the guest.
+     * Whether the guest is a name-only record that nothing but this occupant
+     * row refers to. Guests registered with contact or ID details are kept.
      */
     private function isOnlyKnownFrom(Guest $guest, RoomOccupant $occupant): bool
     {
-        return ! $guest->reservations()->exists()
+        $hasDetails = collect(['caller_name', 'phone', 'email', 'nationality', 'id_type', 'id_number', 'address', 'notes'])
+            ->contains(fn (string $field): bool => filled($guest->getAttribute($field)));
+
+        return ! $hasDetails
+            && ! $guest->reservations()->exists()
             && ! Stay::query()->where('guest_id', $guest->id)->exists()
             && ! Folio::query()->where('guest_id', $guest->id)->exists()
             && ! RoomOccupant::query()->where('guest_id', $guest->id)->whereKeyNot($occupant->id)->exists();

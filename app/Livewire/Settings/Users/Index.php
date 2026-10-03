@@ -109,7 +109,9 @@ class Index extends Component
         }
 
         if ($this->editingUserId) {
-            $user = User::query()->findOrFail($this->editingUserId);
+            // Only members of this hotel can be edited; a super-admin's account only by a super-admin.
+            $user = $hotel->users()->where('users.id', $this->editingUserId)->firstOrFail();
+            abort_if($user->isSuperAdmin() && ! Auth::user()?->isSuperAdmin(), 403);
             $user->update($attributes);
         } else {
             $user = User::query()->create($attributes + [
@@ -140,7 +142,7 @@ class Index extends Component
         }
 
         $hotel = app(TenantContext::class)->current();
-        $user = User::query()->findOrFail($id);
+        $user = $hotel->users()->where('users.id', $id)->firstOrFail();
 
         app(PermissionRegistrar::class)->setPermissionsTeamId($hotel->id);
         $user->syncRoles([]);

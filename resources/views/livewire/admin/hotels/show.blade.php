@@ -86,7 +86,8 @@
                         <flux:select.option value="{{ $code }}">{{ $code }}</flux:select.option>
                     @endforeach
                 </flux:select>
-                <flux:select wire:model="timezone" :label="__('Timezone')">
+                <flux:select wire:model="timezone" :label="__('Timezone')" :disabled="$this->timezoneIsLocked"
+                    :description:trailing="$this->timezoneIsLocked ? __('Locked: the hotel already has bookings, sales or stock recorded on this clock.') : null">
                     @foreach ($this->timezones as $zone)
                         <flux:select.option value="{{ $zone }}">{{ $zone }}</flux:select.option>
                     @endforeach

@@ -13,6 +13,8 @@ use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -73,6 +75,7 @@ class RecordPaymentForm extends Component
     public function submit(RecordPayment $action): void
     {
         $this->validate();
+        $this->validate(['method_code' => [Rule::in($this->methods()->pluck('code')->all())]]);
 
         if ($this->selectedRequiresReference()) {
             $this->validate(['reference' => 'required|string|max:80']);
@@ -88,7 +91,7 @@ class RecordPaymentForm extends Component
                 receivedBy: Auth::user(),
                 note: $this->note ?: null,
             );
-        } catch (RuntimeException $e) {
+        } catch (RuntimeException|InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
 
             return;

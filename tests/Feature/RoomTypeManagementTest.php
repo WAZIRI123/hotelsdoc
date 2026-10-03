@@ -80,3 +80,15 @@ it('deletes a room type', function (): void {
 
     expect(RoomType::find($type->id))->toBeNull();
 });
+
+it('validates every field, not just the code', function (): void {
+    Livewire::test(Index::class)
+        ->set('code', 'STD')
+        ->set('name', '')
+        ->set('base_occupancy', 0)
+        ->set('default_rate_tsh', -5)
+        ->call('save')
+        ->assertHasErrors(['name', 'base_occupancy', 'default_rate_tsh']);
+
+    expect(RoomType::query()->count())->toBe(0);
+});

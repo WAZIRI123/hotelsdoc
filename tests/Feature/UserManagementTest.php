@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Livewire\Settings\Users\Index;
 use App\Models\Hotel;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -70,4 +71,42 @@ it('keeps roles scoped per hotel', function (): void {
     $user->unsetRelation('roles');
     expect($user->hasRole('waiter'))->toBeTrue();
     expect($user->hasRole('admin'))->toBeFalse();
+});
+
+it('cannot edit or remove a user who is not in the current hotel', function (): void {
+    actingAsTenantUser();
+    $outsider = User::factory()->create(['email' => 'outsider@example.com']);
+    $passwordHash = $outsider->password;
+
+    expect(fn () => Livewire::test(Index::class)
+        ->set('editingUserId', $outsider->id)
+        ->set('name', 'Taken Over')
+        ->set('email', 'attacker@example.com')
+        ->set('password', 'password123')
+        ->set('role', 'admin')
+        ->call('save'))->toThrow(ModelNotFoundException::class);
+
+    expect(fn () => Livewire::test(Index::class)->call('removeFromHotel', $outsider->id))
+        ->toThrow(ModelNotFoundException::class);
+
+    $outsider->refresh();
+    expect($outsider->email)->toBe('outsider@example.com')
+        ->and($outsider->password)->toBe($passwordHash);
+});
+
+it('does not let a hotel admin change a super-admin account', function (): void {
+    [$hotel] = actingAsTenantUser();
+    $superAdmin = User::factory()->create(['email' => 'root@example.com']);
+    $superAdmin->forceFill(['is_super_admin' => true])->save();
+    $hotel->users()->syncWithoutDetaching([$superAdmin->id]);
+
+    Livewire::test(Index::class)
+        ->set('editingUserId', $superAdmin->id)
+        ->set('name', 'Root')
+        ->set('email', 'hijacked@example.com')
+        ->set('role', 'staff')
+        ->call('save')
+        ->assertForbidden();
+
+    expect($superAdmin->fresh()->email)->toBe('root@example.com');
 });

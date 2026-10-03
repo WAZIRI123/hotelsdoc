@@ -224,3 +224,24 @@ it('forbids hotel staff from the organization dashboard', function (): void {
 
     $this->get(route('admin.organization'))->assertForbidden();
 });
+
+it('locks the hotel timezone once bookings or sales have been recorded', function (): void {
+    $hotel = Hotel::factory()->create(['timezone' => 'Africa/Dar_es_Salaam']);
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    Livewire::test(Show::class, ['hotel' => $hotel])
+        ->set('timezone', 'Africa/Nairobi')
+        ->call('saveDetails')
+        ->assertHasNoErrors();
+
+    expect($hotel->fresh()->timezone)->toBe('Africa/Nairobi');
+
+    Expense::factory()->for($hotel)->create();
+
+    Livewire::test(Show::class, ['hotel' => $hotel->fresh()])
+        ->set('timezone', 'UTC')
+        ->call('saveDetails')
+        ->assertHasErrors('timezone');
+
+    expect($hotel->fresh()->timezone)->toBe('Africa/Nairobi');
+});

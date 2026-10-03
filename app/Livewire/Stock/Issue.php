@@ -158,7 +158,13 @@ class Issue extends Component
             ->whereHas('menuItem', fn ($query) => $query->where('outlet_id', $this->outlet->id))
             ->findOrFail($id);
 
-        $issueStock->reverse($issue);
+        try {
+            $issueStock->reverse($issue);
+        } catch (RuntimeException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
+        }
 
         Flux::toast(variant: 'success', text: __('Issue reversed.'));
         unset($this->items, $this->selectedItem, $this->recentIssues);

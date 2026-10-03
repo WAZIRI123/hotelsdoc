@@ -47,9 +47,13 @@ final class RatePricingService
     }
 
     /**
+     * The minimum stay is only checked for a stay that starts on the first of
+     * the given nights; extending a stay or re-pricing its remaining nights
+     * passes $checkMinStay = false.
+     *
      * @param  list<string>  $nights
      */
-    public function assertBookable(RatePlan $ratePlan, array $nights): void
+    public function assertBookable(RatePlan $ratePlan, array $nights, bool $checkMinStay = true): void
     {
         if ($nights === []) {
             return;
@@ -62,6 +66,10 @@ final class RatePricingService
             if ($row?->stop_sell) {
                 throw new RuntimeException("Rate plan is closed for {$night}.");
             }
+        }
+
+        if (! $checkMinStay) {
+            return;
         }
 
         $arrival = $nights[0];

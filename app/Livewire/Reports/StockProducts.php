@@ -25,6 +25,7 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
+use RuntimeException;
 
 /**
  * Stock received in the period (the default tab), stock issued in the period
@@ -120,7 +121,13 @@ class StockProducts extends ReportComponent
     {
         abort_unless($this->canRecord(), 403);
 
-        $recordStockEntry->reverse(StockEntry::query()->findOrFail($id));
+        try {
+            $recordStockEntry->reverse(StockEntry::query()->findOrFail($id));
+        } catch (RuntimeException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
+        }
 
         Flux::toast(variant: 'success', text: __('Stock entry deleted.'));
         unset($this->entries, $this->rows, $this->totals);
@@ -130,7 +137,13 @@ class StockProducts extends ReportComponent
     {
         abort_unless($this->canRecord(), 403);
 
-        $issueStock->reverse(StockIssue::query()->findOrFail($id));
+        try {
+            $issueStock->reverse(StockIssue::query()->findOrFail($id));
+        } catch (RuntimeException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
+        }
 
         Flux::toast(variant: 'success', text: __('Issue reversed.'));
         unset($this->issues, $this->rows, $this->totals);

@@ -82,13 +82,24 @@ final class IssueStock
 
     /**
      * Removes a mistaken issue: the quantity goes back to the product it came
-     * from and, for a transfer, off the product that received it.
+     * from and, for a transfer, off the product that received it. A transfer
+     * whose stock has since been sold or issued cannot be reversed.
+     *
+     * @throws RuntimeException when the receiving product no longer holds the quantity
      */
     public function reverse(StockIssue $issue): void
     {
         DB::transaction(function () use ($issue): void {
+            $receiver = $issue->to_menu_item_id === null
+                ? null
+                : MenuItem::query()->lockForUpdate()->find($issue->to_menu_item_id);
+
+            if ($receiver !== null && $receiver->stock_quantity < $issue->quantity) {
+                throw new RuntimeException("Only {$receiver->stock_quantity} of {$receiver->name} is left, so this transfer cannot be reversed.");
+            }
+
             $issue->menuItem()->first()?->increment('stock_quantity', $issue->quantity);
-            $issue->toMenuItem()->first()?->decrement('stock_quantity', $issue->quantity);
+            $receiver?->decrement('stock_quantity', $issue->quantity);
             $issue->delete();
         });
     }

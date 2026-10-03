@@ -120,7 +120,7 @@ final class TransferOccupant
         $room = Room::query()->whereKey($room->id)->lockForUpdate()->firstOrFail();
         $room->load('roomType');
 
-        $this->occupancy->assertRoomCanBeTaken($room, $nights);
+        $this->occupancy->assertRoomCanBeTaken($room, $nights, $reservation);
         $this->occupancy->assertFits($room->roomType, 1, 0);
 
         $rates = $this->rates->forStay(null, null, $room->roomType, 1, 0, $nights);

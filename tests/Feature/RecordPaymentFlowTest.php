@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Livewire\Folios\RecordPaymentForm;
 use App\Livewire\Folios\Show;
 use App\Models\Folio;
+use App\Models\PaymentMethod;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
@@ -66,4 +67,19 @@ it('stores the payer phone and note and shows them on the folio', function (): v
     Livewire::test(Show::class, ['folio' => $this->folio])
         ->assertSee('0712345678')
         ->assertSee('Paid by employer');
+});
+
+it('only accepts the hotel\'s active payment methods', function (): void {
+    PaymentMethod::query()->where('code', 'cash')->update(['is_active' => false]);
+
+    Livewire::test(RecordPaymentForm::class, ['folio' => $this->folio])
+        ->set('method_code', 'cash')
+        ->set('amount_tsh', 80_000)
+        ->call('submit')
+        ->assertHasErrors('method_code')
+        ->set('method_code', 'not-a-method')
+        ->call('submit')
+        ->assertHasErrors('method_code');
+
+    expect($this->folio->payments()->count())->toBe(0);
 });

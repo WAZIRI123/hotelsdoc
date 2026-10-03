@@ -94,3 +94,13 @@ it('does not leak meal plans across tenants', function (): void {
         ->assertSee('Mine')
         ->assertDontSee('Theirs');
 });
+
+it('requires a meal plan name', function (): void {
+    Livewire::test(Index::class)
+        ->set('code', 'HB')
+        ->set('name', '')
+        ->call('save')
+        ->assertHasErrors('name');
+
+    expect(MealPlan::query()->count())->toBe(0);
+});

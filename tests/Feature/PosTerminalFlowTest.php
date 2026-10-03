@@ -10,14 +10,18 @@ use App\Models\Guest;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Outlet;
+use App\Models\PaymentMethod;
 use App\Models\PosOrder;
 use App\Models\Room;
 use App\Models\RoomType;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-10-01 09:00'));
     $this->outlet = Outlet::factory()->for($this->hotel)->create(['name' => 'Main Bar']);
     $cat = MenuCategory::factory()->for($this->hotel)->for($this->outlet)->create();
     $this->beer = MenuItem::factory()->for($this->hotel)->for($this->outlet)->for($cat, 'category')->create([
@@ -145,4 +149,34 @@ it('refuses to settle an empty order', function (): void {
         ->assertNoRedirect();
 
     expect(PosOrder::query()->where('status', 'billed')->count())->toBe(0);
+});
+
+it('only changes quantities on the cashier\'s own order', function (): void {
+    $otherOrder = PosOrder::factory()->for($this->hotel)->for($this->outlet)->create(['status' => 'open']);
+    $otherLine = $otherOrder->items()->create([
+        'menu_item_id' => $this->beer->id,
+        'name_snapshot' => 'Tusker',
+        'quantity' => 4,
+        'unit_price' => $this->beer->price,
+        'tax_amount' => 0,
+        'line_total' => $this->beer->price->multiply(4),
+    ]);
+
+    expect(fn () => Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->snack->id)
+        ->call('changeQty', $otherLine->id, -4))->toThrow(ModelNotFoundException::class);
+
+    expect($otherLine->fresh()->quantity)->toBe(4);
+});
+
+it('refuses to settle with a payment method that is not active', function (): void {
+    PaymentMethod::query()->where('code', 'cash')->update(['is_active' => false]);
+
+    Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->beer->id)
+        ->set('settleMethod', 'cash')
+        ->call('settleDirect');
+
+    expect(PosOrder::query()->sole()->status)->toBe('open')
+        ->and(Folio::query()->count())->toBe(0);
 });

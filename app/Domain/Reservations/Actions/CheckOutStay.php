@@ -38,6 +38,9 @@ final class CheckOutStay
     public function execute(Stay $stay, ?User $actor = null): Stay
     {
         return DB::transaction(function () use ($stay, $actor): Stay {
+            Stay::query()->whereKey($stay->id)->lockForUpdate()->first();
+            $stay->refresh();
+
             if ($stay->checked_out_at !== null) {
                 throw new RuntimeException('Stay is already checked out.');
             }

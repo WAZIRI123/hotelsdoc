@@ -73,6 +73,7 @@ final class PostFolioCharge
             'posted_at' => now(),
         ]);
 
+        Folio::query()->whereKey($folio->id)->lockForUpdate()->first();
         $folio->refresh();
         $subtotal = $folio->subtotal->add($net);
         $taxTotal = $folio->tax_total->add($tax);

@@ -8,6 +8,8 @@ use App\Domain\Reservations\Actions\CreateReservation;
 use App\Domain\Reservations\Actions\MarkNoShow;
 use App\Livewire\Reservations\Show;
 use App\Models\Guest;
+use App\Models\RateCalendar;
+use App\Models\RatePlan;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomAvailability;
@@ -36,7 +38,9 @@ function bookedDates(Room $room): array
 }
 
 it('marks a guest who never arrived as a no-show and frees the room', function (): void {
+    $this->travelTo(CarbonImmutable::parse('2026-11-09 09:00'));
     $reservation = ($this->book)('2026-11-09', '2026-11-12');
+    $this->travelTo(CarbonImmutable::parse('2026-11-10 09:00'));
 
     Livewire::test(Show::class, ['reservation' => $reservation])
         ->assertSee('Mark no-show')
@@ -111,3 +115,23 @@ it('keeps the arrival fixed once checked in', function (): void {
 
     app(ChangeReservationDates::class)->execute($reservation->fresh(), CarbonImmutable::parse('2026-11-09'), CarbonImmutable::parse('2026-11-12'));
 })->throws(RuntimeException::class, 'arrival date cannot change');
+
+it('extends an in-house stay on a rate plan without applying its minimum stay', function (): void {
+    $ratePlan = RatePlan::factory()->for($this->hotel)->for($this->roomType)->create(['price' => 90_000_00]);
+    RateCalendar::factory()->for($this->hotel)->for($ratePlan)->create(['date' => '2026-11-12', 'min_stay' => 3]);
+
+    $reservation = app(CreateReservation::class)->execute(
+        guestId: Guest::factory()->for($this->hotel)->create()->id,
+        roomTypeId: $this->roomType->id,
+        roomId: $this->room->id,
+        arrival: CarbonImmutable::parse('2026-11-10'),
+        departure: CarbonImmutable::parse('2026-11-12'),
+        ratePlanId: $ratePlan->id,
+    );
+    app(CheckInReservation::class)->execute($reservation, $this->user);
+
+    app(ChangeReservationDates::class)->execute($reservation->fresh(), CarbonImmutable::parse('2026-11-10'), CarbonImmutable::parse('2026-11-13'));
+
+    expect($reservation->fresh()->departure->toDateString())->toBe('2026-11-13')
+        ->and(bookedDates($this->room))->toBe(['2026-11-10', '2026-11-11', '2026-11-12']);
+});

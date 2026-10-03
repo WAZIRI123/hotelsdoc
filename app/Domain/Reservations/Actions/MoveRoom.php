@@ -56,7 +56,7 @@ final class MoveRoom
             }
 
             $nights = $this->occupancy->nightsToChange($reservation);
-            $this->occupancy->assertRoomCanBeTaken($toRoom, $nights);
+            $this->occupancy->assertRoomCanBeTaken($toRoom, $nights, $reservation);
             $this->occupancy->assertFits($toRoom->roomType, $reservationRoom->adults, $reservationRoom->children);
 
             RoomAvailability::query()
@@ -118,6 +118,7 @@ final class MoveRoom
 
         $newRates = $this->rates->forStay(
             $ratePlan, null, $toRoom->roomType, $reservationRoom->adults, $reservationRoom->children, $nights,
+            isNewStay: $reservationRoom->reservation->status === 'confirmed',
         );
 
         $difference = Money::zero();

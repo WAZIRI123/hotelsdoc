@@ -28,6 +28,7 @@ use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
@@ -221,7 +222,10 @@ class Show extends Component
     {
         $this->validate([
             'occupantAgeCategory' => ['required', 'in:'.implode(',', RoomOccupant::AGE_CATEGORIES)],
-            'occupantGuestId' => [$this->namingOccupantId !== null ? 'required' : 'nullable', 'integer'],
+            'occupantGuestId' => [
+                $this->namingOccupantId !== null ? 'required' : 'nullable', 'integer',
+                Rule::exists('guests', 'id')->where('hotel_id', $this->reservation->hotel_id),
+            ],
         ], [
             'occupantGuestId.required' => __('Pick the guest staying in this bed.'),
         ]);
@@ -510,7 +514,9 @@ class Show extends Component
 
         return app(AvailabilityChecker::class)
             ->availableRooms(null, CarbonImmutable::parse($nights[0]), $this->reservation->departure)
-            ->whereNotIn('status', ['maintenance', 'out_of_order'])
+            ->whereNotIn('status', $this->reservation->status === 'checked_in'
+                ? ['maintenance', 'out_of_order', 'occupied']
+                : ['maintenance', 'out_of_order'])
             ->load('roomType')
             ->values();
     }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Stock\Actions\IssueStock;
+use App\Domain\Stock\Actions\RecordStockEntry;
 use App\Livewire\Menu\Index as MenuIndex;
 use App\Livewire\Reports\ProfitLoss;
 use App\Livewire\Reports\StockProducts;
@@ -218,4 +219,31 @@ it('records opening stock from the menu as a stock entry kept out of stock purch
         ->and(Livewire::test(ProfitLoss::class, ['from' => '2026-10-01', 'to' => '2026-10-31'])->instance()->stockPurchases()->isZero())->toBeTrue();
 
     CarbonImmutable::setTestNow();
+});
+
+it('refuses to reverse a transfer whose stock has already been used', function (): void {
+    $issue = app(IssueStock::class)->execute(
+        item: $this->storeBeer,
+        quantity: 5,
+        reason: StockIssue::REASON_TRANSFER,
+        issueDate: CarbonImmutable::today(),
+        transferTo: $this->barBeer,
+    );
+    $this->barBeer->fresh()->decrement('stock_quantity', 4);
+
+    Livewire::test(Issue::class, ['outlet' => $this->store])->call('reverse', $issue->id);
+
+    expect(StockIssue::query()->count())->toBe(1)
+        ->and($this->storeBeer->fresh()->stock_quantity)->toBe(15)
+        ->and($this->barBeer->fresh()->stock_quantity)->toBe(1);
+});
+
+it('refuses to delete a stock entry whose stock has already been used', function (): void {
+    $entry = app(RecordStockEntry::class)->execute($this->storeBeer, 10, CarbonImmutable::today());
+    $this->storeBeer->fresh()->decrement('stock_quantity', 25);
+
+    Livewire::test(StockProducts::class)->call('delete', $entry->id);
+
+    expect(StockEntry::query()->whereKey($entry->id)->exists())->toBeTrue()
+        ->and($this->storeBeer->fresh()->stock_quantity)->toBe(5);
 });

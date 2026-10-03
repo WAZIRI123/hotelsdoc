@@ -70,12 +70,20 @@ final class OccupancyChanges
     }
 
     /**
+     * Guests already in-house can only go to a room nobody is still sleeping
+     * in; a room whose last guest has not checked out stays 'occupied' even
+     * when its booking has ended.
+     *
      * @param  list<string>  $nights
      */
-    public function assertRoomCanBeTaken(Room $room, array $nights): void
+    public function assertRoomCanBeTaken(Room $room, array $nights, Reservation $reservation): void
     {
         if ($room->isOutOfService()) {
             throw new RuntimeException("Room {$room->number} is out of service.");
+        }
+
+        if ($reservation->status === 'checked_in' && $room->status === 'occupied') {
+            throw new RuntimeException("Room {$room->number} is still occupied; check the previous guest out first.");
         }
 
         $from = CarbonImmutable::parse($nights[0]);

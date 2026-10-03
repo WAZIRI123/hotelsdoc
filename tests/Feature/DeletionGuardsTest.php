@@ -55,7 +55,8 @@ it('refuses to delete a room with upcoming bookings', function (): void {
 });
 
 it('deactivates a room that only has past bookings', function (): void {
-    ($this->book)(today()->subDays(10)->toDateString(), today()->subDays(8)->toDateString());
+    ($this->book)(today()->toDateString(), today()->addDays(2)->toDateString());
+    $this->travelTo(today()->addDays(10));
 
     Livewire::test(RoomsIndex::class)->call('delete', $this->room->id);
 

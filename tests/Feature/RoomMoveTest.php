@@ -16,6 +16,8 @@ use Carbon\CarbonImmutable;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-07-10 09:00'));
     $this->standard = RoomType::factory()->for($this->hotel)->create([
         'default_rate' => 100_000_00,
         'base_occupancy' => 2,
@@ -174,3 +176,10 @@ it('refuses to transfer between different reservations', function (): void {
 
     app(TransferOccupant::class)->execute($occupant, toReservationRoom: $other->rooms()->first());
 })->throws(RuntimeException::class, 'same reservation');
+
+it('refuses to move in-house guests into a room another guest has not left', function (): void {
+    ($this->checkInAndTravelToSecondNight)();
+    $this->room102->update(['status' => 'occupied']);
+
+    app(MoveRoom::class)->execute($this->reservationRoom, $this->room102);
+})->throws(RuntimeException::class, 'still occupied');

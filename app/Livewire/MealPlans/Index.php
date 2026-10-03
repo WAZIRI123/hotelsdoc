@@ -75,6 +75,7 @@ class Index extends Component
     public function save(): void
     {
         $this->validate([
+            ...$this->getRules(),
             'code' => [
                 'required', 'string', 'max:10',
                 Rule::unique('meal_plans', 'code')

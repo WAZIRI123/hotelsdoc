@@ -14,6 +14,8 @@ use Livewire\Livewire;
 
 beforeEach(function (): void {
     [$this->hotel] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-08-01 09:00'));
     $this->roomType = RoomType::factory()->for($this->hotel)->create(['name' => 'Single']);
 });
 

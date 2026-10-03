@@ -14,6 +14,8 @@ use Carbon\CarbonImmutable;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-07-10 09:00'));
     $this->roomType = RoomType::factory()->for($this->hotel)->create(['default_rate' => 80_000_00]);
     $this->room = Room::factory()->for($this->hotel)->for($this->roomType)->create();
 
@@ -63,7 +65,7 @@ it('handles partial payment correctly when computing balance', function (): void
 });
 
 it('credits unused nights and frees the room when the guest leaves early', function (): void {
-    $this->travelTo(CarbonImmutable::parse('2026-08-02 10:00'));
+    $this->travelTo(CarbonImmutable::parse('2026-08-01 09:00'));
     $room = Room::factory()->for($this->hotel)->for($this->roomType)->create();
     $reservation = app(CreateReservation::class)->execute(
         guestId: Guest::factory()->for($this->hotel)->create()->id,
@@ -73,6 +75,7 @@ it('credits unused nights and frees the room when the guest leaves early', funct
         departure: CarbonImmutable::parse('2026-08-05'),
     );
     $stay = app(CheckInReservation::class)->execute($reservation, $this->user);
+    $this->travelTo(CarbonImmutable::parse('2026-08-02 10:00'));
 
     app(CheckOutStay::class)->execute($stay, $this->user);
 

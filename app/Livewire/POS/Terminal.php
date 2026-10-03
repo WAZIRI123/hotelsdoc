@@ -167,7 +167,7 @@ class Terminal extends Component
 
     public function addItem(int $menuItemId): void
     {
-        $item = MenuItem::query()->where('outlet_id', $this->outlet->id)->findOrFail($menuItemId);
+        $item = MenuItem::query()->where('outlet_id', $this->outlet->id)->where('is_active', true)->findOrFail($menuItemId);
         $order = $this->order();
 
         if ($order !== null && ! $this->orderIsEditable($order)) {
@@ -212,7 +212,10 @@ class Terminal extends Component
 
     public function changeQty(int $itemId, int $delta): void
     {
-        $item = PosOrderItem::query()->with(['menuItem', 'order'])->findOrFail($itemId);
+        $item = PosOrderItem::query()
+            ->with(['menuItem', 'order'])
+            ->where('pos_order_id', $this->orderId)
+            ->findOrFail($itemId);
         $parentOrder = $item->order;
 
         if ($parentOrder === null || ! $this->orderIsEditable($parentOrder)) {
@@ -334,6 +337,12 @@ class Terminal extends Component
     {
         $order = $this->order();
         if ($order === null || $this->settleMethod === '') {
+            return;
+        }
+
+        if (! $this->paymentMethods()->contains('code', $this->settleMethod)) {
+            Flux::toast(variant: 'danger', text: 'Pick a payment method.');
+
             return;
         }
 

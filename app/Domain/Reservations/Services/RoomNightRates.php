@@ -19,6 +19,7 @@ final class RoomNightRates
 
     /**
      * @param  list<string>  $nights
+     * @param  bool  $isNewStay  false when the nights extend or re-price part of an existing stay, so the minimum stay does not apply
      * @return array<string, Money> keyed by Y-m-d
      */
     public function forStay(
@@ -28,13 +29,14 @@ final class RoomNightRates
         int $adults,
         int $children,
         array $nights,
+        bool $isNewStay = true,
     ): array {
         if ($nightlyRateOverride !== null) {
             return array_fill_keys($nights, $nightlyRateOverride);
         }
 
         if ($ratePlan !== null) {
-            $this->pricing->assertBookable($ratePlan, $nights);
+            $this->pricing->assertBookable($ratePlan, $nights, $isNewStay);
 
             return $this->pricing->resolveNightlyRates($ratePlan, $roomType, $adults, $children, $nights);
         }

@@ -20,6 +20,8 @@ use Livewire\Livewire;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-09-10 09:00'));
 });
 
 it('groups payments by method and computes totals for the selected day', function (): void {
@@ -72,6 +74,7 @@ it('lists reservations in-house on the selected day with totals, payments and ba
         arrival: CarbonImmutable::parse('2026-09-14'),
         departure: CarbonImmutable::parse('2026-09-16'),
     );
+    $this->travelTo(CarbonImmutable::parse('2026-09-14 14:00'));
     $stay = app(CheckInReservation::class)->execute($reservation, $this->user);
     app(RecordPayment::class)->execute($stay->folio, 'cash', Money::fromMajor(50_000), receivedBy: $this->user);
 
@@ -182,7 +185,9 @@ it('leaves cancelled bookings out and credits the room only with its share of pa
 
     app(CancelReservation::class)->execute($book());
 
-    $stay = app(CheckInReservation::class)->execute($book(), $this->user);
+    $reservation = $book();
+    $this->travelTo(CarbonImmutable::parse('2026-09-14 14:00'));
+    $stay = app(CheckInReservation::class)->execute($reservation, $this->user);
     app(PostFolioCharge::class)->price($stay->folio, 'pos_order', null, 'Bar', Money::fromMajor(100_000));
     app(RecordPayment::class)->execute($stay->folio->fresh(), 'cash', Money::fromMajor(100_000), receivedBy: $this->user);
 

@@ -6,6 +6,7 @@ namespace App\Domain\Reservations\Actions;
 
 use App\Domain\Reservations\Services\GuestStayConflicts;
 use App\Domain\Reservations\Services\OccupancyChanges;
+use App\Models\Guest;
 use App\Models\ReservationRoom;
 use App\Models\RoomOccupant;
 use App\Models\User;
@@ -43,6 +44,10 @@ final class AddRoomOccupant
 
             if ($guestId !== null && $reservation->occupants()->whereNull('room_occupants.checked_out_at')->where('room_occupants.guest_id', $guestId)->exists()) {
                 throw new RuntimeException('This guest is already staying in a room on this reservation.');
+            }
+
+            if ($guestId !== null && ! Guest::query()->whereKey($guestId)->exists()) {
+                throw new RuntimeException('Unknown guest.');
             }
 
             if ($guestId !== null) {

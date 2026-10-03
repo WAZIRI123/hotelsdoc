@@ -17,6 +17,8 @@ use Carbon\CarbonImmutable;
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-07-10 09:00'));
     $this->roomType = RoomType::factory()->for($this->hotel)->create([
         'default_rate' => 100_000_00,
         'extra_guest_fee' => 20_000_00,
@@ -174,3 +176,24 @@ it('stamps every occupant at check-in and check-out', function (): void {
     app(CheckOutStay::class)->execute($stay, $this->user);
     expect($reservation->occupants()->whereNull('room_occupants.checked_out_at')->count())->toBe(0);
 });
+
+it('keeps a guest registered with details when the occupant is named as someone else', function (): void {
+    $reservation = ($this->book)(2);
+    $placeholder = $reservation->rooms()->first()->occupants()->whereNull('guest_id')->first();
+    $registered = Guest::factory()->for($this->hotel)->create(['first_name' => 'Asha', 'id_number' => 'P1234567']);
+
+    app(NameRoomOccupant::class)->execute($placeholder, $registered->id);
+    app(NameRoomOccupant::class)->executeWithNewGuest($placeholder->fresh(), 'Neema Juma');
+
+    expect(Guest::query()->find($registered->id))->not->toBeNull()
+        ->and($registered->fresh()->first_name)->toBe('Asha')
+        ->and($placeholder->fresh()->guest->fullName())->toBe('Neema Juma');
+});
+
+it('refuses to name an occupant as a guest of another hotel', function (): void {
+    $reservation = ($this->book)(2);
+    $placeholder = $reservation->rooms()->first()->occupants()->whereNull('guest_id')->first();
+    $foreignGuest = Guest::factory()->create();
+
+    app(NameRoomOccupant::class)->execute($placeholder, $foreignGuest->id);
+})->throws(RuntimeException::class, 'Unknown guest');

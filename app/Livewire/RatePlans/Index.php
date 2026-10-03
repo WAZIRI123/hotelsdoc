@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\RatePlans;
 
+use App\Domain\Tenancy\TenantContext;
 use App\Models\MealPlan;
 use App\Models\RatePlan;
 use App\Models\RoomType;
@@ -11,6 +12,7 @@ use App\Support\Money;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Validate;
@@ -21,10 +23,8 @@ class Index extends Component
 {
     public ?int $editingId = null;
 
-    #[Validate('required|integer|exists:room_types,id')]
     public ?int $room_type_id = null;
 
-    #[Validate('nullable|integer|exists:meal_plans,id')]
     public ?int $meal_plan_id = null;
 
     #[Validate('required|string|max:120')]
@@ -110,6 +110,19 @@ class Index extends Component
         $this->is_agent_rate = $plan->is_agent_rate;
         $this->resetValidation();
         Flux::modal('rate-plan-form')->show();
+    }
+
+    /**
+     * @return array<string, array<int, mixed>>
+     */
+    protected function rules(): array
+    {
+        $hotelId = app(TenantContext::class)->id();
+
+        return [
+            'room_type_id' => ['required', 'integer', Rule::exists('room_types', 'id')->where('hotel_id', $hotelId)],
+            'meal_plan_id' => ['nullable', 'integer', Rule::exists('meal_plans', 'id')->where('hotel_id', $hotelId)],
+        ];
     }
 
     public function save(): void

@@ -82,3 +82,18 @@ it('shows the room setting blocks on the Manage Rooms hub', function (): void {
         ->assertSee(route('room-types.index'), false)
         ->assertSee(route('rooms.index'), false);
 });
+
+it('requires a room type from this hotel', function (): void {
+    $otherHotelType = RoomType::factory()->create();
+
+    Livewire::test(Index::class)
+        ->set('number', '101')
+        ->set('status', 'available')
+        ->call('save')
+        ->assertHasErrors('room_type_id')
+        ->set('room_type_id', $otherHotelType->id)
+        ->call('save')
+        ->assertHasErrors('room_type_id');
+
+    expect(Room::query()->count())->toBe(0);
+});

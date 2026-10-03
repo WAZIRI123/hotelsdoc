@@ -10,10 +10,13 @@ use App\Models\RatePlan;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomType;
+use Carbon\CarbonImmutable;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
     [$this->hotel] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-09-01 09:00'));
     $this->roomType = RoomType::factory()->for($this->hotel)->create();
     $this->room = Room::factory()->for($this->hotel)->for($this->roomType)->create();
     $this->guest = Guest::factory()->for($this->hotel)->create();
@@ -107,4 +110,19 @@ it('books an agent rate when an agent is the booker', function (): void {
 
     expect($reservation->agent_id)->toBe($this->agent->id)
         ->and($reservation->rooms->first()->rate_plan_id)->toBe($this->sto->id);
+});
+
+it('refuses to book a guest or rate plan from another hotel', function (): void {
+    $foreignGuest = Guest::factory()->create();
+    $foreignPlan = RatePlan::factory()->create();
+
+    Livewire::test(Create::class)
+        ->set('guest_id', $foreignGuest->id)
+        ->set('room_type_id', $this->roomType->id)
+        ->set('room_id', $this->room->id)
+        ->set('rate_plan_id', $foreignPlan->id)
+        ->call('save')
+        ->assertHasErrors(['guest_id', 'rate_plan_id']);
+
+    expect(Reservation::query()->count())->toBe(0);
 });

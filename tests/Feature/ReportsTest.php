@@ -80,6 +80,8 @@ function menuItemAt(Hotel $hotel, string $outletType, string $name, int $priceMa
 
 beforeEach(function (): void {
     [$this->hotel, $this->user] = actingAsTenantUser(role: 'accountant');
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-08-01 09:00'));
 });
 
 it('splits POS sales into drinks and food by outlet type', function (): void {
@@ -474,13 +476,15 @@ it('totals bookings, room nights, revenue and balances per agent', function (): 
     );
 
     $checkedIn = $book($rooms[0], $safari, '2026-09-10', '2026-09-13');
-    $folio = app(CheckInReservation::class)->execute($checkedIn, $this->user)->folio;
-    app(RecordPayment::class)->execute($folio, 'cash', Money::fromMajor(100_000), receivedBy: $this->user);
     $book($rooms[1], $safari, '2026-09-20', '2026-09-21');
     app(CancelReservation::class)->execute($book($rooms[2], $safari, '2026-09-25', '2026-09-27'));
     $book($rooms[1], $coastal, '2026-09-05', '2026-09-07');
     $book($rooms[2], null, '2026-09-05', '2026-09-06');
     $book($rooms[2], $coastal, '2026-10-05', '2026-10-06');
+
+    $this->travelTo(CarbonImmutable::parse('2026-09-10 14:00'));
+    $folio = app(CheckInReservation::class)->execute($checkedIn, $this->user)->folio;
+    app(RecordPayment::class)->execute($folio, 'cash', Money::fromMajor(100_000), receivedBy: $this->user);
 
     $component = Livewire::test(Agents::class, ['from' => '2026-09-01', 'to' => '2026-09-30'])
         ->assertSeeInOrder(['Safari Tours', 'Coastal Travel']);

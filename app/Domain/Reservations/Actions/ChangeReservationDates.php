@@ -131,7 +131,7 @@ final class ChangeReservationDates
             ? $reservationRoom->ratePlan
             : null;
         $addedRates = $added === [] ? [] : ($ratePlan !== null
-            ? $this->rates->forStay($ratePlan, null, $reservationRoom->roomType, $reservationRoom->adults, $reservationRoom->children, $added)
+            ? $this->rates->forStay($ratePlan, null, $reservationRoom->roomType, $reservationRoom->adults, $reservationRoom->children, $added, isNewStay: false)
             : array_fill_keys($added, $reservationRoom->nightly_rate));
 
         $removedNights = $reservationRoom->nights

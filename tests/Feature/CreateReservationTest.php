@@ -16,6 +16,8 @@ use Carbon\CarbonImmutable;
 
 beforeEach(function (): void {
     [$this->hotel] = actingAsTenantUser();
+    // Bookings cannot arrive in the past, so the clock starts on the first arrival day used here.
+    $this->travelTo(CarbonImmutable::parse('2026-07-10 09:00'));
     $this->action = app(CreateReservation::class);
     $this->roomType = RoomType::factory()->for($this->hotel)->create();
     $this->room = Room::factory()->for($this->hotel)->for($this->roomType)->create(['number' => '101']);
@@ -377,3 +379,13 @@ it('allows back-to-back bookings (checkout same day as next arrival)', function 
     expect(Reservation::count())->toBe(2)
         ->and($next->status)->toBe('confirmed');
 });
+
+it('refuses an arrival date in the past', function (): void {
+    $this->action->execute(
+        guestId: $this->guest->id,
+        roomTypeId: $this->roomType->id,
+        roomId: $this->room->id,
+        arrival: CarbonImmutable::parse('2026-07-09'),
+        departure: CarbonImmutable::parse('2026-07-11'),
+    );
+})->throws(RuntimeException::class, 'cannot be in the past');

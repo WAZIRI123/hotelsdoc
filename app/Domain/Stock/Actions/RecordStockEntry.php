@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * Logs stock received for a menu item and adds it to the item's stock on hand,
@@ -51,12 +52,21 @@ final class RecordStockEntry
     }
 
     /**
-     * Removes a mistaken entry and takes its quantity back off the stock on hand.
+     * Removes a mistaken entry and takes its quantity back off the stock on
+     * hand. An entry whose stock has since been sold or issued cannot be removed.
+     *
+     * @throws RuntimeException when less than the entry's quantity is left on hand
      */
     public function reverse(StockEntry $entry): void
     {
         DB::transaction(function () use ($entry): void {
-            $entry->menuItem()->first()?->decrement('stock_quantity', $entry->quantity);
+            $item = MenuItem::query()->lockForUpdate()->find($entry->menu_item_id);
+
+            if ($item !== null && $item->stock_quantity < $entry->quantity) {
+                throw new RuntimeException("Only {$item->stock_quantity} of {$item->name} is left, so this entry cannot be removed.");
+            }
+
+            $item?->decrement('stock_quantity', $entry->quantity);
             $entry->delete();
         });
     }

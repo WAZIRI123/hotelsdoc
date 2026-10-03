@@ -99,7 +99,7 @@ class Index extends Component
 
     public function openEditCategory(int $id): void
     {
-        $cat = MenuCategory::query()->findOrFail($id);
+        $cat = MenuCategory::query()->where('outlet_id', $this->outlet->id)->findOrFail($id);
         $this->editingCategoryId = $cat->id;
         $this->categoryName = $cat->name;
         $this->resetValidation();
@@ -117,7 +117,7 @@ class Index extends Component
         ];
 
         if ($this->editingCategoryId) {
-            MenuCategory::query()->findOrFail($this->editingCategoryId)->update($attrs);
+            MenuCategory::query()->where('outlet_id', $this->outlet->id)->findOrFail($this->editingCategoryId)->update($attrs);
         } else {
             MenuCategory::query()->create($attrs);
         }
@@ -129,7 +129,7 @@ class Index extends Component
 
     public function deleteCategory(int $id): void
     {
-        $category = MenuCategory::query()->findOrFail($id);
+        $category = MenuCategory::query()->where('outlet_id', $this->outlet->id)->findOrFail($id);
 
         if ($category->hasHistory()) {
             $category->update(['is_active' => false]);
@@ -154,7 +154,7 @@ class Index extends Component
 
     public function openEditItem(int $id): void
     {
-        $item = MenuItem::query()->findOrFail($id);
+        $item = $this->outletItem($id);
         $this->editingItemId = $item->id;
         $this->itemCategoryId = $item->menu_category_id;
         $this->itemName = $item->name;
@@ -172,7 +172,7 @@ class Index extends Component
     public function saveItem(RecordStockEntry $recordStockEntry): void
     {
         $this->validate([
-            'itemCategoryId' => 'required|integer|exists:menu_categories,id',
+            'itemCategoryId' => ['required', 'integer', Rule::exists('menu_categories', 'id')->where('outlet_id', $this->outlet->id)],
             'itemName' => 'required|string|max:120',
             'itemDescription' => 'nullable|string|max:300',
             'itemPriceTsh' => 'required|integer|min:0',
@@ -180,7 +180,7 @@ class Index extends Component
             'itemStockTypeId' => ['nullable', Rule::in($this->stockTypes()->modelKeys())],
         ]);
 
-        $item = $this->editingItemId ? MenuItem::query()->findOrFail($this->editingItemId) : null;
+        $item = $this->editingItemId ? $this->outletItem($this->editingItemId) : null;
 
         if ($item?->track_stock && ! $this->itemTrackStock && $item->stock_quantity > 0) {
             $this->addError('itemTrackStock', __(':count still in stock. Issue them under Manage Stock before you stop tracking this item.', ['count' => $item->stock_quantity]));
@@ -231,7 +231,7 @@ class Index extends Component
 
     public function deleteItem(int $id): void
     {
-        $item = MenuItem::query()->findOrFail($id);
+        $item = $this->outletItem($id);
 
         if ($item->hasHistory()) {
             $item->update(['is_active' => false]);
@@ -246,5 +246,10 @@ class Index extends Component
     public function render(): View
     {
         return view('livewire.menu.index');
+    }
+
+    private function outletItem(int $id): MenuItem
+    {
+        return MenuItem::query()->where('outlet_id', $this->outlet->id)->findOrFail($id);
     }
 }

@@ -14,6 +14,7 @@ use App\Models\Room;
 use App\Models\RoomAvailability;
 use App\Models\RoomType;
 use App\Support\Money;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -41,6 +42,10 @@ final class CreateReservation
         ?string $notes = null,
         ?int $agentId = null,
     ): Reservation {
+        if (CarbonImmutable::instance($arrival)->startOfDay()->isBefore(CarbonImmutable::today())) {
+            throw new RuntimeException('The arrival date cannot be in the past.');
+        }
+
         return DB::transaction(function () use (
             $guestId, $roomTypeId, $roomId, $arrival, $departure,
             $adults, $children, $ratePlanId, $nightlyRate, $source, $externalId, $notes, $agentId,

@@ -35,22 +35,18 @@ use RuntimeException;
 #[Title('New reservation')]
 class Create extends Component
 {
-    #[Validate('required|integer|exists:guests,id')]
     public ?int $guest_id = null;
 
     /** Booking agent; null means walk-in. */
     public ?int $agent_id = null;
 
-    #[Validate('required|integer|exists:room_types,id')]
     public ?int $room_type_id = null;
 
-    #[Validate('nullable|integer|exists:rate_plans,id')]
     public ?int $rate_plan_id = null;
 
-    #[Validate('required|integer|exists:rooms,id')]
     public ?int $room_id = null;
 
-    #[Validate('required|date')]
+    #[Validate('required|date|after_or_equal:today', message: ['after_or_equal' => 'The arrival date cannot be in the past.'])]
     public string $arrival = '';
 
     #[Validate('required|date|after:arrival')]
@@ -70,11 +66,17 @@ class Create extends Component
      */
     protected function rules(): array
     {
+        $hotelId = app(TenantContext::class)->id();
+
         return [
+            'guest_id' => ['required', 'integer', Rule::exists('guests', 'id')->where('hotel_id', $hotelId)],
+            'room_type_id' => ['required', 'integer', Rule::exists('room_types', 'id')->where('hotel_id', $hotelId)],
+            'rate_plan_id' => ['nullable', 'integer', Rule::exists('rate_plans', 'id')->where('hotel_id', $hotelId)],
+            'room_id' => ['required', 'integer', Rule::exists('rooms', 'id')->where('hotel_id', $hotelId)],
             'agent_id' => [
                 'nullable', 'integer',
                 Rule::exists('agents', 'id')
-                    ->where('hotel_id', app(TenantContext::class)->id())
+                    ->where('hotel_id', $hotelId)
                     ->where('is_active', true),
             ],
         ];

@@ -79,6 +79,7 @@ final class RecordPayment
             ]);
 
             if ($result->status === PaymentStatus::Confirmed) {
+                Folio::query()->whereKey($folio->id)->lockForUpdate()->first();
                 $folio->refresh();
                 $newPaid = $folio->paid_total->add($amount);
                 $fullyPaid = $newPaid->amount >= $folio->total_amount->amount && $folio->total_amount->isPositive();

@@ -34,7 +34,9 @@ final class CheckInReservation
     public function execute(Reservation $reservation, ?User $actor = null): Stay
     {
         return DB::transaction(function () use ($reservation, $actor): Stay {
-            $reservation->loadMissing('rooms.room', 'rooms.nights');
+            // Lock the booking so two clicks cannot open two stays and bill the rooms twice.
+            Reservation::query()->whereKey($reservation->id)->lockForUpdate()->first();
+            $reservation->refresh()->loadMissing('rooms.room', 'rooms.nights');
 
             if ($reservation->status === 'checked_in') {
                 throw new RuntimeException('Reservation is already checked in.');
