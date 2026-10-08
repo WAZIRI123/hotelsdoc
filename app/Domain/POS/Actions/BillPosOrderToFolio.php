@@ -40,12 +40,12 @@ final class BillPosOrderToFolio
 
             if (! $folio->acceptsCharges()) {
                 throw new RuntimeException(
-                    "Cannot bill onto a folio in status [{$folio->status}].",
+                    "Cannot bill onto a guest billing in status [{$folio->status}].",
                 );
             }
 
             if ($order->hotel_id !== $folio->hotel_id) {
-                throw new RuntimeException('Order and folio belong to different hotels.');
+                throw new RuntimeException('Order and guest billing belong to different hotels.');
             }
 
             $order->loadMissing('items', 'outlet');

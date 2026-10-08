@@ -276,7 +276,7 @@
                 <form wire:submit="changeDates" class="space-y-6">
                     <flux:heading size="lg">{{ $reservation->status === 'checked_in' ? __('Change departure') : __('Change dates') }}</flux:heading>
                     @if ($reservation->status === 'checked_in')
-                        <flux:text>{{ __('Added nights are billed to the folio; nights dropped are credited.') }}</flux:text>
+                        <flux:text>{{ __('Added nights are billed to the guest billing; nights dropped are credited.') }}</flux:text>
                     @endif
                     <div class="grid gap-4 sm:grid-cols-2">
                         <flux:input type="date" wire:model="newArrival" :label="__('Arrival')"
@@ -296,7 +296,7 @@
                 <flux:separator />
                 <flux:button variant="ghost" icon="document-text" class="w-full"
                     :href="route('folios.show', $reservation->stay->folio)" wire:navigate>
-                    {{ __('Open folio') }}
+                    {{ __('Open guest billing') }}
                 </flux:button>
 
                 <div class="rounded-lg bg-zinc-50 px-4 py-3 text-sm dark:bg-zinc-800">
@@ -332,7 +332,7 @@
 
             <flux:radio.group wire:model="moveRateAction" :label="__('Rate')">
                 <flux:radio value="keep_rate" :label="__('Keep the current rate')" :description="__('Hotel-caused moves, complimentary upgrades.')" />
-                <flux:radio value="new_rate" :label="__('Charge the new room\'s rate')" :description="__('Guest-requested changes. The difference is posted to the folio.')" />
+                <flux:radio value="new_rate" :label="__('Charge the new room\'s rate')" :description="__('Guest-requested changes. The difference is posted to the guest billing.')" />
             </flux:radio.group>
 
             <flux:input wire:model="moveReason" :label="__('Reason')" :placeholder="__('e.g. AC broken, guest upgrade')" />

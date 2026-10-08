@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Reports;
 
+use App\Domain\Folios\BillSection;
 use App\Domain\Reports\FolioPaymentShare;
 use App\Models\ExtraOrder;
 use App\Support\Money;
@@ -34,7 +35,7 @@ class ExtrasSales extends ReportComponent
     public function orders(): Collection
     {
         return ExtraOrder::query()
-            ->with(['items', 'stay.guest', 'folio.payments', 'creator'])
+            ->with(['items', 'stay.guest', 'folio.payments', 'folio.charges', 'creator'])
             ->whereDoesntHave('folio', fn (Builder $folio) => $folio->where('status', 'void'))
             ->whereDate('order_date', '>=', $this->periodStart())
             ->whereDate('order_date', '<=', $this->periodEnd())
@@ -78,7 +79,7 @@ class ExtrasSales extends ReportComponent
     {
         return $this->orders()->map(function (ExtraOrder $order): array {
             $grandTotal = $order->total();
-            $paid = $order->folio === null ? $grandTotal : FolioPaymentShare::paid($order->folio, $grandTotal);
+            $paid = $order->folio === null ? $grandTotal : FolioPaymentShare::paid($order->folio, $grandTotal, BillSection::Extras);
 
             return [
                 'order' => $order,
@@ -87,7 +88,7 @@ class ExtrasSales extends ReportComponent
                 'total' => $grandTotal,
                 'discount' => Money::zero($order->currency),
                 'grand_total' => $grandTotal,
-                'paid_by' => $order->folio === null ? __('Counter') : FolioPaymentShare::paidBy($order->folio),
+                'paid_by' => $order->folio === null ? __('Counter') : FolioPaymentShare::paidBy($order->folio, BillSection::Extras),
                 'paid' => $paid,
                 'balance' => $grandTotal->subtract($paid),
             ];

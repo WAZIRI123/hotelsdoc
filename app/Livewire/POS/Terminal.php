@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\POS;
 
+use App\Domain\Folios\BillSection;
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Payments\PaymentGatewayManager;
 use App\Domain\POS\Actions\BillPosOrderToFolio;
@@ -43,6 +44,9 @@ class Terminal extends Component
     public string $settleReference = '';
 
     public ?int $billToStayId = null;
+
+    /** For an in-house guest: 'billing' posts to their bill, 'pay_now' also takes payment here. */
+    public string $roomSettle = 'billing';
 
     public function mount(Outlet $outlet): void
     {
@@ -180,18 +184,21 @@ class Terminal extends Component
             return;
         }
 
-        $order ??= $this->openOrder();
+        $added = DB::transaction(function () use ($item, &$order): bool {
+            $taken = $item->track_stock ? 1 : 0;
 
-        DB::transaction(function () use ($item, $order): void {
-            if ($item->track_stock) {
-                $item->decrement('stock_quantity');
+            if ($taken > 0 && ! $this->takeStock($item, $taken)) {
+                return false;
             }
+
+            $order ??= $this->openOrder();
 
             $existing = $order->items->first(fn (PosOrderItem $i) => $i->menu_item_id === $item->id);
 
             if ($existing !== null) {
                 $existing->update([
                     'quantity' => $existing->quantity + 1,
+                    'stock_taken' => $existing->stock_taken + $taken,
                     'line_total' => $existing->unit_price->multiply($existing->quantity + 1),
                 ]);
             } else {
@@ -199,12 +206,21 @@ class Terminal extends Component
                     'menu_item_id' => $item->id,
                     'name_snapshot' => $item->name,
                     'quantity' => 1,
+                    'stock_taken' => $taken,
                     'unit_price' => $item->price,
                     'tax_amount' => Money::zero(),
                     'line_total' => $item->price,
                 ]);
             }
+
+            return true;
         });
+
+        if (! $added) {
+            Flux::toast(variant: 'danger', text: "{$item->name} is out of stock.");
+
+            return;
+        }
 
         app(RecalculatePosOrderTotals::class)->execute($order);
         unset($this->order);
@@ -231,14 +247,23 @@ class Terminal extends Component
             return;
         }
 
-        DB::transaction(function () use ($item, $newQty, $delta, $menuItem): void {
-            if ($menuItem?->track_stock) {
-                if ($delta > 0) {
-                    $menuItem->decrement('stock_quantity', $delta);
-                } elseif ($delta < 0) {
-                    $restore = $newQty <= 0 ? $item->quantity : abs($delta);
-                    $menuItem->increment('stock_quantity', $restore);
+        $changed = DB::transaction(function () use ($item, $newQty, $delta, $menuItem): bool {
+            $stockTaken = $item->stock_taken;
+
+            if ($delta > 0 && $menuItem?->track_stock) {
+                if (! $this->takeStock($menuItem, $delta)) {
+                    return false;
                 }
+
+                $stockTaken += $delta;
+            } elseif ($delta < 0) {
+                $keep = min($stockTaken, max($newQty, 0));
+
+                if ($menuItem?->track_stock && $stockTaken > $keep) {
+                    $menuItem->increment('stock_quantity', $stockTaken - $keep);
+                }
+
+                $stockTaken = $keep;
             }
 
             if ($newQty <= 0) {
@@ -246,10 +271,19 @@ class Terminal extends Component
             } else {
                 $item->update([
                     'quantity' => $newQty,
+                    'stock_taken' => $stockTaken,
                     'line_total' => $item->unit_price->multiply($newQty),
                 ]);
             }
+
+            return true;
         });
+
+        if (! $changed) {
+            Flux::toast(variant: 'danger', text: "{$menuItem->name} is out of stock.");
+
+            return;
+        }
 
         $order = $this->order();
         if ($order !== null) {
@@ -258,7 +292,13 @@ class Terminal extends Component
         unset($this->order);
     }
 
-    public function voidOrder(): void
+    /**
+     * Throw away the unbilled order so the cashier can start over. Its stock
+     * goes back on hand; the order and its lines are kept as a cleared record
+     * (who, when, what) for managers to review. An order with no lines left
+     * holds nothing worth reviewing, so it is simply deleted.
+     */
+    public function clearOrder(): void
     {
         $order = $this->order();
         if ($order === null) {
@@ -270,15 +310,21 @@ class Terminal extends Component
         }
 
         DB::transaction(function () use ($order): void {
-            foreach ($order->items as $line) {
-                if ($line->menuItem?->track_stock) {
-                    $line->menuItem->increment('stock_quantity', $line->quantity);
-                }
+            if ($order->items->isEmpty()) {
+                $order->delete();
+
+                return;
             }
-            $order->update(['status' => 'voided']);
+
+            $order->restoreStock();
+            $order->update([
+                'status' => 'cleared',
+                'cleared_at' => now(),
+                'cleared_by' => Auth::id(),
+            ]);
         });
 
-        Flux::toast(variant: 'success', text: 'Order voided.');
+        Flux::toast(variant: 'success', text: __('Order cleared.'));
         $this->finishOrder();
     }
 
@@ -294,6 +340,7 @@ class Terminal extends Component
         $this->settleMethod = '';
         $this->settleReference = '';
         $this->billToStayId = null;
+        $this->roomSettle = 'billing';
         // Default to "Bill to room" only when there's an in-house guest to bill to.
         $this->settleMode = $this->inHouseStays()->isEmpty() ? 'walk_in' : 'room';
         Flux::modal('pos-settle')->show();
@@ -302,26 +349,13 @@ class Terminal extends Component
     public function billToRoom(BillPosOrderToFolio $billAction): void
     {
         $order = $this->order();
-        if ($order === null) {
-            return;
-        }
-
-        if ($this->billToStayId === null) {
-            Flux::toast(variant: 'danger', text: 'Pick a guest.');
-
-            return;
-        }
-
-        $stay = Stay::query()->whereNull('checked_out_at')->findOrFail($this->billToStayId);
-        $folio = $stay->folio;
-        if ($folio === null) {
-            Flux::toast(variant: 'danger', text: 'Selected stay has no open folio.');
-
+        $stay = $this->selectedStay();
+        if ($order === null || $stay === null) {
             return;
         }
 
         try {
-            $billAction->execute($order, $folio);
+            $billAction->execute($order, $stay->folio);
         } catch (RuntimeException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
 
@@ -333,29 +367,53 @@ class Terminal extends Component
         $this->finishOrder();
     }
 
+    /**
+     * An in-house guest pays at the counter: the order still goes on their
+     * bill, under outlets, with the payment against it, so the bill shows it
+     * as already paid.
+     */
+    public function payForGuest(BillPosOrderToFolio $billAction, RecordPayment $payAction): void
+    {
+        $order = $this->order();
+        if ($order === null || ! $this->settlePaymentIsValid()) {
+            return;
+        }
+
+        $stay = $this->selectedStay();
+        if ($stay === null) {
+            return;
+        }
+
+        try {
+            DB::transaction(function () use ($billAction, $payAction, $order, $stay): void {
+                $billed = $billAction->execute($order, $stay->folio);
+                $payAction->execute(
+                    folio: $stay->folio->fresh(),
+                    methodCode: $this->settleMethod,
+                    amount: $billed->total_amount,
+                    reference: $this->settleReference ?: null,
+                    receivedBy: Auth::user(),
+                    section: BillSection::Outlets,
+                );
+            });
+        } catch (RuntimeException|\InvalidArgumentException $e) {
+            Flux::toast(variant: 'danger', text: $e->getMessage());
+
+            return;
+        }
+
+        $printUrl = route('pos.transactions.print', $order->fresh());
+
+        Flux::toast(variant: 'success', text: "Payment received from {$stay->guest?->fullName()}.");
+        Flux::modal('pos-settle')->close();
+        $this->dispatch('open-print', url: $printUrl);
+        $this->finishOrder();
+    }
+
     public function settleDirect(BillPosOrderToFolio $billAction, RecordPayment $payAction): void
     {
         $order = $this->order();
-        if ($order === null || $this->settleMethod === '') {
-            return;
-        }
-
-        if (! $this->paymentMethods()->contains('code', $this->settleMethod)) {
-            Flux::toast(variant: 'danger', text: 'Pick a payment method.');
-
-            return;
-        }
-
-        $needsRef = false;
-        try {
-            $needsRef = app(PaymentGatewayManager::class)->for($this->settleMethod)->requiresReference();
-        } catch (\Throwable) {
-            // unknown method handled below by RecordPayment
-        }
-
-        if ($needsRef && trim($this->settleReference) === '') {
-            Flux::toast(variant: 'danger', text: 'Reference is required for this method.');
-
+        if ($order === null || ! $this->settlePaymentIsValid()) {
             return;
         }
 
@@ -388,6 +446,67 @@ class Terminal extends Component
     public function render(): View
     {
         return view('livewire.pos.terminal');
+    }
+
+    /**
+     * Take units off a product's stock in one conditional update, so two tills
+     * selling the last unit at once cannot both succeed and drive it negative.
+     */
+    private function takeStock(MenuItem $item, int $quantity): bool
+    {
+        return MenuItem::query()
+            ->whereKey($item->id)
+            ->where('stock_quantity', '>=', $quantity)
+            ->decrement('stock_quantity', $quantity) === 1;
+    }
+
+    /**
+     * The in-house guest picked to bill, as long as they have a bill open.
+     */
+    private function selectedStay(): ?Stay
+    {
+        if ($this->billToStayId === null) {
+            Flux::toast(variant: 'danger', text: 'Pick a guest.');
+
+            return null;
+        }
+
+        $stay = Stay::query()->whereNull('checked_out_at')->findOrFail($this->billToStayId);
+
+        if ($stay->folio === null) {
+            Flux::toast(variant: 'danger', text: 'Selected stay has no open guest billing.');
+
+            return null;
+        }
+
+        return $stay;
+    }
+
+    /**
+     * Whether a payment method (and its reference, when needed) was given.
+     */
+    private function settlePaymentIsValid(): bool
+    {
+        if (! $this->paymentMethods()->contains('code', $this->settleMethod)) {
+            Flux::toast(variant: 'danger', text: 'Pick a payment method.');
+
+            return false;
+        }
+
+        $needsRef = false;
+        try {
+            $needsRef = app(PaymentGatewayManager::class)->for($this->settleMethod)->requiresReference();
+        } catch (\Throwable) {
+            // unknown method handled later by RecordPayment
+        }
+
+        if ($needsRef && trim($this->settleReference) === '') {
+            Flux::toast(variant: 'danger', text: 'Reference is required for this method.');
+
+            return false;
+        }
+
+        return true;
     }
 
     private function orderIsEditable(PosOrder $order): bool

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Extras;
 
 use App\Domain\Extras\Actions\RecordExtraOrder;
+use App\Domain\Folios\BillSection;
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Payments\PaymentGatewayManager;
 use App\Models\ExtraOrder;
@@ -36,7 +37,10 @@ class Create extends Component
 
     public string $orderDate = '';
 
-    /** Payment method code a walk-in customer pays with. */
+    /** For an in-house guest: 'billing' posts to their bill, 'pay_now' also takes payment here. */
+    public string $guestSettle = 'billing';
+
+    /** Payment method code a walk-in customer, or a guest paying now, pays with. */
     public string $paymentMethod = '';
 
     public string $paymentReference = '';
@@ -97,6 +101,16 @@ class Create extends Component
         }
     }
 
+    /**
+     * Whether payment is taken now: always for a walk-in, and for an
+     * in-house guest who chose to pay here rather than on their bill.
+     */
+    public function paysNow(): bool
+    {
+        return $this->customer === self::WALK_IN
+            || ($this->customer !== '' && $this->guestSettle === 'pay_now');
+    }
+
     public function addLine(): void
     {
         $this->lines[] = $this->blankLine();
@@ -154,8 +168,8 @@ class Create extends Component
             'lines.*.extra_service_id' => ['required', 'integer', 'exists:extra_services,id'],
             'lines.*.quantity' => ['required', 'integer', 'min:1'],
             'lines.*.price' => ['required', 'numeric', 'min:0'],
-            'paymentMethod' => [Rule::requiredIf($this->customer === self::WALK_IN), 'nullable', Rule::in($this->paymentMethods()->pluck('code')->all())],
-            'paymentReference' => [Rule::requiredIf($this->customer === self::WALK_IN && $this->paymentRequiresReference()), 'nullable', 'string', 'max:100'],
+            'paymentMethod' => [Rule::requiredIf($this->paysNow()), 'nullable', Rule::in($this->paymentMethods()->pluck('code')->all())],
+            'paymentReference' => [Rule::requiredIf($this->paysNow() && $this->paymentRequiresReference()), 'nullable', 'string', 'max:100'],
         ], [
             'customer.required' => __('Select a customer.'),
             'paymentMethod.required' => __('Select how the customer paid.'),
@@ -190,13 +204,15 @@ class Create extends Component
                     createdBy: Auth::user(),
                 );
 
-                if ($order->isWalkIn() && $order->total_amount > 0) {
+                // An in-house guest paying now pays the extras section of their bill.
+                if ($this->paysNow() && $order->total_amount > 0) {
                     $recordPayment->execute(
                         folio: $order->folio,
                         methodCode: $this->paymentMethod,
                         amount: $order->total(),
                         reference: $this->paymentReference ?: null,
                         receivedBy: Auth::user(),
+                        section: $order->isWalkIn() ? null : BillSection::Extras,
                     );
                 }
 
@@ -210,7 +226,7 @@ class Create extends Component
 
         Flux::toast(variant: 'success', text: __('Extras order :reference saved.', ['reference' => $order->reference]));
 
-        $this->reset(['customer', 'paymentMethod', 'paymentReference']);
+        $this->reset(['customer', 'guestSettle', 'paymentMethod', 'paymentReference']);
         $this->lines = [$this->blankLine()];
     }
 

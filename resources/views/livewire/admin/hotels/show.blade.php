@@ -228,7 +228,7 @@
             <div class="min-w-64 flex-1">
                 <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ __('Delete hotel permanently') }}</div>
                 <flux:text class="mt-1">
-                    {{ __('Removes the hotel and ALL its rooms, guests, reservations, folios, payments and POS data. This cannot be undone. User accounts are kept.') }}
+                    {{ __('Removes the hotel and ALL its rooms, guests, reservations, guest billing, payments and POS data. This cannot be undone. User accounts are kept.') }}
                 </flux:text>
                 @unless ($hotel->isSuspended())
                     <flux:text class="mt-1 !text-amber-600">{{ __('Suspend the hotel first to enable deletion.') }}</flux:text>

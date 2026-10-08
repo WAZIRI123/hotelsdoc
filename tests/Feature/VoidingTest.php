@@ -39,6 +39,7 @@ beforeEach(function (): void {
             'menu_item_id' => $this->beer->id,
             'name_snapshot' => 'Beer',
             'quantity' => $quantity,
+            'stock_taken' => $quantity,
             'unit_price' => 5_000_00,
             'line_total' => $quantity * 5_000_00,
         ]);
@@ -117,7 +118,7 @@ it('voids a folio, its POS orders and keeps its sales out of the reports', funct
         ->set('void_reason', 'Opened for the wrong guest')
         ->call('voidFolio')
         ->assertHasNoErrors()
-        ->assertSee('Folio voided');
+        ->assertSee('Guest billing voided');
 
     $income = Livewire::test(ProfitLoss::class)->instance()->income();
 

@@ -7,6 +7,22 @@
         <div class="mt-1 space-y-0.5 text-blue-600 dark:text-blue-400">
             <div>{{ __('Total') }}: {{ $this->roomsStatus['total'] }} <span class="text-zinc-400">|</span> {{ __('Occupied') }}: {{ $this->roomsStatus['occupied'] }}</div>
             <div>{{ __('Today Bookings') }}: {{ $this->roomsStatus['todayBookings'] }} <span class="text-zinc-400">|</span> {{ __('Today Check-outs') }}: {{ $this->roomsStatus['todayCheckOuts'] }}</div>
+            @if ($this->overdueDepartures > 0)
+                @can('manage-reservations')
+                    <a href="{{ route('reservations.index') }}" wire:navigate data-test="sidebar-overdue"
+                        class="flex items-center gap-1 font-semibold text-red-600 hover:underline dark:text-red-400">
+                        <flux:icon.exclamation-triangle variant="micro" />
+                        {{ __('Overdue departures') }}: {{ $this->overdueDepartures }}
+                    </a>
+                @else
+                    <div data-test="sidebar-overdue" class="flex items-center gap-1 font-semibold text-red-600 dark:text-red-400">
+                        <flux:icon.exclamation-triangle variant="micro" />
+                        {{ __('Overdue departures') }}: {{ $this->overdueDepartures }}
+                    </div>
+                @endcan
+            @else
+                <div>{{ __('Overdue departures') }}: 0</div>
+            @endif
         </div>
     </div>
 

@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $menu_item_id
  * @property string $name_snapshot
  * @property int $quantity
+ * @property int $stock_taken
  * @property Money $unit_price
  * @property Money $tax_amount
  * @property Money $line_total
@@ -35,6 +36,7 @@ class PosOrderItem extends Model
         'menu_item_id',
         'name_snapshot',
         'quantity',
+        'stock_taken',
         'unit_price',
         'tax_amount',
         'line_total',
@@ -53,6 +55,7 @@ class PosOrderItem extends Model
             'line_total' => MoneyCast::class,
             'modifiers' => 'array',
             'quantity' => 'integer',
+            'stock_taken' => 'integer',
         ];
     }
 

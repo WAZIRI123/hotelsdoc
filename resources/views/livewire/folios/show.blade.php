@@ -36,7 +36,7 @@
 
             @if (in_array($folio->status, ['open', 'closed'], true))
                 <flux:button variant="primary" icon="banknotes" wire:click="openPayment">
-                    {{ __('Record payment') }}
+                    {{ __('Pay all') }}
                 </flux:button>
             @endif
 
@@ -54,7 +54,7 @@
 
             @if ($this->canVoid())
                 <flux:button variant="ghost" icon="no-symbol" wire:click="startVoidFolio">
-                    {{ __('Void folio') }}
+                    {{ __('Void guest billing') }}
                 </flux:button>
             @endif
         </div>
@@ -63,7 +63,7 @@
     <flux:modal name="void-payment" class="md:w-[480px]">
         <form wire:submit="voidPayment" class="space-y-6">
             <flux:heading size="lg">{{ __('Void payment') }}</flux:heading>
-            <flux:text>{{ __('Use this for a payment recorded by mistake. It is removed from the cash-up and the folio balance.') }}</flux:text>
+            <flux:text>{{ __('Use this for a payment recorded by mistake. It is removed from the cash-up and the guest billing balance.') }}</flux:text>
             <flux:input wire:model="void_reason" :label="__('Reason')" required />
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
@@ -76,14 +76,14 @@
 
     <flux:modal name="void-folio" class="md:w-[480px]">
         <form wire:submit="voidFolio" class="space-y-6">
-            <flux:heading size="lg">{{ __('Void folio') }}</flux:heading>
+            <flux:heading size="lg">{{ __('Void guest billing') }}</flux:heading>
             <flux:text>{{ __('Use this for a bill opened by mistake. Its charges leave the reports and POS orders on it are voided with their stock returned. Payments must be voided or refunded first.') }}</flux:text>
             <flux:input wire:model="void_reason" :label="__('Reason')" required />
             <div class="flex justify-end gap-2">
                 <flux:modal.close>
                     <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
                 </flux:modal.close>
-                <flux:button type="submit" variant="danger">{{ __('Void folio') }}</flux:button>
+                <flux:button type="submit" variant="danger">{{ __('Void guest billing') }}</flux:button>
             </div>
         </form>
     </flux:modal>
@@ -168,7 +168,7 @@
 
     @if ($folio->status === 'void')
         <flux:callout variant="danger" icon="no-symbol" class="mb-6">
-            <flux:callout.heading>{{ __('Folio voided') }}</flux:callout.heading>
+            <flux:callout.heading>{{ __('Guest billing voided') }}</flux:callout.heading>
             <flux:callout.text>{{ $folio->void_reason }} · {{ $folio->voided_at?->format('d M Y, H:i') }}</flux:callout.text>
         </flux:callout>
     @endif
@@ -190,34 +190,69 @@
         </flux:callout>
     @endif
 
-    <flux:card class="mb-6">
-        <flux:heading size="lg">{{ __('Charges') }}</flux:heading>
+    @php $canPay = in_array($folio->status, ['open', 'closed'], true); @endphp
 
-        <flux:table class="mt-4">
-            <flux:table.columns>
-                <flux:table.column>{{ __('Description') }}</flux:table.column>
-                <flux:table.column>{{ __('Qty') }}</flux:table.column>
-                <flux:table.column>{{ __('Unit') }}</flux:table.column>
-                <flux:table.column class="text-right">{{ __('Total') }}</flux:table.column>
-            </flux:table.columns>
-            <flux:table.rows>
-                @forelse ($folio->charges as $charge)
-                    <flux:table.row :key="$charge->id">
-                        <flux:table.cell variant="strong">{{ $charge->description }}</flux:table.cell>
-                        <flux:table.cell>{{ $charge->quantity }}</flux:table.cell>
-                        <flux:table.cell class="font-mono">{{ $charge->unit_price->format() }}</flux:table.cell>
-                        <flux:table.cell class="text-right font-mono">{{ $charge->total->format() }}</flux:table.cell>
-                    </flux:table.row>
-                @empty
-                    <flux:table.row>
-                        <flux:table.cell colspan="4" class="text-center text-zinc-500">
-                            {{ __('No charges yet.') }}
-                        </flux:table.cell>
-                    </flux:table.row>
-                @endforelse
-            </flux:table.rows>
-        </flux:table>
-    </flux:card>
+    @forelse ($this->sections->used() as $row)
+        @php $sectionCharges = $folio->charges->filter(fn ($charge) => \App\Domain\Folios\BillSection::forSourceType($charge->source_type) === $row['section']); @endphp
+        <flux:card class="mb-6" wire:key="section-{{ $row['section']->value }}">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <flux:heading size="lg">{{ $row['section']->label() }}</flux:heading>
+
+                <div class="flex items-center gap-3">
+                    @if ($row['balance']->isPositive())
+                        <flux:badge color="orange" size="sm">{{ __('Owing :amount', ['amount' => $row['balance']->format()]) }}</flux:badge>
+                        @if ($canPay)
+                            <flux:button size="sm" variant="primary" icon="banknotes"
+                                wire:click="openPayment('{{ $row['section']->value }}')">
+                                {{ __('Pay :section', ['section' => $row['section']->label()]) }}
+                            </flux:button>
+                        @endif
+                    @else
+                        <flux:badge color="green" size="sm">{{ __('Paid') }}</flux:badge>
+                    @endif
+                </div>
+            </div>
+
+            <flux:table class="mt-4">
+                <flux:table.columns>
+                    <flux:table.column>{{ __('Description') }}</flux:table.column>
+                    <flux:table.column>{{ __('Qty') }}</flux:table.column>
+                    <flux:table.column>{{ __('Unit') }}</flux:table.column>
+                    <flux:table.column class="text-right">{{ __('Total') }}</flux:table.column>
+                </flux:table.columns>
+                <flux:table.rows>
+                    @foreach ($sectionCharges as $charge)
+                        <flux:table.row :key="$charge->id">
+                            <flux:table.cell variant="strong">{{ $charge->description }}</flux:table.cell>
+                            <flux:table.cell>{{ $charge->quantity }}</flux:table.cell>
+                            <flux:table.cell class="font-mono">{{ $charge->unit_price->format() }}</flux:table.cell>
+                            <flux:table.cell class="text-right font-mono">{{ $charge->total->format() }}</flux:table.cell>
+                        </flux:table.row>
+                    @endforeach
+                </flux:table.rows>
+            </flux:table>
+
+            <div class="mt-4 space-y-1 text-sm">
+                <div class="flex justify-between">
+                    <span>{{ __(':section total', ['section' => $row['section']->label()]) }}</span>
+                    <span class="font-mono font-semibold">{{ $row['total']->format() }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>{{ __('Paid') }}</span>
+                    <span class="font-mono">{{ $row['paid']->format() }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>{{ __('Balance') }}</span>
+                    <span class="font-mono">{{ $row['balance']->format() }}</span>
+                </div>
+            </div>
+        </flux:card>
+    @empty
+        <flux:card class="mb-6">
+            <flux:heading size="lg">{{ __('Charges') }}</flux:heading>
+            <flux:text class="mt-4 text-center text-zinc-500">{{ __('No charges yet.') }}</flux:text>
+        </flux:card>
+    @endforelse
 
     <flux:card class="mb-6">
         <flux:heading size="lg">{{ __('Payments') }}</flux:heading>
@@ -225,6 +260,7 @@
         <flux:table class="mt-4">
             <flux:table.columns>
                 <flux:table.column>{{ __('Method') }}</flux:table.column>
+                <flux:table.column>{{ __('For') }}</flux:table.column>
                 <flux:table.column>{{ __('Reference') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
                 <flux:table.column class="text-right">{{ __('Amount') }}</flux:table.column>
@@ -237,6 +273,9 @@
                                 <flux:badge color="red" size="sm">{{ __('Refund') }}</flux:badge>
                             @endif
                             {{ str_replace('_', ' ', ucfirst($payment->method_code)) }}
+                        </flux:table.cell>
+                        <flux:table.cell class="text-sm">
+                            {{ $payment->billSection()?->label() ?? __('Whole bill') }}
                         </flux:table.cell>
                         <flux:table.cell class="text-sm">
                             <span class="font-mono">{{ $payment->reference ?? '—' }}</span>
@@ -264,7 +303,7 @@
                     </flux:table.row>
                 @empty
                     <flux:table.row>
-                        <flux:table.cell colspan="4" class="text-center text-zinc-500">
+                        <flux:table.cell colspan="5" class="text-center text-zinc-500">
                             {{ __('No payments yet.') }}
                         </flux:table.cell>
                     </flux:table.row>

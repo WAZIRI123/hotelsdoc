@@ -115,12 +115,12 @@
 
                 <div class="mt-4 grid grid-cols-2 gap-2">
                     <flux:button variant="ghost" icon="x-mark"
-                        wire:click="voidOrder" wire:confirm="{{ __('Void this order?') }}">
-                        {{ __('Void') }}
+                        wire:click="clearOrder" wire:confirm="{{ __('Clear this order and start over?') }}">
+                        {{ __('Clear') }}
                     </flux:button>
                     <flux:button variant="primary" icon="banknotes" wire:click="openSettle"
                         :disabled="$this->order->items->isEmpty()">
-                        {{ __('Settle') }}
+                        {{ __('Continue') }}
                     </flux:button>
                 </div>
             @endif
@@ -198,7 +198,7 @@
 
     <flux:modal name="pos-settle" class="md:w-[520px]">
         <div class="space-y-6">
-            <flux:heading size="lg">{{ __('Settle order') }}</flux:heading>
+            <flux:heading size="lg">{{ __('Continue order') }}</flux:heading>
 
             @if ($this->order)
                 <div class="rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800">
@@ -218,7 +218,7 @@
             @if ($settleMode === 'room')
                 <div class="space-y-3">
                     <flux:text class="text-sm text-zinc-500">
-                        {{ __('Post this order onto an in-house guest\'s folio. They settle it at check-out.') }}
+                        {{ __('The order goes on the in-house guest\'s billing under Outlets. They can pay it here now, or later with the rest of their bill.') }}
                     </flux:text>
 
                     @if ($this->inHouseStays->isEmpty())
@@ -236,16 +236,39 @@
                             @endforeach
                         </flux:select>
 
-                        <flux:button variant="primary" icon="home-modern" wire:click="billToRoom"
-                            :disabled="$billToStayId === null">
-                            {{ __('Post to guest folio') }}
-                        </flux:button>
+                        <flux:radio.group wire:model.live="roomSettle" variant="segmented">
+                            <flux:radio value="billing" label="{{ __('Charge to billing') }}" />
+                            <flux:radio value="pay_now" label="{{ __('Pay now') }}" />
+                        </flux:radio.group>
+
+                        @if ($roomSettle === 'pay_now')
+                            <flux:select wire:model.live="settleMethod">
+                                <flux:select.option value="">{{ __('Choose method…') }}</flux:select.option>
+                                @foreach ($this->paymentMethods as $method)
+                                    <flux:select.option :value="$method->code">{{ $method->label }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+
+                            @if ($settleMethod !== '' && $settleMethod !== 'cash')
+                                <flux:input wire:model="settleReference" placeholder="{{ __('Reference / txn ID') }}" />
+                            @endif
+
+                            <flux:button variant="primary" icon="check" wire:click="payForGuest"
+                                :disabled="$billToStayId === null || $settleMethod === ''">
+                                {{ __('Take payment') }}
+                            </flux:button>
+                        @else
+                            <flux:button variant="primary" icon="home-modern" wire:click="billToRoom"
+                                :disabled="$billToStayId === null">
+                                {{ __('Post to guest billing') }}
+                            </flux:button>
+                        @endif
                     @endif
                 </div>
             @else
                 <div class="space-y-3">
                     <flux:text class="text-sm text-zinc-500">
-                        {{ __('For walk-in customers paying at the counter. Creates a standalone folio and issues a receipt.') }}
+                        {{ __('For walk-in customers paying at the counter. Creates a standalone bill and issues a receipt.') }}
                     </flux:text>
 
                     <flux:select wire:model.live="settleMethod">

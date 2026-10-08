@@ -3,6 +3,13 @@
         <form wire:submit="submit" class="space-y-6">
             <flux:heading size="lg">{{ __('Record payment') }}</flux:heading>
 
+            <flux:select wire:model.live="section" :label="__('Pay for')">
+                <flux:select.option value="">{{ __('Whole bill (all sections)') }}</flux:select.option>
+                @foreach ($this->sections as $billSection)
+                    <flux:select.option :value="$billSection->value">{{ $billSection->label() }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
             <flux:select wire:model.live="method_code" :label="__('Payment method')" required>
                 <flux:select.option value="">{{ __('Choose method…') }}</flux:select.option>
                 @foreach ($this->methods as $method)

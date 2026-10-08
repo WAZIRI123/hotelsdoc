@@ -155,7 +155,7 @@
                 <div>
                     <flux:heading size="lg">{{ __('Delete all operations of :name?', ['name' => $this->deletingHotel->name]) }}</flux:heading>
                     <flux:text class="mt-2">
-                        {{ __('This permanently deletes the hotel and ALL its rooms, guests, reservations, folios, payments and POS data. User accounts are kept. This cannot be undone.') }}
+                        {{ __('This permanently deletes the hotel and ALL its rooms, guests, reservations, guest billing, payments and POS data. User accounts are kept. This cannot be undone.') }}
                     </flux:text>
                     @unless ($this->deletingHotel->isSuspended())
                         <flux:text class="mt-2 !text-amber-600">{{ __('Block system access first to enable deletion.') }}</flux:text>

@@ -54,7 +54,7 @@
                             @else
                                 {{ $order->stay?->guest?->fullName() ?? '—' }}
                                 @if ($order->folio_id)
-                                    <flux:link :href="route('folios.show', $order->folio_id)" wire:navigate class="ms-1 text-xs">{{ __('Folio') }}</flux:link>
+                                    <flux:link :href="route('folios.show', $order->folio_id)" wire:navigate class="ms-1 text-xs">{{ __('Guest Billing') }}</flux:link>
                                 @endif
                             @endif
                         </flux:table.cell>

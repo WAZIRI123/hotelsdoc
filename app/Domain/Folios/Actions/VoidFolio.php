@@ -21,7 +21,7 @@ final class VoidFolio
     public function execute(Folio $folio, string $reason, ?User $actor = null): Folio
     {
         if (trim($reason) === '') {
-            throw new RuntimeException('Give a reason for voiding the folio.');
+            throw new RuntimeException('Give a reason for voiding the guest billing.');
         }
 
         return DB::transaction(function () use ($folio, $reason, $actor): Folio {
@@ -29,11 +29,11 @@ final class VoidFolio
             $folio->load('stay');
 
             if ($folio->status === 'void') {
-                throw new RuntimeException('This folio is already voided.');
+                throw new RuntimeException('This guest billing is already voided.');
             }
 
             if (! $folio->paid_total->isZero()) {
-                throw new RuntimeException('This folio holds payments; void or refund them first.');
+                throw new RuntimeException('This guest billing holds payments; void or refund them first.');
             }
 
             if ($folio->stay !== null && $folio->stay->checked_out_at === null) {
@@ -50,7 +50,7 @@ final class VoidFolio
                         'status' => 'voided',
                         'voided_at' => now(),
                         'voided_by' => $actor?->id,
-                        'void_reason' => __('Folio voided: :reason', ['reason' => trim($reason)]),
+                        'void_reason' => __('Guest billing voided: :reason', ['reason' => trim($reason)]),
                     ]);
                 });
 

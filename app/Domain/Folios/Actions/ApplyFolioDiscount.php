@@ -31,7 +31,7 @@ final class ApplyFolioDiscount
         }
 
         if ($amount->amount > $folio->total_amount->amount) {
-            throw new RuntimeException("The discount cannot be more than the folio total of {$folio->total_amount->format()}.");
+            throw new RuntimeException("The discount cannot be more than the guest billing total of {$folio->total_amount->format()}.");
         }
 
         $vat = Vat::forHotel($folio->hotel);

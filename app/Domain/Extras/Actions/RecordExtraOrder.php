@@ -57,11 +57,11 @@ final class RecordExtraOrder
                 $folio = $stay->folio;
 
                 if ($folio === null || ! $folio->acceptsCharges()) {
-                    throw new RuntimeException('This guest has no open folio.');
+                    throw new RuntimeException('This guest has no open guest billing.');
                 }
 
                 if ($folio->currency !== $currency) {
-                    throw new RuntimeException("The guest folio is in {$folio->currency}; record the extras in {$folio->currency}.");
+                    throw new RuntimeException("The guest billing is in {$folio->currency}; record the extras in {$folio->currency}.");
                 }
             }
 

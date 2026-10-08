@@ -6,6 +6,8 @@ namespace App\Livewire\Folios;
 
 use App\Domain\Folios\Actions\ApplyFolioDiscount;
 use App\Domain\Folios\Actions\VoidFolio;
+use App\Domain\Folios\BillSection;
+use App\Domain\Folios\FolioSections;
 use App\Domain\Notifications\BeemSmsClient;
 use App\Domain\Payments\Actions\RecordRefund;
 use App\Domain\Payments\Actions\VoidPayment;
@@ -30,7 +32,7 @@ use Livewire\Component;
 use RuntimeException;
 use Throwable;
 
-#[Title('Folio')]
+#[Title('Guest Billing')]
 class Show extends Component
 {
     public Folio $folio;
@@ -62,9 +64,20 @@ class Show extends Component
         $this->recipient_phone = $folio->guest->phone ?? '';
     }
 
-    public function openPayment(): void
+    /**
+     * Open the payment form for one section of the bill, or for the whole
+     * bill when no section is given.
+     */
+    public function openPayment(string $section = ''): void
     {
-        Flux::modal('record-payment')->show();
+        $this->dispatch('open-payment', section: BillSection::tryFrom($section)?->value ?? '')
+            ->to(RecordPaymentForm::class);
+    }
+
+    #[Computed]
+    public function sections(): FolioSections
+    {
+        return FolioSections::for($this->folio);
     }
 
     public function openSendEmail(): void
@@ -282,7 +295,7 @@ class Show extends Component
             return;
         }
 
-        Flux::toast(variant: 'success', text: __('Folio voided.'));
+        Flux::toast(variant: 'success', text: __('Guest billing voided.'));
         Flux::modal('void-folio')->close();
         $this->reloadFolio($this->folio);
     }
@@ -305,7 +318,7 @@ class Show extends Component
 
     private function reloadFolio(Folio $folio): void
     {
-        unset($this->creditBalance);
+        unset($this->creditBalance, $this->sections);
 
         $this->folio = $folio->fresh(['charges', 'payments', 'guest', 'stay.reservation'])
             ?? $folio->load(['charges', 'payments', 'guest', 'stay.reservation']);

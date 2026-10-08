@@ -70,7 +70,7 @@
                 <span class="text-zinc-400 dark:text-zinc-600">|</span>
                 <a href="{{ route('folios.show', $posOrder->folio) }}" wire:navigate
                     class="text-sky-600 hover:underline dark:text-sky-400">
-                    {{ __('Folio') }} {{ $posOrder->folio->reference }}
+                    {{ __('Guest Billing') }} {{ $posOrder->folio->reference }}
                 </a>
             @endif
         </nav>

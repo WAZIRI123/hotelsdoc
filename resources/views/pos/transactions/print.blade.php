@@ -303,7 +303,7 @@
             @elseif (! $walkIn)
                 <div class="payment">
                     <div class="row">
-                        <span class="label">{{ __('Charged to folio') }}</span>
+                        <span class="label">{{ __('Charged to guest billing') }}</span>
                         <span class="value">{{ $folio->reference }}</span>
                     </div>
                     @if ($folio->guest)

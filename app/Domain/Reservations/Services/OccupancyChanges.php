@@ -160,7 +160,7 @@ final class OccupancyChanges
         $folio = $reservation->stay?->folio;
 
         if (! $folio instanceof Folio || ! $folio->acceptsCharges()) {
-            throw new RuntimeException('This stay has no open folio to post the room adjustment to.');
+            throw new RuntimeException('This stay has no open guest billing to post the room adjustment to.');
         }
 
         $this->postCharge->price($folio, 'room', $reservationRoom->id, $description, $total, $quantity);

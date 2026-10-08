@@ -90,7 +90,7 @@
                             <a href="{{ route('folios.show', $activeFolio) }}"
                                 wire:navigate
                                 class="block w-full transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900"
-                                aria-label="{{ __('Open folio for room') }} {{ $roomLabel }}">
+                                aria-label="{{ __('Open guest billing for room') }} {{ $roomLabel }}">
                                 <x-room-status-card :class="$cardClasses" :label="$statusLabel" />
                             </a>
                         @else

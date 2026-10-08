@@ -33,7 +33,7 @@ final class VoidPayment
             $folio = Folio::query()->lockForUpdate()->findOrFail($payment->folio_id);
 
             if ($folio->status === 'void') {
-                throw new RuntimeException('Cannot void a payment on a voided folio.');
+                throw new RuntimeException('Cannot void a payment on a voided guest billing.');
             }
 
             $payment->update([

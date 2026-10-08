@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Reservations\Services;
 
+use App\Models\ReservationRoom;
 use App\Models\Room;
 use App\Models\RoomAvailability;
 use Carbon\CarbonImmutable;
@@ -18,6 +19,9 @@ use InvalidArgumentException;
  * A row with status='booked' or 'blocked' makes that night unavailable.
  * Rooms that are out of service (inactive, maintenance, out of order) are
  * never available, whatever the dates.
+ *
+ * A guest still checked in after their departure date keeps the room: it is
+ * not offered for tonight until they are checked out or their stay extended.
  *
  * Range semantics: arrival is inclusive, departure is exclusive (industry standard
  * "night of arrival" — checking out on the 5th means you slept the 4th but not the 5th).
@@ -43,6 +47,7 @@ final class AvailabilityChecker
                 $q->whereNull('reservation_id')->orWhere('reservation_id', '!=', $id);
             }))
             ->pluck('room_id')
+            ->merge($this->overstayRoomIds($nights, $excludeReservationId))
             ->unique()
             ->all();
 
@@ -67,6 +72,10 @@ final class AvailabilityChecker
             return false;
         }
 
+        if (in_array($roomId, $this->overstayRoomIds($nights, $excludeReservationId), true)) {
+            return false;
+        }
+
         return ! RoomAvailability::query()
             ->where('room_id', $roomId)
             ->whereIn('date', $nights)
@@ -75,6 +84,29 @@ final class AvailabilityChecker
                 $q->whereNull('reservation_id')->orWhere('reservation_id', '!=', $id);
             }))
             ->exists();
+    }
+
+    /**
+     * Rooms held by guests still checked in after their departure date, when
+     * the requested nights include tonight. Those nights were never booked,
+     * so room_availability alone would sell the room twice.
+     *
+     * @param  list<string>  $nights
+     * @return list<int>
+     */
+    private function overstayRoomIds(array $nights, ?int $excludeReservationId): array
+    {
+        if ($nights[0] > CarbonImmutable::today()->toDateString()) {
+            return [];
+        }
+
+        return ReservationRoom::query()
+            ->whereNotNull('room_id')
+            ->whereHas('reservation', fn ($query) => $query
+                ->overdueDeparture()
+                ->when($excludeReservationId, fn ($query, int $id) => $query->whereKeyNot($id)))
+            ->pluck('room_id')
+            ->all();
     }
 
     /**

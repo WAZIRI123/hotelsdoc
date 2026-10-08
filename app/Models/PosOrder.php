@@ -31,13 +31,15 @@ use Illuminate\Support\Str;
  * @property Carbon|null $voided_at
  * @property int|null $voided_by
  * @property string|null $void_reason
+ * @property Carbon|null $cleared_at
+ * @property int|null $cleared_by
  */
 class PosOrder extends Model
 {
     /** @use HasFactory<PosOrderFactory> */
     use BelongsToTenant, HasFactory;
 
-    public const STATUSES = ['open', 'billed', 'voided'];
+    public const STATUSES = ['open', 'billed', 'voided', 'cleared'];
 
     protected $fillable = [
         'hotel_id',
@@ -55,6 +57,8 @@ class PosOrder extends Model
         'voided_at',
         'voided_by',
         'void_reason',
+        'cleared_at',
+        'cleared_by',
     ];
 
     /**
@@ -68,6 +72,7 @@ class PosOrder extends Model
             'total_amount' => MoneyCast::class,
             'billed_at' => 'datetime',
             'voided_at' => 'datetime',
+            'cleared_at' => 'datetime',
         ];
     }
 
@@ -96,6 +101,14 @@ class PosOrder extends Model
     }
 
     /**
+     * @return BelongsTo<User, $this>
+     */
+    public function clearedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cleared_by');
+    }
+
+    /**
      * @return HasMany<PosOrderItem, $this>
      */
     public function items(): HasMany
@@ -104,16 +117,24 @@ class PosOrder extends Model
     }
 
     /**
-     * Put the stock taken by this order's items back on hand.
+     * Put the stock taken by this order's items back on hand. Only the units
+     * a line actually took come back, so lines rung up before an item was
+     * tracked never add stock that was never there.
      */
     public function restoreStock(): void
     {
         $this->loadMissing('items.menuItem');
 
         foreach ($this->items as $line) {
-            if ($line->menuItem?->track_stock) {
-                $line->menuItem->increment('stock_quantity', $line->quantity);
+            if ($line->stock_taken === 0) {
+                continue;
             }
+
+            if ($line->menuItem?->track_stock) {
+                $line->menuItem->increment('stock_quantity', $line->stock_taken);
+            }
+
+            $line->update(['stock_taken' => 0]);
         }
     }
 }

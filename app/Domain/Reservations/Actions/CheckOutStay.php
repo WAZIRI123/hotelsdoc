@@ -49,7 +49,7 @@ final class CheckOutStay
 
             $folio = $stay->folio;
             if ($folio === null) {
-                throw new RuntimeException('Stay has no folio. This is a data integrity error.');
+                throw new RuntimeException('Stay has no guest billing. This is a data integrity error.');
             }
 
             $this->releaseUnusedNights($stay, $folio);

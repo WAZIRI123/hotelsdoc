@@ -15,7 +15,7 @@
         [__('Room Revenue'), $amount($totals['room_revenue']), 'text-green-600 dark:text-green-400'],
         [__('Outstanding'), $amount($totals['balance']), 'text-red-600 dark:text-red-400'],
     ]"
-    :footnote="__('Counts reservations by arrival date. Cancelled and no-show bookings are listed but excluded from nights and revenue. Billed, paid and outstanding come from checked-in guests\' folios. Currency:') . ' ' . $this->hotelCurrency()"
+    :footnote="__('Counts reservations by arrival date. Cancelled and no-show bookings are listed but excluded from nights and revenue. Billed, paid and outstanding come from checked-in guests\' billing. Currency:') . ' ' . $this->hotelCurrency()"
 >
     <table class="w-full text-sm text-zinc-700 dark:text-zinc-300">
         <thead class="border-b border-zinc-200 dark:border-zinc-700">

@@ -56,7 +56,7 @@ final class PostFolioCharge
         int $quantity = 1,
     ): FolioCharge {
         if (! $folio->acceptsCharges()) {
-            throw new RuntimeException("Cannot post a charge onto a folio in status [{$folio->status}].");
+            throw new RuntimeException("Cannot post a charge onto a guest billing in status [{$folio->status}].");
         }
 
         $gross = $net->add($tax);

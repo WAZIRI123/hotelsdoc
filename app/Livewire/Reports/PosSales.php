@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Reports;
 
+use App\Domain\Folios\BillSection;
 use App\Domain\Reports\FolioPaymentShare;
 use App\Models\Outlet;
 use App\Models\PosOrder;
@@ -17,11 +18,12 @@ use Livewire\Attributes\Url;
 
 /**
  * Billed POS sales for one family of outlets (bars for drinks, restaurants
- * for food), summarised per menu item or listed per order.
+ * for food), summarised per menu item or listed per order, plus the unbilled
+ * orders cashiers cleared from the terminal.
  */
 abstract class PosSales extends ReportComponent
 {
-    public const VIEWS = ['orders', 'items'];
+    public const VIEWS = ['orders', 'items', 'cleared'];
 
     #[Url]
     public string $outlet = '';
@@ -64,8 +66,24 @@ abstract class PosSales extends ReportComponent
     public function orders(): Collection
     {
         return $this->billedOrders()
-            ->with(['outlet', 'items', 'folio.guest', 'folio.payments'])
+            ->with(['outlet', 'items', 'folio.guest', 'folio.payments', 'folio.charges'])
             ->orderBy('billed_at')
+            ->get();
+    }
+
+    /**
+     * Unbilled orders cleared from the terminal in the period, newest first.
+     *
+     * @return Collection<int, PosOrder>
+     */
+    #[Computed]
+    public function clearedOrders(): Collection
+    {
+        return $this->outletOrders()
+            ->where('status', 'cleared')
+            ->whereBetween('cleared_at', [$this->periodStart(), $this->periodEnd()])
+            ->with(['outlet', 'items', 'clearedBy'])
+            ->latest('cleared_at')
             ->get();
     }
 
@@ -106,7 +124,7 @@ abstract class PosSales extends ReportComponent
         return $this->orders()->map(function (PosOrder $order): array {
             $folio = $order->folio;
             $grandTotal = $order->total_amount;
-            $paid = FolioPaymentShare::paid($folio, $grandTotal);
+            $paid = FolioPaymentShare::paid($folio, $grandTotal, BillSection::Outlets);
 
             return [
                 'order' => $order,
@@ -115,7 +133,7 @@ abstract class PosSales extends ReportComponent
                 'total' => $grandTotal,
                 'discount' => Money::zero(),
                 'grand_total' => $grandTotal,
-                'paid_by' => FolioPaymentShare::paidBy($folio),
+                'paid_by' => FolioPaymentShare::paidBy($folio, BillSection::Outlets),
                 'paid' => $paid,
                 'balance' => $grandTotal->subtract($paid),
             ];
@@ -154,9 +172,19 @@ abstract class PosSales extends ReportComponent
      */
     private function billedOrders(): Builder
     {
-        return PosOrder::query()
+        return $this->outletOrders()
             ->where('status', 'billed')
-            ->whereBetween('billed_at', [$this->periodStart(), $this->periodEnd()])
+            ->whereBetween('billed_at', [$this->periodStart(), $this->periodEnd()]);
+    }
+
+    /**
+     * Orders from this report's outlets, narrowed to the chosen outlet.
+     *
+     * @return Builder<PosOrder>
+     */
+    private function outletOrders(): Builder
+    {
+        return PosOrder::query()
             ->whereHas('outlet', fn (Builder $query) => $query->whereIn('type', $this->outletTypes()))
             ->when($this->outlet !== '', fn (Builder $query) => $query->where('outlet_id', (int) $this->outlet));
     }

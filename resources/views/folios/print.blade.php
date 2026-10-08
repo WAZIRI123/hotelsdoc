@@ -364,6 +364,7 @@
             </div>
         @endif
 
+        @php $sections = \App\Domain\Folios\FolioSections::for($folio); @endphp
         <div class="section-title">{{ __('Itemized charges') }}</div>
         <table class="items">
             <thead>
@@ -376,18 +377,33 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse ($folio->charges as $i => $charge)
+                @php $line = 0; @endphp
+                @forelse ($sections->used() as $row)
+                    <tr class="group">
+                        <td colspan="5" style="font-weight:600;background:#f9fafb;">{{ $row['section']->label() }}</td>
+                    </tr>
+                    @foreach ($folio->charges->filter(fn ($charge) => \App\Domain\Folios\BillSection::forSourceType($charge->source_type) === $row['section']) as $charge)
+                        <tr>
+                            <td>{{ ++$line }}</td>
+                            <td class="desc">
+                                {{ $charge->description }}
+                                @if ($charge->posted_at)
+                                    <br><span style="color:#9ca3af;font-size:11px;">{{ $charge->posted_at->format('d M Y H:i') }}</span>
+                                @endif
+                            </td>
+                            <td class="num">{{ $charge->quantity }}</td>
+                            <td class="num">{{ $charge->unit_price->format() }}</td>
+                            <td class="num">{{ $charge->total->format() }}</td>
+                        </tr>
+                    @endforeach
                     <tr>
-                        <td>{{ $i + 1 }}</td>
-                        <td class="desc">
-                            {{ $charge->description }}
-                            @if ($charge->posted_at)
-                                <br><span style="color:#9ca3af;font-size:11px;">{{ $charge->posted_at->format('d M Y H:i') }}</span>
-                            @endif
+                        <td></td>
+                        <td class="desc" colspan="3" style="color:#6b7280;">
+                            {{ __(':section total', ['section' => $row['section']->label()]) }}
+                            · {{ __('Paid') }} {{ $row['paid']->format() }}
+                            · {{ __('Balance') }} {{ $row['balance']->format() }}
                         </td>
-                        <td class="num">{{ $charge->quantity }}</td>
-                        <td class="num">{{ $charge->unit_price->format() }}</td>
-                        <td class="num">{{ $charge->total->format() }}</td>
+                        <td class="num" style="font-weight:600;">{{ $row['total']->format() }}</td>
                     </tr>
                 @empty
                     <tr class="empty">
@@ -417,6 +433,7 @@
                     <tr>
                         <th>{{ __('Date') }}</th>
                         <th>{{ __('Method') }}</th>
+                        <th>{{ __('For') }}</th>
                         <th>{{ __('Reference') }}</th>
                         <th class="num">{{ __('Amount') }}</th>
                     </tr>
@@ -426,6 +443,7 @@
                         <tr>
                             <td>{{ ($payment->confirmed_at ?? $payment->created_at)?->format('d M Y H:i') ?? '—' }}</td>
                             <td class="desc">{{ str_replace('_', ' ', ucfirst($payment->method_code)) }}</td>
+                            <td>{{ $payment->billSection()?->label() ?? __('Whole bill') }}</td>
                             <td>{{ $payment->reference ?? '—' }}</td>
                             <td class="num">{{ $payment->amount->format() }}</td>
                         </tr>

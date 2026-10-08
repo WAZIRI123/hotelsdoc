@@ -14,7 +14,7 @@ use Spatie\Permission\PermissionRegistrar;
  * Permanently deletes a hotel and everything that belongs to it.
  *
  * Every tenant table has a cascading hotel_id foreign key, so deleting the
- * hotel row removes rooms, guests, reservations, folios, payments, POS data
+ * hotel row removes rooms, guests, reservations, guest billing, payments, POS data
  * and the hotel_user links. Spatie's per-hotel roles have no such key, so
  * they are removed here (role assignments cascade from the roles).
  *

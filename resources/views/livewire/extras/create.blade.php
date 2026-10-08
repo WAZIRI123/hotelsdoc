@@ -42,7 +42,14 @@
                 <flux:input type="date" wire:model="orderDate" :label="__('Date:')" />
             </div>
 
-            @if ($customer === \App\Livewire\Extras\Create::WALK_IN)
+            @if ($customer !== '' && $customer !== \App\Livewire\Extras\Create::WALK_IN)
+                <flux:radio.group wire:model.live="guestSettle" :label="__('Payment:')" variant="segmented" class="md:w-1/3">
+                    <flux:radio value="billing" label="{{ __('Charge to billing') }}" />
+                    <flux:radio value="pay_now" label="{{ __('Pay now') }}" />
+                </flux:radio.group>
+            @endif
+
+            @if ($this->paysNow())
                 <div class="grid gap-6 md:grid-cols-3">
                     <flux:select wire:model.live="paymentMethod" :label="__('Paid by:')">
                         <flux:select.option value="">{{ __('Select payment method') }}</flux:select.option>

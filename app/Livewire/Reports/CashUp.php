@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Reports;
 
+use App\Domain\Folios\BillSection;
 use App\Domain\Reports\FolioPaymentShare;
 use App\Domain\Reports\ReportCatalog;
 use App\Models\Expense;
@@ -129,8 +130,8 @@ class CashUp extends Component
                 ->sum(fn ($charge): int => $charge->total->amount)));
             // Room rates are entered prices; when VAT is added on top the guest is billed more.
             $total = Vat::current()->split($roomTotal)['gross']->subtract($discount);
-            // The folio can also hold POS and extras, so the room bill is credited with its share of what was paid.
-            $paid = FolioPaymentShare::paid($folio, $total);
+            // The folio can also hold POS and extras, so the room bill is credited with what was paid on accommodation.
+            $paid = FolioPaymentShare::paid($folio, $total, BillSection::Accommodation);
 
             return [
                 'customer' => $reservation->guest?->fullName() ?? '—',

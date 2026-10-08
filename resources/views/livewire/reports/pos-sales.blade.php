@@ -4,7 +4,7 @@
     $totals = $this->totals;
     $th = 'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400';
     $td = 'px-4 py-3 whitespace-nowrap';
-    $tabs = ['orders' => __('By Order'), 'items' => __('By Item')];
+    $tabs = ['orders' => __('By Order'), 'items' => __('By Item'), 'cleared' => __('Cleared Orders')];
 @endphp
 
 <x-reports.shell
@@ -45,7 +45,34 @@
     </x-slot:filters>
 
     <table class="w-full text-sm text-zinc-700 dark:text-zinc-300">
-        @if ($view === 'items')
+        @if ($view === 'cleared')
+            <thead class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                <tr>
+                    <th class="{{ $th }} text-left">{{ __('Cleared At') }}</th>
+                    <th class="{{ $th }} text-left">{{ __('Cleared By') }}</th>
+                    <th class="{{ $th }} text-left">{{ __('Outlet') }}</th>
+                    <th class="{{ $th }} text-left">{{ __('Table') }}</th>
+                    <th class="{{ $th }} text-left">{{ __('Items') }}</th>
+                    <th class="{{ $th }} text-right">{{ __('Total') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($this->clearedOrders as $clearedOrder)
+                    <tr wire:key="cleared-{{ $clearedOrder->id }}" class="transition hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                        <td class="{{ $td }}" title="{{ $clearedOrder->reference }}">{{ $clearedOrder->cleared_at?->format('d-m-Y H:i') }}</td>
+                        <td class="{{ $td }} font-medium text-zinc-900 dark:text-zinc-100">{{ $clearedOrder->clearedBy?->name ?? '—' }}</td>
+                        <td class="{{ $td }}">{{ $clearedOrder->outlet->name }}</td>
+                        <td class="{{ $td }}">{{ $clearedOrder->table_no ?? '—' }}</td>
+                        <td class="px-4 py-3">{{ $clearedOrder->items->map(fn ($line) => $line->quantity . ' × ' . $line->name_snapshot)->implode(', ') }}</td>
+                        <td class="{{ $td }} text-right tabular-nums">{{ $money($clearedOrder->total_amount) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="px-4 py-12 text-center text-zinc-500">{{ __('No orders were cleared in this period.') }}</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        @elseif ($view === 'items')
             <thead class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
                 <tr>
                     <th class="{{ $th }} text-left">{{ __('Item') }}</th>

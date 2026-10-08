@@ -24,7 +24,7 @@ use RuntimeException;
  *
  * In-house, the person's old row is ended and a new one started so the
  * register shows where they slept each night; both rooms are re-priced
- * from tonight and the difference is posted to the folio.
+ * from tonight and the difference is posted to the guest billing.
  */
 final class TransferOccupant
 {

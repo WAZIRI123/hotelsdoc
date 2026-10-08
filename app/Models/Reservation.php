@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Domain\Tenancy\Concerns\BelongsToTenant;
+use Carbon\CarbonImmutable;
 use Database\Factories\ReservationFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -134,5 +137,18 @@ class Reservation extends Model
     public function stay(): HasOne
     {
         return $this->hasOne(Stay::class);
+    }
+
+    /**
+     * Guests still checked in after their departure date: their extra nights
+     * are neither booked nor billed until they are checked out or extended.
+     *
+     * @param  Builder<Reservation>  $query
+     */
+    #[Scope]
+    protected function overdueDeparture(Builder $query): void
+    {
+        $query->where('reservations.status', 'checked_in')
+            ->whereDate('reservations.departure', '<', CarbonImmutable::today());
     }
 }

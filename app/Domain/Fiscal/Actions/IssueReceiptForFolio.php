@@ -32,7 +32,7 @@ final class IssueReceiptForFolio
         }
 
         if ($folio->status === 'void') {
-            throw new RuntimeException('Cannot issue a receipt for a voided folio.');
+            throw new RuntimeException('Cannot issue a receipt for a voided guest billing.');
         }
 
         return $this->issuer->issue($folio);

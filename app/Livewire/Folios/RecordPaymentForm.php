@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Livewire\Folios;
 
+use App\Domain\Folios\BillSection;
+use App\Domain\Folios\FolioSections;
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Payments\PaymentGatewayManager;
 use App\Models\Folio;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use RuntimeException;
@@ -23,6 +26,9 @@ use RuntimeException;
 class RecordPaymentForm extends Component
 {
     public Folio $folio;
+
+    /** A BillSection value, or '' to pay the whole bill. */
+    public string $section = '';
 
     #[Validate('required|string')]
     public string $method_code = '';
@@ -43,7 +49,40 @@ class RecordPaymentForm extends Component
     public function mount(Folio $folio): void
     {
         $this->folio = $folio;
-        $this->amount_tsh = (int) $folio->total_amount->subtract($folio->paid_total)->toMajor();
+        $this->amount_tsh = $this->balanceFor($this->section);
+    }
+
+    /**
+     * Open the form to pay one section of the bill, or the whole bill when
+     * no section is given, with what is owed on it filled in.
+     */
+    #[On('open-payment')]
+    public function openFor(string $section = ''): void
+    {
+        $this->section = BillSection::tryFrom($section)?->value ?? '';
+        $this->amount_tsh = $this->balanceFor($this->section);
+        $this->resetErrorBag();
+        Flux::modal('record-payment')->show();
+    }
+
+    public function updatedSection(): void
+    {
+        $this->section = BillSection::tryFrom($this->section)?->value ?? '';
+        $this->amount_tsh = $this->balanceFor($this->section);
+    }
+
+    /**
+     * Sections of this bill with something on them, for the "Pay for" choice.
+     *
+     * @return list<BillSection>
+     */
+    #[Computed]
+    public function sections(): array
+    {
+        return array_values(array_map(
+            fn (array $row): BillSection => $row['section'],
+            FolioSections::for($this->folio)->used(),
+        ));
     }
 
     /**
@@ -90,6 +129,7 @@ class RecordPaymentForm extends Component
                 payerPhone: $this->payer_phone ?: null,
                 receivedBy: Auth::user(),
                 note: $this->note ?: null,
+                section: BillSection::tryFrom($this->section),
             );
         } catch (RuntimeException|InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
@@ -100,6 +140,20 @@ class RecordPaymentForm extends Component
         Flux::toast(variant: 'success', text: 'Payment recorded.');
         Flux::modal('record-payment')->close();
         $this->dispatch('payment-recorded');
+    }
+
+    /**
+     * What is still owed, in whole currency units, on a section or the whole bill.
+     */
+    private function balanceFor(string $section): int
+    {
+        $billSection = BillSection::tryFrom($section);
+
+        $balance = $billSection === null
+            ? $this->folio->total_amount->subtract($this->folio->paid_total)
+            : FolioSections::for($this->folio)->balance($billSection);
+
+        return max(0, (int) $balance->toMajor());
     }
 
     public function render(): View

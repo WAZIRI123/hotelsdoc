@@ -4,6 +4,10 @@
         $primaryRole = $user->getRoleNames()->first() ?? 'staff';
         $roleTitle = ucwords(str_replace('_', ' ', $primaryRole));
 
+        $overdueDepartures = $user->can('manage-reservations')
+            ? \App\Models\Reservation::query()->overdueDeparture()->count()
+            : 0;
+
         $cards = [
             [
                 'permission' => 'manage-guests',
@@ -67,6 +71,20 @@
             </div>
 
             <hr class="my-5 border-zinc-200 dark:border-zinc-700" />
+
+            @if ($overdueDepartures > 0)
+                <flux:callout variant="danger" icon="exclamation-triangle" class="mb-5" data-test="dashboard-overdue">
+                    <flux:callout.heading>
+                        {{ trans_choice(':count guest is past their departure date but still checked in.|:count guests are past their departure date but still checked in.', $overdueDepartures) }}
+                    </flux:callout.heading>
+                    <flux:callout.text>
+                        {{ __('Their rooms stay off sale and the extra nights are not billed until you check them out or extend the stay.') }}
+                    </flux:callout.text>
+                    <x-slot name="actions">
+                        <flux:button size="sm" :href="route('reservations.index')" wire:navigate>{{ __('Review overdue departures') }}</flux:button>
+                    </x-slot>
+                </flux:callout>
+            @endif
 
             <div class="grid gap-4 sm:grid-cols-2">
                 @foreach ($cards as $card)

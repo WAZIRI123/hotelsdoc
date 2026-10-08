@@ -35,13 +35,13 @@ final class RecordRefund
             $folio = Folio::query()->lockForUpdate()->findOrFail($folio->id);
 
             if ($folio->status === 'void') {
-                throw new RuntimeException('Cannot refund a voided folio.');
+                throw new RuntimeException('Cannot refund a voided guest billing.');
             }
 
             $credit = $folio->paid_total->subtract($folio->total_amount);
 
             if ($amount->amount > $credit->amount) {
-                throw new RuntimeException("Only {$credit->format()} can be refunded on this folio.");
+                throw new RuntimeException("Only {$credit->format()} can be refunded on this guest billing.");
             }
 
             $payment = Payment::query()->create([

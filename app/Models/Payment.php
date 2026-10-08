@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\Folios\BillSection;
 use App\Domain\Tenancy\Concerns\BelongsToTenant;
 use App\Support\Casts\MoneyCast;
 use App\Support\Money;
@@ -19,6 +20,7 @@ use Illuminate\Support\Str;
  * @property string $uuid
  * @property int $hotel_id
  * @property int $folio_id
+ * @property string|null $bill_section accommodation|outlets|extras; null pays the whole bill
  * @property string $method_code
  * @property Money $amount
  * @property string $currency
@@ -40,6 +42,7 @@ class Payment extends Model
     protected $fillable = [
         'hotel_id',
         'folio_id',
+        'bill_section',
         'method_code',
         'amount',
         'currency',
@@ -81,6 +84,15 @@ class Payment extends Model
     public function isRefund(): bool
     {
         return $this->amount->isNegative();
+    }
+
+    /**
+     * The part of the guest billing this payment was made against, or null
+     * when it was made against the whole bill.
+     */
+    public function billSection(): ?BillSection
+    {
+        return $this->bill_section === null ? null : BillSection::from($this->bill_section);
     }
 
     /**

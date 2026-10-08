@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Payments\Actions;
 
 use App\Domain\Fiscal\Actions\IssueReceiptForFolio;
+use App\Domain\Folios\BillSection;
 use App\Domain\Payments\DataTransfer\PaymentRequest;
 use App\Domain\Payments\DataTransfer\PaymentStatus;
 use App\Domain\Payments\PaymentGatewayManager;
@@ -23,6 +24,10 @@ use RuntimeException;
  * pending payments will sit at status='pending' until a webhook flips them — the
  * folio bookkeeping below only credits paid_total on confirmed payments, so
  * pending payments are safe.
+ *
+ * A payment can be made against one section of the bill (accommodation,
+ * outlets or extras) so the guest can pay those separately, or against the
+ * whole bill when no section is given. See FolioSections.
  *
  * If the folio becomes fully paid, it is marked settled and a fiscal receipt
  * is issued via the FiscalReceiptIssuer port.
@@ -43,9 +48,10 @@ final class RecordPayment
         ?string $payerName = null,
         ?User $receivedBy = null,
         ?string $note = null,
+        ?BillSection $section = null,
     ): Payment {
         if ($folio->status === 'void') {
-            throw new RuntimeException('Cannot record a payment against a voided folio.');
+            throw new RuntimeException('Cannot record a payment against a voided guest billing.');
         }
 
         if ($amount->isZero() || $amount->isNegative()) {
@@ -63,9 +69,10 @@ final class RecordPayment
             note: $note,
         ));
 
-        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy, $payerPhone, $note): Payment {
+        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy, $payerPhone, $note, $section): Payment {
             $payment = Payment::query()->create([
                 'folio_id' => $folio->id,
+                'bill_section' => $section?->value,
                 'method_code' => $methodCode,
                 'amount' => $amount,
                 'currency' => $amount->currency,

@@ -99,7 +99,7 @@ it('shows the folio reference on a receipt billed to a guest room', function ():
 
     $this->get(route('pos.transactions.print', $order))
         ->assertOk()
-        ->assertSee('Charged to folio')
+        ->assertSee('Charged to guest billing')
         ->assertSee($folio->reference);
 });
 

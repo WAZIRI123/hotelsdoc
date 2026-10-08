@@ -37,6 +37,67 @@
 
         <hr class="my-5 border-zinc-200 dark:border-zinc-700" />
 
+        @if ($this->overdueDepartures->isNotEmpty())
+            <div class="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/40">
+                <div class="flex items-center gap-2">
+                    <flux:icon.exclamation-triangle class="size-5 text-amber-600 dark:text-amber-400" />
+                    <flux:heading>{{ __('Departures not checked out') }} ({{ $this->overdueDepartures->count() }})</flux:heading>
+                </div>
+                <flux:text class="mt-1">
+                    {{ __('These guests are past their departure date but still checked in. Their rooms stay off sale until you check them out or extend the stay.') }}
+                </flux:text>
+
+                <flux:table class="mt-3">
+                    <flux:table.columns>
+                        <flux:table.column>{{ __('Conf #') }}</flux:table.column>
+                        <flux:table.column>{{ __('Guest') }}</flux:table.column>
+                        <flux:table.column>{{ __('Rooms') }}</flux:table.column>
+                        <flux:table.column>{{ __('Was due out') }}</flux:table.column>
+                        <flux:table.column></flux:table.column>
+                    </flux:table.columns>
+                    <flux:table.rows>
+                        @foreach ($this->overdueDepartures as $overdue)
+                            @php
+                                $daysOverdue = (int) $overdue->departure->copy()->startOfDay()->diffInDays(today());
+                            @endphp
+                            <flux:table.row :key="'overdue-'.$overdue->id">
+                                <flux:table.cell class="font-mono text-sm">
+                                    <a href="{{ route('reservations.show', $overdue) }}" wire:navigate class="text-sky-600 hover:underline dark:text-sky-400">{{ $overdue->confirmation_no }}</a>
+                                </flux:table.cell>
+                                <flux:table.cell variant="strong">{{ $overdue->guest?->fullName() }}</flux:table.cell>
+                                <flux:table.cell>
+                                    {{ $overdue->rooms->map(fn ($r) => $r->room?->number)->filter()->implode(', ') ?: '—' }}
+                                </flux:table.cell>
+                                <flux:table.cell>
+                                    {{ $overdue->departure->format('D, M j') }}
+                                    <flux:badge color="amber" size="sm">{{ trans_choice(':count day overdue|:count days overdue', $daysOverdue) }}</flux:badge>
+                                </flux:table.cell>
+                                <flux:table.cell class="text-right whitespace-nowrap">
+                                    <flux:button size="sm" wire:click="startExtending({{ $overdue->id }})">{{ __('Extend stay') }}</flux:button>
+                                    <flux:button size="sm" variant="primary" wire:click="checkOutOverdue({{ $overdue->id }})"
+                                        wire:confirm="{{ __('Check this guest out? Only the booked nights are billed.') }}">{{ __('Check out') }}</flux:button>
+                                </flux:table.cell>
+                            </flux:table.row>
+                        @endforeach
+                    </flux:table.rows>
+                </flux:table>
+            </div>
+
+            <flux:modal name="extend-stay" class="md:w-[480px]">
+                <form wire:submit="extendStay" class="space-y-6">
+                    <flux:heading size="lg">{{ __('Extend stay') }}</flux:heading>
+                    <flux:text>{{ __('Every night from the original departure up to the new one is booked and billed to the guest billing.') }}</flux:text>
+                    <flux:input type="date" wire:model="extendDeparture" :label="__('New departure')" required />
+                    <div class="flex justify-end gap-2">
+                        <flux:modal.close>
+                            <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                        </flux:modal.close>
+                        <flux:button type="submit" variant="primary">{{ __('Extend stay') }}</flux:button>
+                    </div>
+                </form>
+            </flux:modal>
+        @endif
+
         <div class="flex items-center justify-end pb-4">
             <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass"
                 placeholder="{{ __('Confirmation no, guest…') }}" />
