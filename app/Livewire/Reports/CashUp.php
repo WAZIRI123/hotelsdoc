@@ -246,6 +246,55 @@ class CashUp extends Component
     }
 
     /**
+     * What should be in hand per payment method and currency: foreign money
+     * as the customer handed it over, with any change given back from the
+     * hotel currency, alongside what was credited to the bills.
+     *
+     * @return array<string, array{method: string, currency: string, foreign: bool, count: int, received: Money, value: Money, change: Money, credited: Money}>
+     */
+    #[Computed]
+    public function collectedByCurrency(): array
+    {
+        $rows = [];
+
+        foreach ($this->payments() as $payment) {
+            $tender = $payment->tendered();
+            $received = $tender === null ? $payment->amount : $tender->amount;
+            $key = $payment->method_code.'|'.$received->currency;
+
+            $rows[$key] ??= [
+                'method' => ucwords(str_replace('_', ' ', $payment->method_code)),
+                'currency' => $received->currency,
+                'foreign' => $tender !== null,
+                'count' => 0,
+                'received' => Money::zero($received->currency),
+                'value' => Money::zero(),
+                'change' => Money::zero(),
+                'credited' => Money::zero(),
+            ];
+
+            $rows[$key]['count']++;
+            $rows[$key]['received'] = $rows[$key]['received']->add($received);
+            $rows[$key]['value'] = $rows[$key]['value']->add($tender?->localValue() ?? $payment->amount);
+            $rows[$key]['change'] = $rows[$key]['change']->add($payment->changeGiven() ?? Money::zero());
+            $rows[$key]['credited'] = $rows[$key]['credited']->add($payment->amount);
+        }
+
+        uasort($rows, fn (array $a, array $b): int => [$a['foreign'], $a['currency'], $a['method']] <=> [$b['foreign'], $b['currency'], $b['method']]);
+
+        return $rows;
+    }
+
+    /**
+     * Whether any payment in the period was taken in a foreign currency.
+     */
+    #[Computed]
+    public function hasForeignPayments(): bool
+    {
+        return collect($this->collectedByCurrency())->contains('foreign', true);
+    }
+
+    /**
      * @return Collection<int, Expense>
      */
     #[Computed]

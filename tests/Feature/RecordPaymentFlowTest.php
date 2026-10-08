@@ -19,13 +19,13 @@ beforeEach(function (): void {
 
 it('pre-fills the form with the outstanding balance', function (): void {
     Livewire::test(RecordPaymentForm::class, ['folio' => $this->folio])
-        ->assertSet('amount_tsh', 80_000);
+        ->assertSet('tenderAmount', 80_000);
 });
 
 it('records a cash payment via the form', function (): void {
     Livewire::test(RecordPaymentForm::class, ['folio' => $this->folio])
         ->set('method_code', 'cash')
-        ->set('amount_tsh', 80_000)
+        ->set('tenderAmount', 80_000)
         ->call('submit')
         ->assertHasNoErrors()
         ->assertDispatched('payment-recorded');
@@ -37,7 +37,7 @@ it('records a cash payment via the form', function (): void {
 it('requires a reference when the gateway demands it', function (): void {
     Livewire::test(RecordPaymentForm::class, ['folio' => $this->folio])
         ->set('method_code', 'mpesa')
-        ->set('amount_tsh', 50_000)
+        ->set('tenderAmount', 50_000)
         ->call('submit')
         ->assertHasErrors('reference');
 });
@@ -45,15 +45,15 @@ it('requires a reference when the gateway demands it', function (): void {
 it('rejects a zero amount', function (): void {
     Livewire::test(RecordPaymentForm::class, ['folio' => $this->folio])
         ->set('method_code', 'cash')
-        ->set('amount_tsh', 0)
+        ->set('tenderAmount', 0)
         ->call('submit')
-        ->assertHasErrors('amount_tsh');
+        ->assertHasErrors('tenderAmount');
 });
 
 it('stores the payer phone and note and shows them on the folio', function (): void {
     Livewire::test(RecordPaymentForm::class, ['folio' => $this->folio])
         ->set('method_code', 'mpesa')
-        ->set('amount_tsh', 30_000)
+        ->set('tenderAmount', 30_000)
         ->set('reference', 'MP123')
         ->set('payer_phone', '0712345678')
         ->set('note', 'Paid by employer')
@@ -74,7 +74,7 @@ it('only accepts the hotel\'s active payment methods', function (): void {
 
     Livewire::test(RecordPaymentForm::class, ['folio' => $this->folio])
         ->set('method_code', 'cash')
-        ->set('amount_tsh', 80_000)
+        ->set('tenderAmount', 80_000)
         ->call('submit')
         ->assertHasErrors('method_code')
         ->set('method_code', 'not-a-method')

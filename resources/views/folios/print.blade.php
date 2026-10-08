@@ -445,7 +445,7 @@
                             <td class="desc">{{ str_replace('_', ' ', ucfirst($payment->method_code)) }}</td>
                             <td>{{ $payment->billSection()?->label() ?? __('Whole bill') }}</td>
                             <td>{{ $payment->reference ?? '—' }}</td>
-                            <td class="num">{{ $payment->amount->format() }}</td>
+                            <td class="num">{{ $payment->amountLabel() }}</td>
                         </tr>
                     @endforeach
                 </tbody>

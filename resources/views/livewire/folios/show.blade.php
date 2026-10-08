@@ -295,7 +295,10 @@
                             @endif
                         </flux:table.cell>
                         <flux:table.cell @class(['text-right font-mono', 'line-through text-zinc-400' => $payment->status === 'voided'])>
-                            {{ $payment->amount->format() }}
+                            {{ $payment->amountLabel() }}
+                            @if ($payment->changeGiven())
+                                <div class="text-xs text-zinc-500">{{ __('Credited :amount, change :change', ['amount' => $payment->amount->format(), 'change' => $payment->changeGiven()->format()]) }}</div>
+                            @endif
                             @if ($payment->status === 'confirmed' && $this->canVoid())
                                 <flux:button size="xs" variant="ghost" wire:click="startVoidPayment({{ $payment->id }})">{{ __('Void') }}</flux:button>
                             @endif

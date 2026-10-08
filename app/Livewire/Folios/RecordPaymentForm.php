@@ -8,6 +8,8 @@ use App\Domain\Folios\BillSection;
 use App\Domain\Folios\FolioSections;
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Payments\PaymentGatewayManager;
+use App\Domain\Payments\Tender;
+use App\Livewire\Concerns\TakesTender;
 use App\Models\Folio;
 use App\Models\PaymentMethod;
 use App\Support\Money;
@@ -25,6 +27,8 @@ use RuntimeException;
 
 class RecordPaymentForm extends Component
 {
+    use TakesTender;
+
     public Folio $folio;
 
     /** A BillSection value, or '' to pay the whole bill. */
@@ -32,10 +36,6 @@ class RecordPaymentForm extends Component
 
     #[Validate('required|string')]
     public string $method_code = '';
-
-    /** Whole TSh, never cents at the UI layer. */
-    #[Validate('required|numeric|min:1')]
-    public ?int $amount_tsh = null;
 
     #[Validate('nullable|string|max:80')]
     public string $reference = '';
@@ -49,7 +49,7 @@ class RecordPaymentForm extends Component
     public function mount(Folio $folio): void
     {
         $this->folio = $folio;
-        $this->amount_tsh = $this->balanceFor($this->section);
+        $this->resetTender();
     }
 
     /**
@@ -60,7 +60,7 @@ class RecordPaymentForm extends Component
     public function openFor(string $section = ''): void
     {
         $this->section = BillSection::tryFrom($section)?->value ?? '';
-        $this->amount_tsh = $this->balanceFor($this->section);
+        $this->resetTender();
         $this->resetErrorBag();
         Flux::modal('record-payment')->show();
     }
@@ -68,7 +68,7 @@ class RecordPaymentForm extends Component
     public function updatedSection(): void
     {
         $this->section = BillSection::tryFrom($this->section)?->value ?? '';
-        $this->amount_tsh = $this->balanceFor($this->section);
+        $this->tenderAmount = $this->defaultTenderAmount();
     }
 
     /**
@@ -120,16 +120,20 @@ class RecordPaymentForm extends Component
             $this->validate(['reference' => 'required|string|max:80']);
         }
 
+        $this->validate(['tenderAmount' => 'required']);
+        $tender = $this->validatedTender(mustCover: false);
+
         try {
             $action->execute(
                 folio: $this->folio,
                 methodCode: $this->method_code,
-                amount: Money::fromMajor((int) $this->amount_tsh),
+                amount: $this->amountToCredit($tender),
                 reference: $this->reference ?: null,
                 payerPhone: $this->payer_phone ?: null,
                 receivedBy: Auth::user(),
                 note: $this->note ?: null,
                 section: BillSection::tryFrom($this->section),
+                tender: $tender,
             );
         } catch (RuntimeException|InvalidArgumentException $e) {
             Flux::toast(variant: 'danger', text: $e->getMessage());
@@ -143,17 +147,44 @@ class RecordPaymentForm extends Component
     }
 
     /**
-     * What is still owed, in whole currency units, on a section or the whole bill.
+     * What is still owed on the chosen section, or on the whole bill.
      */
-    private function balanceFor(string $section): int
+    protected function tenderDue(): Money
     {
-        $billSection = BillSection::tryFrom($section);
+        $billSection = BillSection::tryFrom($this->section);
 
         $balance = $billSection === null
             ? $this->folio->total_amount->subtract($this->folio->paid_total)
             : FolioSections::for($this->folio)->balance($billSection);
 
-        return max(0, (int) $balance->toMajor());
+        return $balance->isNegative() ? Money::zero($balance->currency) : $balance;
+    }
+
+    /**
+     * The form starts at what is owed, in whole units of the chosen currency.
+     */
+    protected function defaultTenderAmount(): int|float|null
+    {
+        $due = $this->dueInTenderCurrency();
+
+        if (! $due->isPositive()) {
+            return null;
+        }
+
+        return $due->amount % 100 === 0 ? intdiv($due->amount, 100) : $due->toMajor();
+    }
+
+    /**
+     * A hotel-currency payment is credited as entered. Foreign money worth
+     * more than what is owed is credited up to the balance, with the rest
+     * handed back as change in the hotel currency.
+     */
+    private function amountToCredit(Tender $tender): Money
+    {
+        $value = $tender->localValue();
+        $due = $this->tenderDue();
+
+        return $tender->isForeign() && $due->isPositive() && $value->amount > $due->amount ? $due : $value;
     }
 
     public function render(): View

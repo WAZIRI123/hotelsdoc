@@ -7,8 +7,10 @@ namespace App\Livewire\POS;
 use App\Domain\Folios\BillSection;
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Payments\PaymentGatewayManager;
+use App\Domain\Payments\Tender;
 use App\Domain\POS\Actions\BillPosOrderToFolio;
 use App\Domain\POS\Actions\RecalculatePosOrderTotals;
+use App\Livewire\Concerns\TakesTender;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
 use App\Models\Outlet;
@@ -30,6 +32,8 @@ use RuntimeException;
 #[Title('Point of Sale')]
 class Terminal extends Component
 {
+    use TakesTender;
+
     public Outlet $outlet;
 
     public ?int $orderId = null;
@@ -341,6 +345,7 @@ class Terminal extends Component
         $this->settleReference = '';
         $this->billToStayId = null;
         $this->roomSettle = 'billing';
+        $this->resetTender();
         // Default to "Bill to room" only when there's an in-house guest to bill to.
         $this->settleMode = $this->inHouseStays()->isEmpty() ? 'walk_in' : 'room';
         Flux::modal('pos-settle')->show();
@@ -384,8 +389,10 @@ class Terminal extends Component
             return;
         }
 
+        $tender = $this->validatedTender(mustCover: true);
+
         try {
-            DB::transaction(function () use ($billAction, $payAction, $order, $stay): void {
+            DB::transaction(function () use ($billAction, $payAction, $order, $stay, $tender): void {
                 $billed = $billAction->execute($order, $stay->folio);
                 $payAction->execute(
                     folio: $stay->folio->fresh(),
@@ -394,6 +401,7 @@ class Terminal extends Component
                     reference: $this->settleReference ?: null,
                     receivedBy: Auth::user(),
                     section: BillSection::Outlets,
+                    tender: $tender,
                 );
             });
         } catch (RuntimeException|\InvalidArgumentException $e) {
@@ -404,7 +412,7 @@ class Terminal extends Component
 
         $printUrl = route('pos.transactions.print', $order->fresh());
 
-        Flux::toast(variant: 'success', text: "Payment received from {$stay->guest?->fullName()}.");
+        Flux::toast(variant: 'success', text: "Payment received from {$stay->guest?->fullName()}.".$this->changeNote($tender, $order));
         Flux::modal('pos-settle')->close();
         $this->dispatch('open-print', url: $printUrl);
         $this->finishOrder();
@@ -417,9 +425,11 @@ class Terminal extends Component
             return;
         }
 
+        $tender = $this->validatedTender(mustCover: true);
+
         try {
             // One transaction: if the payment fails the order is not left billed onto an unpaid walk-in folio.
-            DB::transaction(function () use ($billAction, $payAction, $order): void {
+            DB::transaction(function () use ($billAction, $payAction, $order, $tender): void {
                 $folio = $billAction->settleAsWalkIn($order);
                 $payAction->execute(
                     folio: $folio,
@@ -427,6 +437,7 @@ class Terminal extends Component
                     amount: $folio->total_amount,
                     reference: $this->settleReference ?: null,
                     receivedBy: Auth::user(),
+                    tender: $tender,
                 );
             });
         } catch (RuntimeException|\InvalidArgumentException $e) {
@@ -437,7 +448,7 @@ class Terminal extends Component
 
         $printUrl = route('pos.transactions.print', $order->fresh());
 
-        Flux::toast(variant: 'success', text: 'Payment received.');
+        Flux::toast(variant: 'success', text: 'Payment received.'.$this->changeNote($tender, $order));
         Flux::modal('pos-settle')->close();
         $this->dispatch('open-print', url: $printUrl);
         $this->finishOrder();
@@ -446,6 +457,24 @@ class Terminal extends Component
     public function render(): View
     {
         return view('livewire.pos.terminal');
+    }
+
+    /**
+     * What the order has to be paid in full, in the hotel currency.
+     */
+    protected function tenderDue(): Money
+    {
+        return $this->order()->total_amount ?? Money::zero();
+    }
+
+    /**
+     * " Change: TZS 5,000." when the customer handed over more than the order total.
+     */
+    private function changeNote(Tender $tender, PosOrder $order): string
+    {
+        $change = $tender->changeFor($order->fresh()->total_amount);
+
+        return $change === null ? '' : ' '.__('Change: :amount.', ['amount' => $change->format()]);
     }
 
     /**

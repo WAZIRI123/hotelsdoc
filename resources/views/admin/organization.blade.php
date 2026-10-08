@@ -25,6 +25,12 @@
                 'icon' => 'document-duplicate',
                 'color' => 'bg-[#6495ED]',
             ],
+            [
+                'route' => 'currencies.index',
+                'label' => __('Currencies'),
+                'icon' => 'currency-dollar',
+                'color' => 'bg-[#2E8B57]',
+            ],
         ];
     @endphp
 

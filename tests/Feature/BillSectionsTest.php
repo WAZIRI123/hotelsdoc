@@ -148,7 +148,7 @@ it('pays one section from the guest billing with its balance filled in', functio
     Livewire::test(RecordPaymentForm::class, ['folio' => $this->stay->folio->fresh()])
         ->call('openFor', 'outlets')
         ->assertSet('section', 'outlets')
-        ->assertSet('amount_tsh', (int) $outletBalance->toMajor())
+        ->assertSet('tenderAmount', (int) $outletBalance->toMajor())
         ->set('method_code', 'cash')
         ->call('submit')
         ->assertDispatched('payment-recorded');
@@ -166,7 +166,7 @@ it('pays every section at once with a whole-bill payment', function (): void {
     Livewire::test(RecordPaymentForm::class, ['folio' => $folio])
         ->call('openFor')
         ->assertSet('section', '')
-        ->assertSet('amount_tsh', (int) $folio->total_amount->toMajor())
+        ->assertSet('tenderAmount', (int) $folio->total_amount->toMajor())
         ->set('method_code', 'cash')
         ->call('submit');
 

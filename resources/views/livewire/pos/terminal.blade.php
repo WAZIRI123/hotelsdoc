@@ -253,6 +253,8 @@
                                 <flux:input wire:model="settleReference" placeholder="{{ __('Reference / txn ID') }}" />
                             @endif
 
+                            <x-payments.tender-fields :currencies="$this->acceptedCurrencies" :summary="$this->tenderSummary" />
+
                             <flux:button variant="primary" icon="check" wire:click="payForGuest"
                                 :disabled="$billToStayId === null || $settleMethod === ''">
                                 {{ __('Take payment') }}
@@ -281,6 +283,8 @@
                     @if ($settleMethod !== '' && $settleMethod !== 'cash')
                         <flux:input wire:model="settleReference" placeholder="{{ __('Reference / txn ID') }}" />
                     @endif
+
+                    <x-payments.tender-fields :currencies="$this->acceptedCurrencies" :summary="$this->tenderSummary" />
 
                     <flux:button variant="primary" icon="check" wire:click="settleDirect"
                         :disabled="$settleMethod === ''">

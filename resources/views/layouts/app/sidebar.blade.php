@@ -68,7 +68,7 @@
 
             <flux:sidebar.nav class="mt-3">
                 @if (auth()->user()->isSuperAdmin())
-                    <flux:sidebar.item icon="building-office" :href="route('admin.organization')" :current="request()->routeIs('admin.organization', 'admin.hotels.*')" wire:navigate>
+                    <flux:sidebar.item icon="building-office" :href="route('admin.organization')" :current="request()->routeIs('admin.organization', 'admin.hotels.*', 'currencies.*')" wire:navigate>
                         {{ __('Organization') }}
                     </flux:sidebar.item>
                 @endif
@@ -110,6 +110,12 @@
                         {{ __('Manage Stock') }}
                     </flux:sidebar.item>
                 @endcan
+
+                @if (! auth()->user()->isSuperAdmin() && auth()->user()->can('manage-hotel'))
+                    <flux:sidebar.item icon="currency-dollar" :href="route('currencies.index')" :current="request()->routeIs('currencies.*')" wire:navigate>
+                        {{ __('Currencies') }}
+                    </flux:sidebar.item>
+                @endif
 
                 <flux:sidebar.item icon="chart-bar" :href="route('reports.index')" :current="request()->routeIs('reports.*')" wire:navigate>
                     {{ __('Get Reports') }}

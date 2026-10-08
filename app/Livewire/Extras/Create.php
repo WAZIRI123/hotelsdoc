@@ -8,12 +8,14 @@ use App\Domain\Extras\Actions\RecordExtraOrder;
 use App\Domain\Folios\BillSection;
 use App\Domain\Payments\Actions\RecordPayment;
 use App\Domain\Payments\PaymentGatewayManager;
+use App\Livewire\Concerns\TakesTender;
 use App\Models\ExtraOrder;
 use App\Models\ExtraService;
 use App\Models\PaymentMethod;
 use App\Models\Stay;
 use App\Support\HotelCurrency;
 use App\Support\Money;
+use App\Support\Vat;
 use Carbon\CarbonImmutable;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
@@ -30,6 +32,8 @@ use RuntimeException;
 #[Title('Add extras services')]
 class Create extends Component
 {
+    use TakesTender;
+
     public const WALK_IN = 'walk_in';
 
     /** Either self::WALK_IN or the id of an in-house stay. */
@@ -177,6 +181,8 @@ class Create extends Component
             'lines.*.extra_service_id.required' => __('Select an extra item.'),
         ]);
 
+        $tender = $this->paysNow() ? $this->validatedTender(mustCover: true) : null;
+
         $stay = null;
         if ($this->customer !== self::WALK_IN) {
             $stay = Stay::query()->whereNull('checked_out_at')->find((int) $this->customer);
@@ -189,7 +195,7 @@ class Create extends Component
         }
 
         try {
-            $order = DB::transaction(function () use ($recordExtraOrder, $recordPayment, $stay): ExtraOrder {
+            $order = DB::transaction(function () use ($recordExtraOrder, $recordPayment, $stay, $tender): ExtraOrder {
                 $currency = HotelCurrency::current();
 
                 $order = $recordExtraOrder->execute(
@@ -213,6 +219,7 @@ class Create extends Component
                         reference: $this->paymentReference ?: null,
                         receivedBy: Auth::user(),
                         section: $order->isWalkIn() ? null : BillSection::Extras,
+                        tender: $tender,
                     );
                 }
 
@@ -228,11 +235,28 @@ class Create extends Component
 
         $this->reset(['customer', 'guestSettle', 'paymentMethod', 'paymentReference']);
         $this->lines = [$this->blankLine()];
+        $this->resetTender();
     }
 
     public function render(): View
     {
         return view('livewire.extras.create');
+    }
+
+    /**
+     * What the entered lines come to, VAT included, in the hotel currency.
+     */
+    protected function tenderDue(): Money
+    {
+        $total = Money::zero();
+
+        foreach ($this->lines as $line) {
+            if (is_numeric($line['quantity']) && is_numeric($line['price'])) {
+                $total = $total->add(Money::fromMajor((float) $line['price'])->multiply((int) $line['quantity']));
+            }
+        }
+
+        return Vat::current()->split($total)['gross'];
     }
 
     /**

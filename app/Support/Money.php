@@ -91,6 +91,14 @@ final readonly class Money implements JsonSerializable, Stringable
         return $this->currency.' '.number_format($this->toMajor(), 0);
     }
 
+    /**
+     * Like format(), but keeps the cents when there are any (USD 12.50).
+     */
+    public function formatExact(): string
+    {
+        return $this->currency.' '.number_format($this->toMajor(), $this->amount % 100 === 0 ? 0 : 2);
+    }
+
     public function __toString(): string
     {
         return $this->format();

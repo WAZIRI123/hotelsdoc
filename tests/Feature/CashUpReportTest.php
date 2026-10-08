@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use App\Domain\Folios\Actions\PostFolioCharge;
 use App\Domain\Payments\Actions\RecordPayment;
+use App\Domain\Payments\Tender;
 use App\Domain\Reservations\Actions\CancelReservation;
 use App\Domain\Reservations\Actions\CheckInReservation;
 use App\Domain\Reservations\Actions\CreateReservation;
 use App\Livewire\Reports\CashUp;
+use App\Models\AcceptedCurrency;
 use App\Models\Expense;
 use App\Models\Folio;
 use App\Models\Guest;
@@ -171,6 +173,36 @@ it('takes expenses paid out off the collected total per method', function (): vo
         ->and($cashUp->methodSummary()['cash']['paid_out']->amount)->toBe(15_000_00)
         ->and($cashUp->methodSummary()['cash']['net']->amount)->toBe(35_000_00)
         ->and($cashUp->totalPaidOut()->amount)->toBe(15_000_00);
+});
+
+it('breaks collections down by the currency they were received in', function (): void {
+    AcceptedCurrency::factory()->for($this->hotel)->create(['code' => 'USD', 'rate' => '2600']);
+    $folio = Folio::query()->create(['hotel_id' => $this->hotel->id, 'total_amount' => 200_000_00, 'status' => 'open']);
+    $pay = app(RecordPayment::class);
+    $pay->execute($folio, 'cash', Money::fromMajor(30_000), receivedBy: $this->user);
+    $pay->execute($folio, 'cash', Money::fromMajor(50_000), receivedBy: $this->user,
+        tender: Tender::foreign(Money::fromMajor(20, 'USD'), '2600', 'TZS'));
+    $pay->execute($folio, 'cash', Money::fromMajor(26_000), receivedBy: $this->user,
+        tender: Tender::foreign(Money::fromMajor(10, 'USD'), '2600', 'TZS'));
+
+    $component = Livewire::test(CashUp::class, ['view' => 'general'])
+        ->assertSee('Collected by currency')
+        ->assertSee('USD 30');
+    $rows = $component->instance()->collectedByCurrency();
+
+    expect($rows['cash|TZS']['received']->amount)->toBe(30_000_00)
+        ->and($rows['cash|USD']['count'])->toBe(2)
+        ->and($rows['cash|USD']['received']->amount)->toBe(30_00)
+        ->and($rows['cash|USD']['value']->amount)->toBe(78_000_00)
+        ->and($rows['cash|USD']['change']->amount)->toBe(2_000_00)
+        ->and($rows['cash|USD']['credited']->amount)->toBe(76_000_00);
+});
+
+it('hides the currency breakdown when everything was paid in the hotel currency', function (): void {
+    $folio = Folio::query()->create(['hotel_id' => $this->hotel->id, 'total_amount' => 200_000_00, 'status' => 'open']);
+    app(RecordPayment::class)->execute($folio, 'cash', Money::fromMajor(30_000), receivedBy: $this->user);
+
+    Livewire::test(CashUp::class, ['view' => 'general'])->assertDontSee('Collected by currency');
 });
 
 it('leaves cancelled bookings out and credits the room only with its share of payments', function (): void {

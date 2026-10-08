@@ -10,6 +10,7 @@ use App\Livewire\Admin\InvoiceFooters\Index as AdminInvoiceFootersIndex;
 use App\Livewire\Admin\Organization\SystemControl as AdminSystemControl;
 use App\Livewire\Agents\Index as AgentsIndex;
 use App\Livewire\Agents\Register as AgentsRegister;
+use App\Livewire\Currencies\Index as CurrenciesIndex;
 use App\Livewire\Extras\Create as ExtrasCreate;
 use App\Livewire\Extras\Orders as ExtrasOrders;
 use App\Livewire\Extras\Services as ExtrasServices;
@@ -96,6 +97,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::livewire('extras/orders', ExtrasOrders::class)->name('extras.orders');
     });
     Route::livewire('extras/services', ExtrasServices::class)->middleware('can:manage-hotel')->name('extras.services');
+    Route::livewire('currencies', CurrenciesIndex::class)->middleware('can:manage-hotel')->name('currencies.index');
 
     Route::middleware('can:manage-stock')->group(function () {
         Route::get('manage-stock', fn () => view('manage-stock', [

@@ -242,4 +242,58 @@
             <span>{{ __('Currency:') }} {{ $currencyLabel }}</span>
         </div>
     </div>
+
+    @if ($view === 'general' && $this->hasForeignPayments)
+        <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm print:break-inside-avoid print:border-zinc-300 print:shadow-none dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                <flux:heading size="lg">{{ __('Collected by currency') }}</flux:heading>
+                <flux:text class="text-sm">
+                    {{ __('Money in hand per method and currency. Foreign money is shown as received, with its :local value at the rate used; change was given back in :local.', ['local' => $currencyLabel]) }}
+                </flux:text>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                        <tr>
+                            <th class="{{ $th }} text-left">{{ __('Currency') }}</th>
+                            <th class="{{ $th }} text-left">{{ __('Payment Method') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Payments') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Received') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Value (:currency)', ['currency' => $currencyLabel]) }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Change given') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Credited') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach ($this->collectedByCurrency as $key => $row)
+                            <tr wire:key="currency-{{ $key }}" class="transition hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                                <td class="{{ $td }} font-medium text-zinc-900 dark:text-zinc-100">
+                                    {{ $row['currency'] }}
+                                    @unless ($row['foreign'])
+                                        <span class="text-xs font-normal text-zinc-500">({{ __('local') }})</span>
+                                    @endunless
+                                </td>
+                                <td class="{{ $td }}">{{ $row['method'] }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $row['count'] }}</td>
+                                <td class="{{ $td }} text-right font-medium tabular-nums text-zinc-900 dark:text-zinc-100">{{ $row['received']->formatExact() }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($row['value']) }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $row['change']->isZero() ? '—' : $amount($row['change']) }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($row['credited']) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="border-t-2 border-zinc-200 bg-zinc-50 font-semibold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100">
+                        <tr>
+                            <td class="{{ $td }}" colspan="2">{{ __('Total') }}</td>
+                            <td class="{{ $td }} text-right tabular-nums">{{ $this->payments->count() }}</td>
+                            <td class="{{ $td }}"></td>
+                            <td class="{{ $td }} text-right tabular-nums">{{ $amount(collect($this->collectedByCurrency)->reduce(fn ($carry, $row) => $carry->add($row['value']), \App\Support\Money::zero())) }}</td>
+                            <td class="{{ $td }} text-right tabular-nums">{{ $amount(collect($this->collectedByCurrency)->reduce(fn ($carry, $row) => $carry->add($row['change']), \App\Support\Money::zero())) }}</td>
+                            <td class="{{ $td }} text-right tabular-nums">{{ $amount($this->grandTotal) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    @endif
 </section>

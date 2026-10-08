@@ -292,8 +292,14 @@
                                 {{ __('Paid') }} · {{ str_replace('_', ' ', ucfirst($payment->method_code)) }}
                                 @if ($payment->reference) · {{ $payment->reference }} @endif
                             </span>
-                            <span class="value">{{ $payment->amount->format() }}</span>
+                            <span class="value">{{ $payment->amountLabel() }}</span>
                         </div>
+                        @if ($payment->changeGiven())
+                            <div class="row">
+                                <span class="label">{{ __('Change') }}</span>
+                                <span class="value">{{ $payment->changeGiven()->format() }}</span>
+                            </div>
+                        @endif
                     @endforeach
                 </div>
             @elseif ($walkIn && $balance->isZero())

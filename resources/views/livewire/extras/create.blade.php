@@ -61,6 +61,8 @@
                     <flux:input wire:model="paymentReference"
                         :label="$this->paymentRequiresReference ? __('Reference / transaction ID:') : __('Reference (optional):')" />
                 </div>
+
+                <x-payments.tender-fields class="md:w-2/3" :currencies="$this->acceptedCurrencies" :summary="$this->tenderSummary" />
             @endif
 
             <div>
@@ -112,11 +114,11 @@
                                     <flux:error name="lines.{{ $index }}.extra_service_id" />
                                 </td>
                                 <td class="border border-zinc-200 p-3 dark:border-zinc-700">
-                                    <flux:input type="number" min="1" step="1" wire:model="lines.{{ $index }}.quantity" />
+                                    <flux:input type="number" min="1" step="1" wire:model.live.blur="lines.{{ $index }}.quantity" />
                                     <flux:error name="lines.{{ $index }}.quantity" />
                                 </td>
                                 <td class="border border-zinc-200 p-3 dark:border-zinc-700">
-                                    <flux:input type="number" min="0" step="any" wire:model="lines.{{ $index }}.price" />
+                                    <flux:input type="number" min="0" step="any" wire:model.live.blur="lines.{{ $index }}.price" />
                                     <flux:error name="lines.{{ $index }}.price" />
                                 </td>
                                 <td class="border border-zinc-200 p-3 dark:border-zinc-700">

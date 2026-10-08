@@ -9,6 +9,7 @@ use App\Domain\Folios\BillSection;
 use App\Domain\Payments\DataTransfer\PaymentRequest;
 use App\Domain\Payments\DataTransfer\PaymentStatus;
 use App\Domain\Payments\PaymentGatewayManager;
+use App\Domain\Payments\Tender;
 use App\Models\Folio;
 use App\Models\Payment;
 use App\Models\User;
@@ -28,6 +29,10 @@ use RuntimeException;
  * A payment can be made against one section of the bill (accommodation,
  * outlets or extras) so the guest can pay those separately, or against the
  * whole bill when no section is given. See FolioSections.
+ *
+ * The amount is always in the hotel currency. When the customer paid in one
+ * of the hotel's accepted currencies, the tender records what they handed
+ * over and the rate used; it must be worth at least the amount credited.
  *
  * If the folio becomes fully paid, it is marked settled and a fiscal receipt
  * is issued via the FiscalReceiptIssuer port.
@@ -49,6 +54,7 @@ final class RecordPayment
         ?User $receivedBy = null,
         ?string $note = null,
         ?BillSection $section = null,
+        ?Tender $tender = null,
     ): Payment {
         if ($folio->status === 'void') {
             throw new RuntimeException('Cannot record a payment against a voided guest billing.');
@@ -57,6 +63,12 @@ final class RecordPayment
         if ($amount->isZero() || $amount->isNegative()) {
             throw new RuntimeException('Payment amount must be positive.');
         }
+
+        if ($tender !== null && ! $tender->covers($amount)) {
+            throw new RuntimeException("{$tender->amount->formatExact()} ({$tender->localValue()->format()}) does not cover {$amount->format()}.");
+        }
+
+        $foreignTender = $tender?->isForeign() ? $tender : null;
 
         $gateway = $this->gateways->for($methodCode);
 
@@ -69,13 +81,16 @@ final class RecordPayment
             note: $note,
         ));
 
-        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy, $payerPhone, $note, $section): Payment {
+        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy, $payerPhone, $note, $section, $foreignTender): Payment {
             $payment = Payment::query()->create([
                 'folio_id' => $folio->id,
                 'bill_section' => $section?->value,
                 'method_code' => $methodCode,
                 'amount' => $amount,
                 'currency' => $amount->currency,
+                'tendered_currency' => $foreignTender?->amount->currency,
+                'tendered_amount' => $foreignTender?->amount->amount,
+                'exchange_rate' => $foreignTender?->rate,
                 'reference' => $result->reference,
                 'payer_phone' => $payerPhone,
                 'note' => $note,

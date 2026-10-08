@@ -216,7 +216,8 @@ it('shows the organization dashboard to a super-admin', function (): void {
         ->assertDontSee('View Currency')
         ->assertSee('Add Invoice Footer')
         ->assertSee('View Invoice Footer')
-        ->assertSee(route('admin.hotels.index'));
+        ->assertSee(route('admin.hotels.index'))
+        ->assertSee(route('currencies.index'));
 });
 
 it('forbids hotel staff from the organization dashboard', function (): void {

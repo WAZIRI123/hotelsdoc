@@ -17,8 +17,8 @@
                 @endforeach
             </flux:select>
 
-            <flux:input wire:model.number="amount_tsh" type="number" min="1"
-                :label="__('Amount (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" required />
+            <x-payments.tender-fields :currencies="$this->acceptedCurrencies" :summary="$this->tenderSummary"
+                :must-cover="false" :amount-label="__('Amount (:currency)', ['currency' => $this->tenderSummary['dueInTender']->currency])" />
 
             @if ($this->selectedRequiresReference)
                 <flux:input wire:model="reference"
