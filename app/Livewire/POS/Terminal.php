@@ -376,6 +376,30 @@ class Terminal extends Component
         unset($this->order);
     }
 
+    /**
+     * Set a line to the quantity the cashier typed in, rather than tapping
+     * plus or minus one unit at a time. Zero removes the line.
+     */
+    public function setQty(int $itemId, mixed $quantity): void
+    {
+        if (! is_numeric($quantity) || (int) $quantity < 0 || (float) $quantity != (int) $quantity) {
+            Flux::toast(variant: 'danger', text: __('Enter a whole number of 0 or more.'));
+
+            return;
+        }
+
+        $current = PosOrderItem::query()
+            ->where('pos_order_id', $this->orderId)
+            ->findOrFail($itemId)
+            ->quantity;
+
+        $delta = (int) $quantity - $current;
+
+        if ($delta !== 0) {
+            $this->changeQty($itemId, $delta);
+        }
+    }
+
     public function openAdjustLine(int $lineId): void
     {
         abort_unless($this->canAdjustPrices(), 403);
@@ -524,8 +548,8 @@ class Terminal extends Component
 
     /**
      * An in-house guest pays at the counter: the order still goes on their
-     * bill, under outlets, with the payment against it, so the bill shows it
-     * as already paid.
+     * bill, under outlets, with the payment against it. They may pay only
+     * part of it; whatever is left stays on their bill to pay later.
      */
     public function payForGuest(BillPosOrderToFolio $billAction, RecordPayment $payAction): void
     {
@@ -539,19 +563,22 @@ class Terminal extends Component
             return;
         }
 
-        $tender = $this->validatedTender(mustCover: true);
+        $tender = $this->validatedTender(mustCover: false);
+        $paid = $this->guestPaymentAmount($tender, $order->total_amount);
+        $leftOnBill = $order->total_amount->subtract($paid);
 
         try {
-            DB::transaction(function () use ($billAction, $payAction, $order, $stay, $tender): void {
-                $billed = $billAction->execute($order, $stay->folio);
+            DB::transaction(function () use ($billAction, $payAction, $order, $stay, $tender, $paid): void {
+                $billAction->execute($order, $stay->folio);
                 $payAction->execute(
                     folio: $stay->folio->fresh(),
                     methodCode: $this->settleMethod,
-                    amount: $billed->total_amount,
+                    amount: $paid,
                     reference: $this->settleReference ?: null,
                     receivedBy: Auth::user(),
                     section: BillSection::Outlets,
                     tender: $tender,
+                    posOrder: $order,
                 );
             });
         } catch (RuntimeException|\InvalidArgumentException $e) {
@@ -562,7 +589,11 @@ class Terminal extends Component
 
         $printUrl = route('pos.transactions.print', $order->fresh());
 
-        Flux::toast(variant: 'success', text: "Payment received from {$stay->guest?->fullName()}.".$this->changeNote($tender, $order));
+        $note = $leftOnBill->isPositive()
+            ? ' '.__(':amount left on their bill.', ['amount' => $leftOnBill->format()])
+            : $this->changeNote($tender, $order);
+
+        Flux::toast(variant: 'success', text: "Payment received from {$stay->guest?->fullName()}.".$note);
         Flux::modal('pos-settle')->close();
         $this->dispatch('open-print', url: $printUrl);
         $this->finishOrder();
@@ -588,6 +619,7 @@ class Terminal extends Component
                     reference: $this->settleReference ?: null,
                     receivedBy: Auth::user(),
                     tender: $tender,
+                    posOrder: $order,
                 );
             });
         } catch (RuntimeException|\InvalidArgumentException $e) {
@@ -615,6 +647,15 @@ class Terminal extends Component
     protected function tenderDue(): Money
     {
         return $this->order()->total_amount ?? Money::zero();
+    }
+
+    /**
+     * What a guest's tender pays off the order: all of it, or less when they
+     * pay only part now and leave the rest on their bill.
+     */
+    private function guestPaymentAmount(Tender $tender, Money $orderTotal): Money
+    {
+        return $tender->covers($orderTotal) ? $orderTotal : $tender->localValue();
     }
 
     /**

@@ -100,6 +100,69 @@ it('lets an in-house guest pay an outlet order at the counter onto their billing
         ->and($folio->status)->toBe('open');
 });
 
+it('lets an in-house guest pay part of an outlet order now and the rest later on their bill', function (): void {
+    Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->beer->id)
+        ->call('addItem', $this->beer->id)
+        ->call('openSettle')
+        ->set('billToStayId', $this->stay->id)
+        ->set('roomSettle', 'pay_now')
+        ->set('settleMethod', 'cash')
+        ->set('tenderAmount', '4000')
+        ->call('payForGuest')
+        ->assertHasNoErrors()
+        ->assertDispatched('open-print');
+
+    $order = PosOrder::query()->sole();
+    $folio = $this->stay->folio->fresh();
+    $payment = $folio->payments()->sole();
+
+    expect($order->status)->toBe('billed')
+        ->and($order->folio_id)->toBe($folio->id)
+        ->and($payment->amount->amount)->toBe(4_000_00)
+        ->and($payment->bill_section)->toBe('outlets')
+        ->and($payment->pos_order_id)->toBe($order->id)
+        ->and(sectionsOf($this->stay)->balance(BillSection::Outlets)->amount)->toBe($order->total_amount->amount - 4_000_00)
+        ->and($order->unpaidAmount()->amount)->toBe($order->total_amount->amount - 4_000_00)
+        ->and($folio->status)->toBe('open');
+
+    $this->get(route('pos.transactions.print', $order))
+        ->assertOk()
+        ->assertSeeInOrder([__('Left on guest billing'), $order->unpaidAmount()->formatExact(), $folio->reference]);
+});
+
+it('shows only the order\'s own payments on an in-house guest\'s receipt', function (): void {
+    app(RecordPayment::class)->execute($this->stay->folio, 'cash', Money::fromMajor(77_777), section: BillSection::Accommodation);
+
+    Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->beer->id)
+        ->call('openSettle')
+        ->set('billToStayId', $this->stay->id)
+        ->set('roomSettle', 'pay_now')
+        ->set('settleMethod', 'cash')
+        ->call('payForGuest');
+
+    $this->get(route('pos.transactions.print', PosOrder::query()->sole()))
+        ->assertOk()
+        ->assertDontSee('77,777')
+        ->assertDontSee(__('Left on guest billing'));
+});
+
+it('takes only the order total from an in-house guest who hands over more', function (): void {
+    Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->beer->id)
+        ->call('openSettle')
+        ->set('billToStayId', $this->stay->id)
+        ->set('roomSettle', 'pay_now')
+        ->set('settleMethod', 'cash')
+        ->set('tenderAmount', '50000')
+        ->call('payForGuest')
+        ->assertHasNoErrors();
+
+    expect($this->stay->folio->fresh()->payments()->sole()->amount->amount)->toBe(PosOrder::query()->sole()->total_amount->amount)
+        ->and(sectionsOf($this->stay)->balance(BillSection::Outlets)->isZero())->toBeTrue();
+});
+
 it('charges an outlet order to the billing when the guest does not pay now', function (): void {
     billBeerToRoom($this->stay, $this->beer, $this->outlet);
 

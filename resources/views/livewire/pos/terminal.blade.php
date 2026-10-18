@@ -110,7 +110,18 @@
                         @endif
                         <div class="flex items-center gap-1">
                             <flux:button variant="ghost" size="sm" icon="minus" wire:click="changeQty({{ $item->id }}, -1)" />
-                            <span class="w-8 text-center font-mono">{{ $item->quantity }}</span>
+                            <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                inputmode="numeric"
+                                value="{{ $item->quantity }}"
+                                aria-label="{{ __('Quantity') }}"
+                                x-on:focus="$el.select()"
+                                x-on:keydown.enter.prevent="$el.blur()"
+                                x-on:change="$wire.setQty({{ $item->id }}, $event.target.value).then(() => $el.value = $el.getAttribute('value'))"
+                                class="w-14 rounded-md border border-zinc-200 bg-white px-1 py-0.5 text-center font-mono text-sm dark:border-zinc-600 dark:bg-zinc-800 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
                             <flux:button variant="ghost" size="sm" icon="plus" wire:click="changeQty({{ $item->id }}, 1)" />
                         </div>
                         <div class="w-24 text-right font-mono">{{ $item->line_total->formatExact() }}</div>
@@ -307,7 +318,12 @@
                                 <flux:input wire:model="settleReference" placeholder="{{ __('Reference / txn ID') }}" />
                             @endif
 
-                            <x-payments.tender-fields :currencies="$this->acceptedCurrencies" :summary="$this->tenderSummary" />
+                            <x-payments.tender-fields :currencies="$this->acceptedCurrencies" :summary="$this->tenderSummary"
+                                :must-cover="false" :amount-label="__('Amount paid now (:currency)', ['currency' => $this->tenderSummary['dueInTender']->currency])" />
+
+                            <flux:text class="text-xs text-zinc-500">
+                                {{ __('Leave blank to pay in full, or enter less to pay part now — the rest stays on their bill.') }}
+                            </flux:text>
 
                             <flux:button variant="primary" icon="check" wire:click="payForGuest"
                                 :disabled="$billToStayId === null || $settleMethod === ''">

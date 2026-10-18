@@ -120,6 +120,55 @@ it('blocks incrementing a line beyond available stock', function (): void {
         ->and($this->tracked->fresh()->stock_quantity)->toBe(0);
 });
 
+it('sets a line to a typed quantity and takes that much stock', function (): void {
+    $this->tracked->update(['stock_quantity' => 150]);
+
+    $component = Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->tracked->id);
+
+    $line = $component->instance()->order()->items->first();
+    $component->call('setQty', $line->id, '100');
+
+    expect($line->fresh()->quantity)->toBe(100)
+        ->and($line->fresh()->stock_taken)->toBe(100)
+        ->and($line->fresh()->line_total->equals($line->unit_price->multiply(100)))->toBeTrue()
+        ->and($this->tracked->fresh()->stock_quantity)->toBe(50);
+
+    $component->call('setQty', $line->id, '40');
+
+    expect($line->fresh()->quantity)->toBe(40)
+        ->and($this->tracked->fresh()->stock_quantity)->toBe(110);
+});
+
+it('blocks typing a quantity beyond available stock', function (): void {
+    $this->tracked->update(['stock_quantity' => 5]);
+
+    $component = Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->tracked->id);
+
+    $line = $component->instance()->order()->items->first();
+    $component->call('setQty', $line->id, '100');
+
+    expect($line->fresh()->quantity)->toBe(1)
+        ->and($this->tracked->fresh()->stock_quantity)->toBe(4);
+});
+
+it('removes the line when the typed quantity is zero and ignores invalid input', function (): void {
+    $component = Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->tracked->id);
+
+    $line = $component->instance()->order()->items->first();
+
+    $component->call('setQty', $line->id, 'abc')
+        ->call('setQty', $line->id, '-3')
+        ->call('setQty', $line->id, '1.5');
+    expect($line->fresh()->quantity)->toBe(1);
+
+    $component->call('setQty', $line->id, '0');
+    expect($line->fresh())->toBeNull()
+        ->and($this->tracked->fresh()->stock_quantity)->toBe(2);
+});
+
 it('refuses to add items to a non-editable order', function (): void {
     $component = Livewire::test(Terminal::class, ['outlet' => $this->outlet])
         ->call('addItem', $this->tracked->id);

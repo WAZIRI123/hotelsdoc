@@ -21,6 +21,7 @@ use Illuminate\Support\Str;
  * @property string $uuid
  * @property int $hotel_id
  * @property int $folio_id
+ * @property int|null $pos_order_id The POS order this payment was taken for at the till
  * @property string|null $bill_section accommodation|outlets|extras; null pays the whole bill
  * @property string $method_code
  * @property Money $amount
@@ -46,6 +47,7 @@ class Payment extends Model
     protected $fillable = [
         'hotel_id',
         'folio_id',
+        'pos_order_id',
         'bill_section',
         'method_code',
         'amount',
@@ -145,6 +147,14 @@ class Payment extends Model
     public function billSection(): ?BillSection
     {
         return $this->bill_section === null ? null : BillSection::from($this->bill_section);
+    }
+
+    /**
+     * @return BelongsTo<PosOrder, $this>
+     */
+    public function posOrder(): BelongsTo
+    {
+        return $this->belongsTo(PosOrder::class);
     }
 
     /**

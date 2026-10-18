@@ -135,7 +135,7 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
         Route::livewire('pos', PosLobby::class)->name('pos.lobby');
         Route::livewire('pos/transactions/{posOrder}', PosTransaction::class)->name('pos.transactions.show');
         Route::get('pos/transactions/{posOrder}/print', function (PosOrder $posOrder) {
-            $posOrder->load(['outlet', 'items', 'folio.guest', 'folio.payments']);
+            $posOrder->load(['outlet', 'items', 'folio.guest', 'folio.payments', 'payments']);
 
             return view('pos.transactions.print', [
                 'order' => $posOrder,

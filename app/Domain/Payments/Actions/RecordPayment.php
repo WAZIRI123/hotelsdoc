@@ -12,6 +12,7 @@ use App\Domain\Payments\PaymentGatewayManager;
 use App\Domain\Payments\Tender;
 use App\Models\Folio;
 use App\Models\Payment;
+use App\Models\PosOrder;
 use App\Models\User;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,7 @@ final class RecordPayment
         ?string $note = null,
         ?BillSection $section = null,
         ?Tender $tender = null,
+        ?PosOrder $posOrder = null,
     ): Payment {
         if ($folio->status === 'void') {
             throw new RuntimeException('Cannot record a payment against a voided guest billing.');
@@ -81,9 +83,10 @@ final class RecordPayment
             note: $note,
         ));
 
-        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy, $payerPhone, $note, $section, $foreignTender): Payment {
+        return DB::transaction(function () use ($folio, $methodCode, $amount, $result, $receivedBy, $payerPhone, $note, $section, $foreignTender, $posOrder): Payment {
             $payment = Payment::query()->create([
                 'folio_id' => $folio->id,
+                'pos_order_id' => $posOrder?->id,
                 'bill_section' => $section?->value,
                 'method_code' => $methodCode,
                 'amount' => $amount,

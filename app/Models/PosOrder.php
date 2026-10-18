@@ -109,6 +109,31 @@ class PosOrder extends Model
     }
 
     /**
+     * Payments taken at the till for this order.
+     *
+     * @return HasMany<Payment, $this>
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * What the customer has not yet paid towards this order at the till,
+     * counting confirmed payments that were not voided.
+     */
+    public function unpaidAmount(): Money
+    {
+        $paid = $this->payments
+            ->filter(fn (Payment $payment): bool => $payment->status === 'confirmed' && $payment->voided_at === null)
+            ->sum(fn (Payment $payment): int => $payment->amount->amount);
+
+        $unpaid = $this->total_amount->subtract(new Money($paid, $this->total_amount->currency));
+
+        return $unpaid->isNegative() ? Money::zero($unpaid->currency) : $unpaid;
+    }
+
+    /**
      * @return HasMany<PosOrderItem, $this>
      */
     public function items(): HasMany

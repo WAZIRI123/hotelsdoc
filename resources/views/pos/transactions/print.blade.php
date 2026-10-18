@@ -285,11 +285,13 @@
                 $folio = $order->folio;
                 $balance = $folio->total_amount->subtract($folio->paid_total);
                 $walkIn = $folio->guest_id === null && $folio->stay_id === null;
+                // A guest's bill holds their whole stay, so only what was paid for this order belongs here.
+                $orderPayments = $walkIn ? $folio->payments : $order->payments;
             @endphp
 
-            @if ($folio->payments->isNotEmpty())
+            @if ($orderPayments->isNotEmpty())
                 <div class="payment paid">
-                    @foreach ($folio->payments as $payment)
+                    @foreach ($orderPayments as $payment)
                         <div class="row">
                             <span class="label">
                                 {{ __('Paid') }} · {{ str_replace('_', ' ', ucfirst($payment->method_code)) }}
@@ -321,6 +323,19 @@
                             <span class="value" style="font-family:inherit;">{{ $folio->guest->fullName() }}</span>
                         </div>
                     @endif
+                </div>
+            @endif
+
+            @if (! $walkIn && $orderPayments->isNotEmpty() && $order->unpaidAmount()->isPositive())
+                <div class="payment due">
+                    <div class="row">
+                        <span class="label">{{ __('Left on guest billing') }}</span>
+                        <span class="value">{{ $order->unpaidAmount()->formatExact() }}</span>
+                    </div>
+                    <div class="row">
+                        <span class="label">{{ __('Guest billing') }}</span>
+                        <span class="value">{{ $folio->reference }}</span>
+                    </div>
                 </div>
             @endif
 
