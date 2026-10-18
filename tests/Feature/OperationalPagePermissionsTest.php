@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Folio;
 use App\Models\Hotel;
 use App\Models\Outlet;
@@ -27,6 +29,8 @@ function operationalRouteParameters(): array
         'pos.terminal' => fn (Hotel $hotel): array => ['outlet' => Outlet::factory()->for($hotel)->create()],
         'pos.transactions.show' => fn (Hotel $hotel): array => ['posOrder' => PosOrder::factory()->for($hotel)->for(Outlet::factory()->for($hotel))->create()],
         'pos.transactions.print' => fn (Hotel $hotel): array => ['posOrder' => PosOrder::factory()->for($hotel)->for(Outlet::factory()->for($hotel))->create()],
+        'expenses.edit' => fn (Hotel $hotel): array => ['expense' => Expense::factory()->for($hotel)->create()],
+        'expense-categories.edit' => fn (Hotel $hotel): array => ['category' => ExpenseCategory::factory()->for($hotel)->create()],
     ];
 }
 
@@ -65,6 +69,13 @@ dataset('guarded operational pages', [
     ['pos.terminal', 'front_desk', 'waiter'],
     ['pos.transactions.show', 'front_desk', 'waiter'],
     ['pos.transactions.print', 'front_desk', 'waiter'],
+    ['expenses', 'front_desk', 'cashier'],
+    ['expenses.list', 'front_desk', 'cashier'],
+    ['expenses.create', 'front_desk', 'cashier'],
+    ['expenses.edit', 'front_desk', 'accountant'],
+    ['expense-categories.index', 'front_desk', 'accountant'],
+    ['expense-categories.create', 'front_desk', 'accountant'],
+    ['expense-categories.edit', 'front_desk', 'accountant'],
 ]);
 
 it('forbids staff without the permission from opening the page', function (string $routeName, string $deniedRole): void {
@@ -87,5 +98,6 @@ it('hides sidebar links to pages the user cannot open', function (): void {
         ->assertSee(route('pos.lobby'))
         ->assertDontSee(route('guests.index'))
         ->assertDontSee(route('room-settings'))
-        ->assertDontSee(route('manage-stock'));
+        ->assertDontSee(route('manage-stock'))
+        ->assertDontSee(route('expenses'));
 });

@@ -11,6 +11,10 @@ use App\Livewire\Admin\Organization\SystemControl as AdminSystemControl;
 use App\Livewire\Agents\Index as AgentsIndex;
 use App\Livewire\Agents\Register as AgentsRegister;
 use App\Livewire\Currencies\Index as CurrenciesIndex;
+use App\Livewire\ExpenseCategories\Index as ExpenseCategoriesIndex;
+use App\Livewire\ExpenseCategories\Register as ExpenseCategoriesRegister;
+use App\Livewire\Expenses\Index as ExpensesIndex;
+use App\Livewire\Expenses\Record as ExpensesRecord;
 use App\Livewire\Extras\Create as ExtrasCreate;
 use App\Livewire\Extras\Orders as ExtrasOrders;
 use App\Livewire\Extras\Services as ExtrasServices;
@@ -116,6 +120,16 @@ Route::middleware(['auth', 'verified', 'tenant'])->group(function () {
     });
     Route::livewire('outlets', OutletsIndex::class)->middleware('can:manage-outlets')->name('outlets.index');
     Route::livewire('outlets/{outlet}/menu', MenuIndex::class)->middleware('can:manage-menu')->name('menu.index');
+
+    Route::middleware('can:manage-payments')->group(function () {
+        Route::view('expenses', 'expenses')->name('expenses');
+        Route::livewire('expenses/daily', ExpensesIndex::class)->name('expenses.list');
+        Route::livewire('expenses/daily/new', ExpensesRecord::class)->name('expenses.create');
+        Route::livewire('expenses/daily/{expense}/edit', ExpensesRecord::class)->name('expenses.edit');
+        Route::livewire('expenses/categories', ExpenseCategoriesIndex::class)->name('expense-categories.index');
+        Route::livewire('expenses/categories/new', ExpenseCategoriesRegister::class)->name('expense-categories.create');
+        Route::livewire('expenses/categories/{category}/edit', ExpenseCategoriesRegister::class)->name('expense-categories.edit');
+    });
 
     Route::middleware('can:operate-pos')->group(function () {
         Route::livewire('pos', PosLobby::class)->name('pos.lobby');

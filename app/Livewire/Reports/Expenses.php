@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Reports;
 
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\PaymentMethod;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
@@ -65,7 +66,7 @@ class Expenses extends ReportComponent
         $validated = $this->validate([
             'expenseDate' => ['required', 'date', 'before_or_equal:today'],
             'expensePvNumber' => ['nullable', 'string', 'max:50'],
-            'expenseCategory' => ['required', Rule::in(Expense::CATEGORIES)],
+            'expenseCategory' => ['required', Rule::in($this->expenseCategories()->pluck('name')->all())],
             'expenseDescription' => ['required', 'string', 'max:255'],
             'expenseQuantity' => ['nullable', 'numeric', 'gt:0'],
             'expensePayee' => ['nullable', 'string', 'max:120'],
@@ -101,6 +102,15 @@ class Expenses extends ReportComponent
 
         Flux::toast(variant: 'success', text: __('Expense deleted.'));
         unset($this->expenses, $this->totalsByCategory);
+    }
+
+    /**
+     * @return Collection<int, ExpenseCategory>
+     */
+    #[Computed]
+    public function expenseCategories(): Collection
+    {
+        return ExpenseCategory::query()->orderBy('name')->get();
     }
 
     /**

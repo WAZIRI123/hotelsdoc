@@ -111,6 +111,12 @@
                     </flux:sidebar.item>
                 @endcan
 
+                @can('manage-payments')
+                    <flux:sidebar.item icon="banknotes" :href="route('expenses')" :current="request()->routeIs('expenses', 'expenses.*', 'expense-categories.*')" wire:navigate>
+                        {{ __('Expenses') }}
+                    </flux:sidebar.item>
+                @endcan
+
                 @if (! auth()->user()->isSuperAdmin() && auth()->user()->can('manage-hotel'))
                     <flux:sidebar.item icon="currency-dollar" :href="route('currencies.index')" :current="request()->routeIs('currencies.*')" wire:navigate>
                         {{ __('Currencies') }}

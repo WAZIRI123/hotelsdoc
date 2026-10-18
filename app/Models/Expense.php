@@ -38,7 +38,12 @@ class Expense extends Model
     /** @use HasFactory<ExpenseFactory> */
     use BelongsToTenant, HasFactory;
 
-    /** @var list<string> */
+    /**
+     * Expense categories every hotel starts with; hotels manage their own
+     * list as ExpenseCategory rows.
+     *
+     * @var list<string>
+     */
     public const CATEGORIES = [
         'Salaries & Wages',
         'Utilities',

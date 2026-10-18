@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Domain\Tenancy\Listeners;
 
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Hotel;
 use App\Models\PaymentMethod;
 
 /**
  * Runs on Hotel::created and stamps the new hotel with a sensible default
  * set of payment methods (cash + the manual mobile money / bank gateways
- * registered in config/integrations.php).
+ * registered in config/integrations.php) and the default expense categories.
  *
  * Adding TRA VFD later: nothing to change here — that's a fiscal issuer, not
  * a payment method. Adding Selcom: keep the same 'mpesa' / 'tigopesa' codes,
@@ -38,6 +40,10 @@ final class SeedDefaultHotelData
                 ['hotel_id' => $hotel->id, 'code' => $method['code']],
                 ['label' => $method['label'], 'sort_order' => $method['sort_order'], 'is_active' => true],
             );
+        }
+
+        foreach (Expense::CATEGORIES as $category) {
+            ExpenseCategory::query()->firstOrCreate(['hotel_id' => $hotel->id, 'name' => $category]);
         }
     }
 }

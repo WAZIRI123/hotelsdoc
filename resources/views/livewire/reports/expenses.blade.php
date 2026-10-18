@@ -34,8 +34,8 @@
             <div class="w-full sm:w-56">
                 <flux:select wire:model="category" :label="__('Category')">
                     <flux:select.option value="">{{ __('All categories') }}</flux:select.option>
-                    @foreach (\App\Models\Expense::CATEGORIES as $option)
-                        <flux:select.option :value="$option">{{ __($option) }}</flux:select.option>
+                    @foreach ($this->expenseCategories as $option)
+                        <flux:select.option :value="$option->name">{{ __($option->name) }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
@@ -105,8 +105,8 @@
                 </div>
                 <flux:select wire:model="expenseCategory" :label="__('Category')" required>
                     <flux:select.option value="">{{ __('Choose a category') }}</flux:select.option>
-                    @foreach (\App\Models\Expense::CATEGORIES as $option)
-                        <flux:select.option :value="$option">{{ __($option) }}</flux:select.option>
+                    @foreach ($this->expenseCategories as $option)
+                        <flux:select.option :value="$option->name">{{ __($option->name) }}</flux:select.option>
                     @endforeach
                 </flux:select>
                 <flux:input wire:model="expenseDescription" :label="__('Item')" required />
