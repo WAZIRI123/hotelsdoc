@@ -305,6 +305,7 @@ class CashUp extends Component
     public function expensesPaidOut(): Collection
     {
         return Expense::query()
+            ->unvoided()
             ->whereDate('expense_date', '>=', $this->reportDay()->toDateString())
             ->whereDate('expense_date', '<=', $this->reportEnd()->toDateString())
             ->get();

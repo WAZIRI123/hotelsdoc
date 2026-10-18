@@ -33,4 +33,12 @@ class ExpenseFactory extends Factory
             'amount' => fake()->numberBetween(5_000, 500_000) * 100,
         ];
     }
+
+    public function voided(string $reason = 'Recorded twice'): static
+    {
+        return $this->state(fn (): array => [
+            'voided_at' => now(),
+            'void_reason' => $reason,
+        ]);
+    }
 }

@@ -124,6 +124,7 @@ class ProfitLoss extends ReportComponent
     public function expenses(): array
     {
         $expenses = Expense::query()
+            ->unvoided()
             ->whereDate('expense_date', '>=', $this->periodStart())
             ->whereDate('expense_date', '<=', $this->periodEnd())
             ->groupBy('category')

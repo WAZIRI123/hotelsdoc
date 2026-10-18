@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Livewire\Expenses;
 
 use App\Domain\Tenancy\TenantContext;
+use App\Livewire\Concerns\VoidsExpenses;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
-use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -20,11 +20,14 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Lists the day-to-day expenses recorded in a date range.
+ * Lists the day-to-day expenses recorded in a date range. Voided expenses
+ * stay listed but do not count towards the total.
  */
 #[Title('View Daily Expenses')]
 class Index extends Component
 {
+    use VoidsExpenses;
+
     #[Url]
     public string $from = '';
 
@@ -49,7 +52,7 @@ class Index extends Component
             $this->{$property} = $this->validDate($this->{$property}) ?? CarbonImmutable::today()->toDateString();
         }
 
-        unset($this->expenses);
+        $this->forgetExpenses();
     }
 
     /**
@@ -68,7 +71,7 @@ class Index extends Component
     public function expenses(): Collection
     {
         return Expense::query()
-            ->with('recorder')
+            ->with(['recorder', 'voider'])
             ->whereDate('expense_date', '>=', $this->from)
             ->whereDate('expense_date', '<=', $this->to)
             ->when($this->category !== '', fn (Builder $query) => $query->where('category', $this->category))
@@ -80,22 +83,20 @@ class Index extends Component
     #[Computed]
     public function total(): Money
     {
-        return new Money((int) $this->expenses()->sum('amount'), app(TenantContext::class)->current()->currency);
-    }
-
-    public function delete(int $id): void
-    {
-        $this->authorizeManagement();
-
-        Expense::query()->findOrFail($id)->delete();
-
-        Flux::toast(variant: 'success', text: __('Expense deleted.'));
-        unset($this->expenses);
+        return new Money(
+            (int) $this->expenses()->reject(fn (Expense $expense): bool => $expense->isVoided())->sum('amount'),
+            app(TenantContext::class)->current()->currency,
+        );
     }
 
     public function render(): View
     {
         return view('livewire.expenses.index');
+    }
+
+    protected function forgetExpenses(): void
+    {
+        unset($this->expenses, $this->total);
     }
 
     private function validDate(string $value): ?string

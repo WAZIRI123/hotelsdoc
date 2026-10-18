@@ -10,6 +10,7 @@ use App\Livewire\Reports\Expenses as ExpensesReport;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Hotel;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
@@ -128,7 +129,7 @@ it('validates daily expenses', function (): void {
         ->assertHasErrors(['expenseDate', 'category', 'description', 'quantity', 'amount']);
 });
 
-it('edits and deletes a daily expense', function (): void {
+it('edits and voids a daily expense', function (): void {
     $expense = Expense::factory()->for($this->hotel)->create(['category' => 'Transport', 'description' => 'Bus fare', 'amount' => 5_000_00]);
 
     Livewire::test(ExpensesRecord::class, ['expense' => $expense])
@@ -139,9 +140,45 @@ it('edits and deletes a daily expense', function (): void {
 
     expect($expense->fresh()->money()->toMajor())->toBe(7_500.0);
 
-    Livewire::test(ExpensesIndex::class)->call('delete', $expense->id);
+    $component = Livewire::test(ExpensesIndex::class)
+        ->call('startVoidExpense', $expense->id)
+        ->set('voidReason', 'Paid from petty cash already')
+        ->call('voidExpense')
+        ->assertHasNoErrors()
+        ->assertSee(['Bus fare', 'Voided', 'Paid from petty cash already']);
 
-    expect(Expense::query()->count())->toBe(0);
+    $expense->refresh();
+
+    expect($expense->isVoided())->toBeTrue()
+        ->and($expense->voided_by)->toBe($this->user->id)
+        ->and($expense->void_reason)->toBe('Paid from petty cash already')
+        ->and($component->instance()->total->amount)->toBe(0);
+});
+
+it('requires a reason to void an expense', function (): void {
+    $expense = Expense::factory()->for($this->hotel)->create();
+
+    Livewire::test(ExpensesIndex::class)
+        ->call('startVoidExpense', $expense->id)
+        ->set('voidReason', '  ')
+        ->call('voidExpense')
+        ->assertHasErrors(['voidReason']);
+
+    expect($expense->fresh()->isVoided())->toBeFalse();
+});
+
+it('does not void or edit an expense that is already voided', function (): void {
+    $expense = Expense::factory()->for($this->hotel)->voided()->create();
+
+    expect(fn () => Livewire::test(ExpensesIndex::class)->call('startVoidExpense', $expense->id))
+        ->toThrow(ModelNotFoundException::class);
+
+    $this->get(route('expenses.edit', $expense))->assertForbidden();
+});
+
+it('no longer offers a way to delete an expense', function (): void {
+    expect(method_exists(ExpensesIndex::class, 'delete'))->toBeFalse()
+        ->and(method_exists(ExpensesReport::class, 'delete'))->toBeFalse();
 });
 
 it('filters daily expenses by date and category', function (): void {

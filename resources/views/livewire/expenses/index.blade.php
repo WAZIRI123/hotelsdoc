@@ -39,7 +39,7 @@
                 </flux:select>
             </div>
             <div class="ms-auto text-right">
-                <flux:text>{{ __(':count expenses', ['count' => $this->expenses->count()]) }}</flux:text>
+                <flux:text>{{ __(':count expenses', ['count' => $this->expenses->reject->isVoided()->count()]) }}</flux:text>
                 <div class="text-2xl font-semibold tabular-nums text-red-600 dark:text-red-400">
                     {{ $this->total->currency }} {{ $amount($this->total) }}
                 </div>
@@ -62,31 +62,40 @@
 
             <flux:table.rows>
                 @forelse ($this->expenses as $expense)
-                    <flux:table.row :key="$expense->id">
+                    @php($voided = $expense->isVoided())
+                    <flux:table.row :key="$expense->id" @class(['opacity-60' => $voided])>
                         <flux:table.cell class="whitespace-nowrap">{{ $expense->expense_date->format('d-m-Y') }}</flux:table.cell>
                         <flux:table.cell>{{ $expense->pv_number ?? '—' }}</flux:table.cell>
-                        <flux:table.cell variant="strong">{{ $expense->description }}</flux:table.cell>
+                        <flux:table.cell variant="strong">
+                            <span @class(['line-through' => $voided])>{{ $expense->description }}</span>
+                            @if ($voided)
+                                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs font-normal text-zinc-500">
+                                    <flux:badge color="zinc" size="sm">{{ __('Voided') }}</flux:badge>
+                                    <span>{{ $expense->void_reason }} · {{ $expense->voider?->name ?? '—' }} · {{ $expense->voided_at?->format('d M Y, H:i') }}</span>
+                                </div>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell>{{ $expense->category }}</flux:table.cell>
                         <flux:table.cell align="end" class="tabular-nums">{{ $expense->quantity !== null ? $quantity($expense->quantity) : '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $expense->payee ?? '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $expense->method_code !== null ? ucwords(str_replace('_', ' ', $expense->method_code)) : '—' }}</flux:table.cell>
                         <flux:table.cell>{{ $expense->recorder?->name ?? '—' }}</flux:table.cell>
-                        <flux:table.cell align="end" class="tabular-nums">{{ $amount($expense->money()) }}</flux:table.cell>
+                        <flux:table.cell align="end" @class(['tabular-nums', 'line-through' => $voided])>{{ $amount($expense->money()) }}</flux:table.cell>
                         <flux:table.cell class="text-right">
-                            <flux:dropdown align="end">
-                                <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
-                                <flux:menu>
-                                    <flux:menu.item icon="pencil-square" :href="route('expenses.edit', $expense)" wire:navigate>
-                                        {{ __('Edit') }}
-                                    </flux:menu.item>
-                                    <flux:menu.separator />
-                                    <flux:menu.item icon="trash" variant="danger"
-                                        wire:click="delete({{ $expense->id }})"
-                                        wire:confirm="{{ __('Delete this expense?') }}">
-                                        {{ __('Delete') }}
-                                    </flux:menu.item>
-                                </flux:menu>
-                            </flux:dropdown>
+                            @unless ($voided)
+                                <flux:dropdown align="end">
+                                    <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" />
+                                    <flux:menu>
+                                        <flux:menu.item icon="pencil-square" :href="route('expenses.edit', $expense)" wire:navigate>
+                                            {{ __('Edit') }}
+                                        </flux:menu.item>
+                                        <flux:menu.separator />
+                                        <flux:menu.item icon="no-symbol" variant="danger" wire:click="startVoidExpense({{ $expense->id }})">
+                                            {{ __('Void') }}
+                                        </flux:menu.item>
+                                    </flux:menu>
+                                </flux:dropdown>
+                            @endunless
                         </flux:table.cell>
                     </flux:table.row>
                 @empty
@@ -99,4 +108,6 @@
             </flux:table.rows>
         </flux:table>
     </div>
+
+    @include('livewire.expenses.partials.void-modal')
 </section>

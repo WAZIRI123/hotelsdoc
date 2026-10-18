@@ -7,6 +7,8 @@ namespace App\Models;
 use App\Domain\Tenancy\Concerns\BelongsToTenant;
 use App\Support\Money;
 use Database\Factories\ExpenseFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +19,9 @@ use Illuminate\Support\Carbon;
  *
  * The amount is integer minor units in the expense's own currency, so it is
  * not cast to Money (MoneyCast is fixed to one currency).
+ *
+ * Expenses are never deleted: one recorded by mistake is voided, which keeps
+ * it on record but takes it out of every report total.
  *
  * @property int $id
  * @property int $hotel_id
@@ -30,6 +35,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $method_code
  * @property string $currency
  * @property int $amount
+ * @property Carbon|null $voided_at
+ * @property int|null $voided_by
+ * @property string|null $void_reason
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -69,6 +77,9 @@ class Expense extends Model
         'method_code',
         'currency',
         'amount',
+        'voided_at',
+        'voided_by',
+        'void_reason',
     ];
 
     /**
@@ -80,7 +91,13 @@ class Expense extends Model
             'expense_date' => 'date',
             'quantity' => 'decimal:2',
             'amount' => 'integer',
+            'voided_at' => 'datetime',
         ];
+    }
+
+    public function isVoided(): bool
+    {
+        return $this->voided_at !== null;
     }
 
     public function money(): Money
@@ -94,5 +111,24 @@ class Expense extends Model
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function voider(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+
+    /**
+     * Expenses that count towards the books (not voided).
+     *
+     * @param  Builder<Expense>  $query
+     */
+    #[Scope]
+    protected function unvoided(Builder $query): void
+    {
+        $query->whereNull('expenses.voided_at');
     }
 }

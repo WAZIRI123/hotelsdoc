@@ -13,7 +13,7 @@
         icon="receipt-percent"
         :subtitle="__('Expenses from :from to :to', ['from' => $this->periodStart()->format('d M Y'), 'to' => $this->periodEnd()->format('d M Y')])"
         :tiles="[
-            [__('Expenses'), $this->expenses->count(), 'text-zinc-900 dark:text-zinc-100'],
+            [__('Expenses'), $this->activeExpenses()->count(), 'text-zinc-900 dark:text-zinc-100'],
             [__('Categories'), count($this->totalsByCategory), 'text-zinc-900 dark:text-zinc-100'],
             [__('Biggest Category'), $topCategory ?? '—', 'text-zinc-900 dark:text-zinc-100 !text-base'],
             [__('Total Spent'), $amount($this->grandTotal), 'text-red-600 dark:text-red-400'],
@@ -59,19 +59,29 @@
             </thead>
             <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
                 @forelse ($this->expenses as $expense)
-                    <tr wire:key="expense-{{ $expense->id }}" class="transition hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                    @php($voided = $expense->isVoided())
+                    <tr wire:key="expense-{{ $expense->id }}" @class(['transition hover:bg-zinc-50 dark:hover:bg-zinc-800/40', 'opacity-60' => $voided])>
                         <td class="{{ $td }}">{{ $expense->expense_date->format('d-m-Y') }}</td>
                         <td class="{{ $td }}">{{ $expense->pv_number ?? '—' }}</td>
-                        <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ $expense->description }}</td>
+                        <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">
+                            <span @class(['line-through' => $voided])>{{ $expense->description }}</span>
+                            @if ($voided)
+                                <div class="mt-1 text-xs font-normal text-zinc-500">
+                                    {{ __('Voided') }}: {{ $expense->void_reason }} · {{ $expense->voider?->name ?? '—' }} · {{ $expense->voided_at?->format('d M Y, H:i') }}
+                                </div>
+                            @endif
+                        </td>
                         <td class="{{ $td }}">{{ __($expense->category) }}</td>
                         <td class="{{ $td }} tabular-nums">{{ $expense->quantity !== null ? $quantity($expense->quantity) : '—' }}</td>
                         <td class="{{ $td }}">{{ $expense->payee ?? '—' }}</td>
                         <td class="{{ $td }}">{{ $expense->method_code !== null ? ucwords(str_replace('_', ' ', $expense->method_code)) : '—' }}</td>
-                        <td class="{{ $td }} text-right tabular-nums">{{ $amount($expense->money()) }}</td>
+                        <td @class([$td, 'text-right tabular-nums', 'line-through' => $voided])>{{ $amount($expense->money()) }}</td>
                         @if ($canRecord)
                             <td class="{{ $td }} text-right print:hidden">
-                                <button type="button" wire:click="delete({{ $expense->id }})" wire:confirm="{{ __('Delete this expense?') }}"
-                                    class="text-red-600 hover:underline dark:text-red-400">{{ __('Delete') }}</button>
+                                @unless ($voided)
+                                    <button type="button" wire:click="startVoidExpense({{ $expense->id }})"
+                                        class="text-red-600 hover:underline dark:text-red-400">{{ __('Void') }}</button>
+                                @endunless
                             </td>
                         @endif
                     </tr>
@@ -95,6 +105,8 @@
     </x-reports.shell>
 
     @if ($canRecord)
+        @include('livewire.expenses.partials.void-modal')
+
         <flux:modal name="expense-form" class="md:w-[480px]">
             <form wire:submit="save" class="space-y-6">
                 <flux:heading size="lg">{{ __('Record expense') }}</flux:heading>

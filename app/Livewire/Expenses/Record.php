@@ -48,6 +48,8 @@ class Record extends Component
         $this->authorizeManagement();
 
         if ($expense?->exists) {
+            abort_if($expense->isVoided(), 403, __('A voided expense cannot be edited.'));
+
             $this->expense = $expense;
             $this->expenseDate = $expense->expense_date->toDateString();
             $this->pvNumber = $expense->pv_number ?? '';
@@ -117,6 +119,8 @@ class Record extends Component
         ];
 
         if ($this->expense) {
+            abort_if($this->expense->fresh()?->isVoided() ?? true, 403, __('A voided expense cannot be edited.'));
+
             $this->expense->update($attributes);
             Flux::toast(variant: 'success', text: __('Expense updated.'));
         } else {

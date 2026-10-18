@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Reports;
 
+use App\Livewire\Concerns\VoidsExpenses;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\PaymentMethod;
@@ -21,10 +22,13 @@ use Livewire\Attributes\Url;
 
 /**
  * Expenses paid out in the period, and the ledger where they are recorded.
+ * Voided expenses stay listed but leave every total.
  */
 #[Title('Expenses Report')]
 class Expenses extends ReportComponent
 {
+    use VoidsExpenses;
+
     #[Url]
     public string $category = '';
 
@@ -91,17 +95,7 @@ class Expenses extends ReportComponent
 
         Flux::modal('expense-form')->close();
         Flux::toast(variant: 'success', text: __('Expense recorded.'));
-        unset($this->expenses, $this->totalsByCategory);
-    }
-
-    public function delete(int $id): void
-    {
-        abort_unless($this->canRecord(), 403);
-
-        Expense::query()->findOrFail($id)->delete();
-
-        Flux::toast(variant: 'success', text: __('Expense deleted.'));
-        unset($this->expenses, $this->totalsByCategory);
+        $this->forgetExpenses();
     }
 
     /**
@@ -129,7 +123,7 @@ class Expenses extends ReportComponent
     public function expenses(): Collection
     {
         return Expense::query()
-            ->with('recorder')
+            ->with(['recorder', 'voider'])
             ->whereDate('expense_date', '>=', $this->periodStart())
             ->whereDate('expense_date', '<=', $this->periodEnd())
             ->when($this->category !== '', fn (Builder $query) => $query->where('category', $this->category))
@@ -146,7 +140,7 @@ class Expenses extends ReportComponent
     {
         $totals = [];
 
-        foreach ($this->expenses() as $expense) {
+        foreach ($this->activeExpenses() as $expense) {
             $totals[$expense->category] ??= ['count' => 0, 'total' => Money::zero($expense->currency)];
             $totals[$expense->category]['count']++;
             $totals[$expense->category]['total'] = $totals[$expense->category]['total']->add($expense->money());
@@ -160,12 +154,27 @@ class Expenses extends ReportComponent
     #[Computed]
     public function grandTotal(): Money
     {
-        return new Money((int) $this->expenses()->sum('amount'), $this->hotelCurrency());
+        return new Money((int) $this->activeExpenses()->sum('amount'), $this->hotelCurrency());
+    }
+
+    /**
+     * The period's expenses that count towards the totals.
+     *
+     * @return Collection<int, Expense>
+     */
+    public function activeExpenses(): Collection
+    {
+        return $this->expenses()->reject(fn (Expense $expense): bool => $expense->isVoided());
     }
 
     public function render(): View
     {
         return view('livewire.reports.expenses');
+    }
+
+    protected function forgetExpenses(): void
+    {
+        unset($this->expenses, $this->totalsByCategory, $this->grandTotal);
     }
 
     protected function reportKey(): string

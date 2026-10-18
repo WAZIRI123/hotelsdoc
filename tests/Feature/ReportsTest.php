@@ -268,7 +268,7 @@ it('hides stock recording from roles without manage-stock', function (): void {
         ->assertForbidden();
 });
 
-it('lets an accountant record and delete expenses', function (): void {
+it('lets an accountant record and void expenses', function (): void {
     PaymentMethod::query()->firstOrCreate(['code' => 'cash'], ['label' => 'Cash', 'is_active' => true, 'sort_order' => 0]);
 
     Livewire::test(Expenses::class)
@@ -292,9 +292,14 @@ it('lets an accountant record and delete expenses', function (): void {
         ->and($expense->recorded_by)->toBe($this->user->id)
         ->and($expense->currency)->toBe('TZS');
 
-    Livewire::test(Expenses::class)->call('delete', $expense->id);
+    Livewire::test(Expenses::class)
+        ->call('startVoidExpense', $expense->id)
+        ->set('voidReason', 'Entered twice')
+        ->call('voidExpense')
+        ->assertHasNoErrors();
 
-    expect(Expense::query()->count())->toBe(0);
+    expect($expense->fresh()->isVoided())->toBeTrue()
+        ->and(Expense::query()->count())->toBe(1);
 });
 
 it('validates expenses', function (): void {
@@ -311,11 +316,13 @@ it('lists expenses in the period with category totals', function (): void {
     Expense::factory()->for($this->hotel)->create(['expense_date' => '2026-09-05', 'category' => 'Utilities', 'description' => 'Water', 'amount' => 40_000_00]);
     Expense::factory()->for($this->hotel)->create(['expense_date' => '2026-09-06', 'category' => 'Utilities', 'description' => 'Power', 'amount' => 60_000_00]);
     Expense::factory()->for($this->hotel)->create(['expense_date' => '2026-08-06', 'category' => 'Rent', 'description' => 'August rent']);
+    Expense::factory()->for($this->hotel)->voided('Duplicate entry')->create(['expense_date' => '2026-09-07', 'category' => 'Utilities', 'description' => 'Power again', 'amount' => 60_000_00]);
 
     $component = Livewire::test(Expenses::class, ['from' => '2026-09-01', 'to' => '2026-09-30'])
         ->assertSeeInOrder(['Date', 'PV Number', 'Item', 'Category', 'Quantity', 'Amount'])
         ->assertSee('Water')
         ->assertSeeInOrder(['Total', '100,000.00'])
+        ->assertSee(['Power again', 'Duplicate entry'])
         ->assertDontSee('August rent');
 
     expect($component->instance()->grandTotal()->toMajor())->toBe(100_000.0)
@@ -410,6 +417,7 @@ it('nets income against expenses in the profit and loss report', function (): vo
     billedPosOrder(menuItemAt($this->hotel, 'restaurant', 'Pilau', 12_000), 1, '2026-09-14 13:00');
     ExtraOrder::factory()->for($this->hotel)->create(['order_date' => '2026-09-14', 'total_amount' => 15_000_00]);
     Expense::factory()->for($this->hotel)->create(['expense_date' => '2026-09-14', 'category' => 'Utilities', 'amount' => 50_000_00]);
+    Expense::factory()->for($this->hotel)->voided()->create(['expense_date' => '2026-09-14', 'category' => 'Rent', 'amount' => 90_000_00]);
 
     $component = Livewire::test(ProfitLoss::class, ['from' => '2026-09-01', 'to' => '2026-09-30'])
         ->assertSeeInOrder(['Food &amp; Drinks sales', 'Accommodation sales', 'Extras sales', 'Total Expenses', 'Expenses', 'Balance'], false)

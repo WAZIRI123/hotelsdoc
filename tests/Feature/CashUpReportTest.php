@@ -164,6 +164,11 @@ it('takes expenses paid out off the collected total per method', function (): vo
         'payee' => 'Market',
         'amount' => 15_000_00,
     ]);
+    Expense::factory()->for($this->hotel)->voided()->create([
+        'expense_date' => today()->toDateString(),
+        'method_code' => 'cash',
+        'amount' => 9_000_00,
+    ]);
 
     $cashUp = Livewire::test(CashUp::class, ['view' => 'general'])
         ->assertSee('Paid out')
