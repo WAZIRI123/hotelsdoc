@@ -72,7 +72,7 @@
                                             <flux:text class="text-xs text-zinc-500">{{ $item->description }}</flux:text>
                                         @endif
                                     </flux:table.cell>
-                                    <flux:table.cell align="center" class="font-mono">{{ $item->price->format() }}</flux:table.cell>
+                                    <flux:table.cell align="center" class="font-mono">{{ $item->price->formatExact() }}</flux:table.cell>
                                     <flux:table.cell align="center">
                                         @if ($item->track_stock)
                                             @if ($item->stock_quantity <= 0)
@@ -142,7 +142,22 @@
 
             <flux:input wire:model="itemName" :label="__('Name')" required />
             <flux:textarea wire:model="itemDescription" :label="__('Description')" rows="2" />
-            <flux:input wire:model.number="itemPriceTsh" type="number" min="0" :label="__('Price (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" required />
+            <flux:input wire:model="itemPrice" type="number" min="0" step="0.01" :label="__('Price (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" required />
+            <flux:switch wire:model="itemIsOpenPrice" :label="__('Open price')"
+                :description="__('The till asks for the price each time; the price above is only the suggestion.')" />
+            @if ($editingItemId && $this->priceHistory->isNotEmpty())
+                <flux:field>
+                    <flux:label>{{ __('Price history') }}</flux:label>
+                    <ul class="mt-1 space-y-1 text-sm">
+                        @foreach ($this->priceHistory as $change)
+                            <li wire:key="price-change-{{ $change->id }}" class="flex justify-between gap-2 text-zinc-600 dark:text-zinc-300">
+                                <span class="font-mono">{{ $change->old_price->formatExact() }} → {{ $change->new_price->formatExact() }}</span>
+                                <span class="text-zinc-500">{{ $change->created_at?->format('M j, Y H:i') }}@if ($change->changedBy) · {{ $change->changedBy->name }}@endif</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </flux:field>
+            @endif
             <flux:switch wire:model.live="itemTrackStock" :label="__('Track stock')"
                 :description="__('Block adding to orders once the counter hits zero.')" />
             @if ($itemTrackStock)

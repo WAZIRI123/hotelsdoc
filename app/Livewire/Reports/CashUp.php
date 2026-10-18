@@ -8,7 +8,9 @@ use App\Domain\Folios\BillSection;
 use App\Domain\Reports\FolioPaymentShare;
 use App\Domain\Reports\ReportCatalog;
 use App\Models\Expense;
+use App\Models\FolioCharge;
 use App\Models\Payment;
+use App\Models\PosOrderItem;
 use App\Models\Reservation;
 use App\Models\ReservationRoom;
 use App\Support\Money;
@@ -16,8 +18,10 @@ use App\Support\Vat;
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -93,7 +97,7 @@ class CashUp extends Component
             'to' => ['required', 'date', 'after_or_equal:date'],
         ]);
 
-        unset($this->reservationRows, $this->payments, $this->expensesPaidOut);
+        unset($this->reservationRows, $this->payments, $this->expensesPaidOut, $this->discountsGiven);
     }
 
     /**
@@ -313,6 +317,66 @@ class CashUp extends Component
             fn (Money $carry, Expense $expense): Money => $carry->add($expense->money()),
             Money::zero(),
         );
+    }
+
+    /**
+     * Every discount given in the period, oldest first: those taken off guest
+     * bills and those given at the POS tills (line discounts and price cuts on
+     * billed orders). Amounts are what came off the bill, VAT included.
+     *
+     * @return list<array{at: CarbonImmutable, where: string, customer: string, reason: string, by: string, amount: Money}>
+     */
+    #[Computed]
+    public function discountsGiven(): array
+    {
+        $rows = FolioCharge::query()
+            ->with(['folio.guest', 'postedBy'])
+            ->where('source_type', 'discount')
+            ->whereBetween('posted_at', [$this->reportDay(), $this->reportEnd()])
+            ->whereHas('folio', fn (Builder $folio) => $folio->where('status', '!=', 'void'))
+            ->get()
+            ->map(fn (FolioCharge $charge): array => [
+                'at' => CarbonImmutable::parse($charge->posted_at),
+                'where' => __('Guest bill'),
+                'customer' => $charge->folio?->guest?->fullName() ?? __('Walk-in'),
+                'reason' => Str::after($charge->description, 'Discount — '),
+                'by' => $charge->postedBy->name ?? '—',
+                'amount' => Money::zero()->subtract($charge->total),
+            ])
+            ->all();
+
+        $tillLines = PosOrderItem::query()
+            ->with(['order.outlet', 'order.folio.guest', 'adjustedBy'])
+            ->whereHas('order', fn (Builder $order) => $order
+                ->where('status', 'billed')
+                ->whereBetween('billed_at', [$this->reportDay(), $this->reportEnd()]))
+            ->where('amount_off_gross', '>', 0)
+            ->get();
+
+        foreach ($tillLines as $line) {
+            if ($line->order === null) {
+                continue;
+            }
+
+            $rows[] = [
+                'at' => CarbonImmutable::parse($line->order->billed_at),
+                'where' => "{$line->order->outlet?->name} · {$line->order->reference}",
+                'customer' => $line->order->folio?->guest?->fullName() ?? __('Walk-in'),
+                'reason' => trim("{$line->quantity} × {$line->name_snapshot} — ".($line->adjustment_reason ?? ''), ' —'),
+                'by' => $line->adjustedBy->name ?? '—',
+                'amount' => $line->amount_off_gross,
+            ];
+        }
+
+        usort($rows, fn (array $a, array $b): int => $a['at'] <=> $b['at']);
+
+        return $rows;
+    }
+
+    #[Computed]
+    public function totalDiscountsGiven(): Money
+    {
+        return array_reduce($this->discountsGiven(), fn (Money $carry, array $row): Money => $carry->add($row['amount']), Money::zero());
     }
 
     #[Computed]

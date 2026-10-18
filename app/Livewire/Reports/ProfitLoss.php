@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\ExtraOrder;
 use App\Models\FolioCharge;
 use App\Models\PosOrder;
+use App\Models\PosOrderItem;
 use App\Models\StockEntry;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
@@ -36,6 +37,17 @@ class ProfitLoss extends ReportComponent
     private const SEPARATELY_REPORTED_SOURCES = ['room', 'pos_order', 'extra_order', 'discount', 'tax'];
 
     /**
+     * Outlet types whose POS sales count as food & drinks income.
+     *
+     * @var array<string, list<string>>
+     */
+    private const POS_SALES_OUTLET_TYPES = [
+        'drinks' => ['bar'],
+        'food' => ['restaurant', 'room_service'],
+        'shop' => ['shop'],
+    ];
+
+    /**
      * @return array<string, Money>
      */
     #[Computed]
@@ -43,22 +55,45 @@ class ProfitLoss extends ReportComponent
     {
         return [
             __('Room Revenue') => $this->folioCharges(fn (Builder $query) => $query->where('source_type', 'room')),
-            __('Drinks Sales') => $this->posSales(['bar']),
-            __('Food Sales') => $this->posSales(['restaurant', 'room_service']),
-            __('Shop Sales') => $this->posSales(['shop']),
+            __('Drinks Sales') => $this->posSales('drinks'),
+            __('Food Sales') => $this->posSales('food'),
+            __('Shop Sales') => $this->posSales('shop'),
             __('Extras Sales') => $this->money((int) ExtraOrder::query()
                 ->whereDoesntHave('folio', fn (Builder $folio) => $folio->where('status', 'void'))
                 ->whereDate('order_date', '>=', $this->periodStart())
                 ->whereDate('order_date', '<=', $this->periodEnd())
                 ->sum(DB::raw('total_amount - tax_amount'))),
             __('Other Charges') => $this->folioCharges(fn (Builder $query) => $query->whereNotIn('source_type', self::SEPARATELY_REPORTED_SOURCES)),
-            __('Less: Discounts') => $this->folioCharges(fn (Builder $query) => $query->where('source_type', 'discount')),
+            __('Less: Discounts') => $this->folioDiscounts()->subtract($this->posDiscounts()),
         ];
     }
 
     /**
-     * Income grouped into the report's three sales columns. Shop sales count
-     * with food & drinks; other folio charges and discounts with accommodation.
+     * Discounts given on guest bills (a negative amount, before VAT).
+     */
+    #[Computed]
+    public function folioDiscounts(): Money
+    {
+        return $this->folioCharges(fn (Builder $query) => $query->where('source_type', 'discount'));
+    }
+
+    /**
+     * What line discounts and price cuts at the till took off billed POS
+     * sales, before VAT (a positive amount).
+     */
+    #[Computed]
+    public function posDiscounts(): Money
+    {
+        return $this->sum(array_map(
+            fn (string $group): Money => $this->posDiscountsFor($group),
+            array_keys(self::POS_SALES_OUTLET_TYPES),
+        ));
+    }
+
+    /**
+     * Income grouped into the report's three sales columns, each after its
+     * discounts. Shop sales and till discounts count with food & drinks;
+     * other folio charges and bill discounts with accommodation.
      *
      * @return array{food_drinks: Money, accommodation: Money, extras: Money}
      */
@@ -68,8 +103,8 @@ class ProfitLoss extends ReportComponent
         $income = $this->income();
 
         return [
-            'food_drinks' => $this->sum([$income[__('Drinks Sales')], $income[__('Food Sales')], $income[__('Shop Sales')]]),
-            'accommodation' => $this->sum([$income[__('Room Revenue')], $income[__('Other Charges')], $income[__('Less: Discounts')]]),
+            'food_drinks' => $this->sum([$income[__('Drinks Sales')], $income[__('Food Sales')], $income[__('Shop Sales')]])->subtract($this->posDiscounts()),
+            'accommodation' => $this->sum([$income[__('Room Revenue')], $income[__('Other Charges')], $this->folioDiscounts()]),
             'extras' => $income[__('Extras Sales')],
         ];
     }
@@ -156,17 +191,34 @@ class ProfitLoss extends ReportComponent
     }
 
     /**
-     * Billed POS sales before tax for the given outlet types.
-     *
-     * @param  list<string>  $outletTypes
+     * Billed POS sales before tax and before till discounts for one group of
+     * outlet types; the discounts are taken off under Less: Discounts.
      */
-    private function posSales(array $outletTypes): Money
+    private function posSales(string $group): Money
     {
-        return $this->money((int) PosOrder::query()
+        return $this->money((int) $this->billedPosOrders($group)->sum('subtotal'))
+            ->add($this->posDiscountsFor($group));
+    }
+
+    /**
+     * Till discounts on one group's billed POS sales, before VAT.
+     */
+    private function posDiscountsFor(string $group): Money
+    {
+        return $this->money((int) PosOrderItem::query()
+            ->whereIn('pos_order_id', $this->billedPosOrders($group)->select('id'))
+            ->sum('amount_off_net'));
+    }
+
+    /**
+     * @return Builder<PosOrder>
+     */
+    private function billedPosOrders(string $group): Builder
+    {
+        return PosOrder::query()
             ->where('status', 'billed')
             ->whereBetween('billed_at', [$this->periodStart(), $this->periodEnd()])
-            ->whereHas('outlet', fn (Builder $query) => $query->whereIn('type', $outletTypes))
-            ->sum('subtotal'));
+            ->whereHas('outlet', fn (Builder $query) => $query->whereIn('type', self::POS_SALES_OUTLET_TYPES[$group]));
     }
 
     private function money(int $amount): Money

@@ -68,6 +68,7 @@ class Transaction extends Component
         $this->posOrder = ($posOrder->fresh() ?? $posOrder)->load([
             'outlet',
             'items.menuItem',
+            'items.adjustedBy',
             'folio.guest',
             'folio.stay.reservation',
         ]);

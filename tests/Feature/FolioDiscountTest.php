@@ -45,7 +45,8 @@ it('applies a discount from the folio page and reports it as a discount', functi
         ->assertHasNoErrors()
         ->assertSee('Discount — Late breakfast');
 
-    expect($folio->fresh()->total_amount->amount)->toBe(90_000_00);
+    expect($folio->fresh()->total_amount->amount)->toBe(90_000_00)
+        ->and($folio->charges()->where('source_type', 'discount')->value('posted_by'))->toBe(auth()->id());
 
     $income = Livewire::test(ProfitLoss::class)->instance()->income();
     expect($income[__('Less: Discounts')]->amount)->toBe(-10_000_00);

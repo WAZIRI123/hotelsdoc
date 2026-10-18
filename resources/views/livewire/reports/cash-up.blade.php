@@ -243,6 +243,49 @@
         </div>
     </div>
 
+    @if ($view === 'general' && $this->discountsGiven !== [])
+        <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm print:break-inside-avoid print:border-zinc-300 print:shadow-none dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                <flux:heading size="lg">{{ __('Discounts given') }}</flux:heading>
+                <flux:text class="text-sm">
+                    {{ __('Discounts taken off guest bills, and line discounts and price cuts given at the POS tills. Amounts are what came off the bill.') }}
+                </flux:text>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/60">
+                        <tr>
+                            <th class="{{ $th }} text-left">{{ __('Date') }}</th>
+                            <th class="{{ $th }} text-left">{{ __('Where') }}</th>
+                            <th class="{{ $th }} text-left">{{ __('Customer') }}</th>
+                            <th class="{{ $th }} text-left">{{ __('Reason') }}</th>
+                            <th class="{{ $th }} text-left">{{ __('Given by') }}</th>
+                            <th class="{{ $th }} text-right">{{ __('Amount') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach ($this->discountsGiven as $row)
+                            <tr wire:key="discount-{{ $loop->index }}" class="transition hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                                <td class="{{ $td }} whitespace-nowrap">{{ $row['at']->format('d-m-Y H:i') }}</td>
+                                <td class="{{ $td }}">{{ $row['where'] }}</td>
+                                <td class="{{ $td }} font-medium text-zinc-900 dark:text-zinc-100">{{ $row['customer'] }}</td>
+                                <td class="{{ $td }}">{{ $row['reason'] }}</td>
+                                <td class="{{ $td }}">{{ $row['by'] }}</td>
+                                <td class="{{ $td }} text-right tabular-nums">{{ $amount($row['amount']) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="border-t-2 border-zinc-200 bg-zinc-50 font-semibold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100">
+                        <tr>
+                            <td class="{{ $td }}" colspan="5">{{ __('Total') }}</td>
+                            <td class="{{ $td }} text-right tabular-nums">{{ $amount($this->totalDiscountsGiven) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    @endif
+
     @if ($view === 'general' && $this->hasForeignPayments)
         <div class="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm print:break-inside-avoid print:border-zinc-300 print:shadow-none dark:border-zinc-700 dark:bg-zinc-900">
             <div class="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">

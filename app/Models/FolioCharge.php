@@ -25,6 +25,7 @@ use Illuminate\Support\Str;
  * @property Money $unit_price
  * @property Money $tax_amount
  * @property Money $total
+ * @property int|null $posted_by
  */
 class FolioCharge extends Model
 {
@@ -42,6 +43,7 @@ class FolioCharge extends Model
         'tax_amount',
         'total',
         'posted_at',
+        'posted_by',
     ];
 
     /**
@@ -71,5 +73,13 @@ class FolioCharge extends Model
     public function folio(): BelongsTo
     {
         return $this->belongsTo(Folio::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function postedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'posted_by');
     }
 }

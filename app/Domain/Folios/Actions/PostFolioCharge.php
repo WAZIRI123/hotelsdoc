@@ -7,6 +7,7 @@ namespace App\Domain\Folios\Actions;
 use App\Domain\Fiscal\Actions\IssueReceiptForFolio;
 use App\Models\Folio;
 use App\Models\FolioCharge;
+use App\Models\User;
 use App\Support\Money;
 use App\Support\Vat;
 use RuntimeException;
@@ -37,10 +38,11 @@ final class PostFolioCharge
         string $description,
         Money $price,
         int $quantity = 1,
+        ?User $postedBy = null,
     ): FolioCharge {
         $split = Vat::forHotel($folio->hotel)->split($price);
 
-        return $this->amounts($folio, $sourceType, $sourceId, $description, $split['net'], $split['tax'], $quantity);
+        return $this->amounts($folio, $sourceType, $sourceId, $description, $split['net'], $split['tax'], $quantity, $postedBy);
     }
 
     /**
@@ -54,6 +56,7 @@ final class PostFolioCharge
         Money $net,
         Money $tax,
         int $quantity = 1,
+        ?User $postedBy = null,
     ): FolioCharge {
         if (! $folio->acceptsCharges()) {
             throw new RuntimeException("Cannot post a charge onto a guest billing in status [{$folio->status}].");
@@ -71,6 +74,7 @@ final class PostFolioCharge
             'tax_amount' => $tax,
             'total' => $gross,
             'posted_at' => now(),
+            'posted_by' => $postedBy?->id,
         ]);
 
         Folio::query()->whereKey($folio->id)->lockForUpdate()->first();

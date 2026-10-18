@@ -143,8 +143,8 @@
             <tfoot class="border-t-2 border-zinc-200 bg-zinc-50 font-semibold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100">
                 <tr>
                     <td colspan="3" class="{{ $td }} text-base">{{ __('Total') }}</td>
-                    <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['total']) }}</td>
-                    <td class="{{ $td }} text-right tabular-nums">{{ $money(\App\Support\Money::zero()) }}</td>
+                    <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['total']->add($totals['discount'])) }}</td>
+                    <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['discount']) }}</td>
                     <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['total']) }}</td>
                     <td class="{{ $td }}"></td>
                     <td class="{{ $td }} text-right tabular-nums">{{ $money($totals['paid']) }}</td>

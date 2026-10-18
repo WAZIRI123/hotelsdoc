@@ -11,6 +11,7 @@ use Database\Factories\MenuItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $name
  * @property string|null $description
  * @property Money $price
+ * @property bool $is_open_price
  * @property string|null $tax_code
  * @property bool $is_active
  * @property bool $track_stock
@@ -39,6 +41,7 @@ class MenuItem extends Model
         'name',
         'description',
         'price',
+        'is_open_price',
         'tax_code',
         'is_active',
         'track_stock',
@@ -52,6 +55,7 @@ class MenuItem extends Model
     {
         return [
             'price' => MoneyCast::class,
+            'is_open_price' => 'boolean',
             'is_active' => 'boolean',
             'track_stock' => 'boolean',
             'stock_quantity' => 'integer',
@@ -86,6 +90,14 @@ class MenuItem extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(MenuCategory::class, 'menu_category_id');
+    }
+
+    /**
+     * @return HasMany<MenuItemPriceChange, $this>
+     */
+    public function priceChanges(): HasMany
+    {
+        return $this->hasMany(MenuItemPriceChange::class)->latest('id');
     }
 
     /**

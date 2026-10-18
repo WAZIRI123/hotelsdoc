@@ -10,7 +10,8 @@ use App\Support\Vat;
 
 /**
  * Sums the order's line items into the order's subtotal/tax_total/total_amount,
- * applying the hotel's VAT setting to each line.
+ * applying the hotel's VAT setting to each line, and splits what each line's
+ * discount took off the same way so reports keep the VAT of the sale.
  * Called whenever items change.
  */
 final class RecalculatePosOrderTotals
@@ -28,9 +29,16 @@ final class RecalculatePosOrderTotals
         foreach ($order->items as $item) {
             // line_total is the menu price × quantity; VAT is split out of it or added on top.
             $split = $vat->split($item->line_total);
+            $amountOff = $vat->split($item->amountOff());
 
-            if (! $item->tax_amount->equals($split['tax'])) {
-                $item->update(['tax_amount' => $split['tax']]);
+            if (! $item->tax_amount->equals($split['tax'])
+                || ! $item->amount_off_net->equals($amountOff['net'])
+                || ! $item->amount_off_gross->equals($amountOff['gross'])) {
+                $item->update([
+                    'tax_amount' => $split['tax'],
+                    'amount_off_net' => $amountOff['net'],
+                    'amount_off_gross' => $amountOff['gross'],
+                ]);
             }
 
             $subtotal = $subtotal->add($split['net']);

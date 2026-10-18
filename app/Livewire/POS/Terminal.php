@@ -52,6 +52,20 @@ class Terminal extends Component
     /** For an in-house guest: 'billing' posts to their bill, 'pay_now' also takes payment here. */
     public string $roomSettle = 'billing';
 
+    /* Open-price modal state */
+    public ?int $openPriceItemId = null;
+
+    public string $openPrice = '';
+
+    /* Line adjustment modal state (managers only) */
+    public ?int $adjustingLineId = null;
+
+    public string $adjustUnitPrice = '';
+
+    public string $adjustDiscount = '';
+
+    public string $adjustReason = '';
+
     public function mount(Outlet $outlet): void
     {
         $this->outlet = $outlet;
@@ -71,6 +85,15 @@ class Terminal extends Component
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Whether this user may change a line's price or discount it at the till.
+     */
+    #[Computed]
+    public function canAdjustPrices(): bool
+    {
+        return Auth::user()?->can('override-pos-prices') ?? false;
     }
 
     #[Computed]
@@ -175,7 +198,54 @@ class Terminal extends Component
 
     public function addItem(int $menuItemId): void
     {
-        $item = MenuItem::query()->where('outlet_id', $this->outlet->id)->where('is_active', true)->findOrFail($menuItemId);
+        $item = $this->sellableItem($menuItemId);
+
+        if ($item->is_open_price) {
+            $this->openPriceItemId = $item->id;
+            $this->openPrice = $item->price->isPositive() ? (string) $item->price->toMajor() : '';
+            $this->resetValidation();
+            Flux::modal('pos-open-price')->show();
+
+            return;
+        }
+
+        $this->addUnit($item, $item->price);
+    }
+
+    /**
+     * Ring up an open-price item at the price the cashier typed in.
+     */
+    public function confirmOpenPrice(): void
+    {
+        $this->validate([
+            'openPriceItemId' => 'required|integer',
+            'openPrice' => 'required|numeric|min:0|decimal:0,2',
+        ]);
+
+        $item = $this->sellableItem((int) $this->openPriceItemId);
+
+        if (! $item->is_open_price) {
+            return;
+        }
+
+        Flux::modal('pos-open-price')->close();
+        $this->addUnit($item, Money::fromMajor((float) $this->openPrice));
+        $this->reset(['openPriceItemId', 'openPrice']);
+    }
+
+    private function sellableItem(int $menuItemId): MenuItem
+    {
+        return MenuItem::query()->where('outlet_id', $this->outlet->id)->where('is_active', true)->findOrFail($menuItemId);
+    }
+
+    /**
+     * Add one unit of an item at the given price. It tops up an existing line
+     * only when that line is untouched and still at this exact price, so every
+     * line has a single price: units rung up before a menu price change,
+     * open-price entries and manager-adjusted lines each stay on their own.
+     */
+    private function addUnit(MenuItem $item, Money $price): void
+    {
         $order = $this->order();
 
         if ($order !== null && ! $this->orderIsEditable($order)) {
@@ -188,7 +258,7 @@ class Terminal extends Component
             return;
         }
 
-        $added = DB::transaction(function () use ($item, &$order): bool {
+        $added = DB::transaction(function () use ($item, $price, &$order): bool {
             $taken = $item->track_stock ? 1 : 0;
 
             if ($taken > 0 && ! $this->takeStock($item, $taken)) {
@@ -197,13 +267,17 @@ class Terminal extends Component
 
             $order ??= $this->openOrder();
 
-            $existing = $order->items->first(fn (PosOrderItem $i) => $i->menu_item_id === $item->id);
+            $existing = $item->is_open_price ? null : $order->items->first(
+                fn (PosOrderItem $line): bool => $line->menu_item_id === $item->id
+                    && $line->unit_price->equals($price)
+                    && ! $line->isAdjusted(),
+            );
 
             if ($existing !== null) {
                 $existing->update([
                     'quantity' => $existing->quantity + 1,
                     'stock_taken' => $existing->stock_taken + $taken,
-                    'line_total' => $existing->unit_price->multiply($existing->quantity + 1),
+                    'line_total' => $existing->totalFor($existing->quantity + 1),
                 ]);
             } else {
                 $order->items()->create([
@@ -211,9 +285,10 @@ class Terminal extends Component
                     'name_snapshot' => $item->name,
                     'quantity' => 1,
                     'stock_taken' => $taken,
-                    'unit_price' => $item->price,
+                    'unit_price' => $price,
+                    'discount_amount' => Money::zero(),
                     'tax_amount' => Money::zero(),
-                    'line_total' => $item->price,
+                    'line_total' => $price,
                 ]);
             }
 
@@ -273,10 +348,15 @@ class Terminal extends Component
             if ($newQty <= 0) {
                 $item->delete();
             } else {
+                // A discount bigger than what is left of the line shrinks to fit it.
+                $gross = $item->unit_price->multiply($newQty);
+                $discount = $item->discount_amount->amount > $gross->amount ? $gross : $item->discount_amount;
+
                 $item->update([
                     'quantity' => $newQty,
                     'stock_taken' => $stockTaken,
-                    'line_total' => $item->unit_price->multiply($newQty),
+                    'discount_amount' => $discount,
+                    'line_total' => $gross->subtract($discount),
                 ]);
             }
 
@@ -294,6 +374,76 @@ class Terminal extends Component
             app(RecalculatePosOrderTotals::class)->execute($order);
         }
         unset($this->order);
+    }
+
+    public function openAdjustLine(int $lineId): void
+    {
+        abort_unless($this->canAdjustPrices(), 403);
+
+        $line = PosOrderItem::query()->where('pos_order_id', $this->orderId)->findOrFail($lineId);
+
+        $this->adjustingLineId = $line->id;
+        $this->adjustUnitPrice = (string) $line->unit_price->toMajor();
+        $this->adjustDiscount = $line->discount_amount->isPositive() ? (string) $line->discount_amount->toMajor() : '';
+        $this->adjustReason = $line->adjustment_reason ?? '';
+        $this->resetValidation();
+        Flux::modal('pos-adjust-line')->show();
+    }
+
+    /**
+     * Override a line's unit price and/or take an amount off it. The price it
+     * was first rung up at is kept, with the reason and who changed it; putting
+     * the line back to that price with no discount clears the adjustment.
+     */
+    public function saveLineAdjustment(): void
+    {
+        abort_unless($this->canAdjustPrices(), 403);
+
+        $this->validate([
+            'adjustUnitPrice' => 'required|numeric|min:0|decimal:0,2',
+            'adjustDiscount' => 'nullable|numeric|min:0|decimal:0,2',
+            'adjustReason' => 'nullable|string|max:200',
+        ]);
+
+        $line = PosOrderItem::query()->with('order')->where('pos_order_id', $this->orderId)->findOrFail($this->adjustingLineId);
+
+        if ($line->order === null || ! $this->orderIsEditable($line->order)) {
+            return;
+        }
+
+        $ringUpPrice = $line->original_unit_price ?? $line->unit_price;
+        $unitPrice = Money::fromMajor((float) $this->adjustUnitPrice);
+        $discount = Money::fromMajor((float) ($this->adjustDiscount ?: 0));
+        $gross = $unitPrice->multiply($line->quantity);
+        $isAdjusted = ! $unitPrice->equals($ringUpPrice) || $discount->isPositive();
+
+        if ($discount->amount > $gross->amount) {
+            $this->addError('adjustDiscount', __('The discount cannot be more than the line total of :amount.', ['amount' => $gross->formatExact()]));
+
+            return;
+        }
+
+        if ($isAdjusted && trim($this->adjustReason) === '') {
+            $this->addError('adjustReason', __('Give a reason for the change.'));
+
+            return;
+        }
+
+        $line->update([
+            'unit_price' => $unitPrice,
+            'original_unit_price' => $unitPrice->equals($ringUpPrice) ? null : $ringUpPrice,
+            'discount_amount' => $discount,
+            'adjustment_reason' => $isAdjusted ? trim($this->adjustReason) : null,
+            'adjusted_by' => $isAdjusted ? Auth::id() : null,
+            'line_total' => $gross->subtract($discount),
+        ]);
+
+        app(RecalculatePosOrderTotals::class)->execute($line->order);
+        unset($this->order);
+
+        Flux::modal('pos-adjust-line')->close();
+        $this->reset(['adjustingLineId', 'adjustUnitPrice', 'adjustDiscount', 'adjustReason']);
+        Flux::toast(variant: 'success', text: __('Line updated.'));
     }
 
     /**

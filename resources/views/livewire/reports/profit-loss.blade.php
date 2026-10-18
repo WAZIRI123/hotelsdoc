@@ -31,8 +31,18 @@
             </thead>
             <tbody>
                 <tr>
-                    <td class="{{ $td }}">{{ $amount($sales['food_drinks']) }}</td>
-                    <td @class([$td, 'text-red-600 dark:text-red-400' => $sales['accommodation']->isNegative()])>{{ $amount($sales['accommodation']) }}</td>
+                    <td class="{{ $td }}">
+                        {{ $amount($sales['food_drinks']) }}
+                        @if ($this->posDiscounts->isPositive())
+                            <div class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('after discounts of :amount', ['amount' => $amount($this->posDiscounts)]) }}</div>
+                        @endif
+                    </td>
+                    <td @class([$td, 'text-red-600 dark:text-red-400' => $sales['accommodation']->isNegative()])>
+                        {{ $amount($sales['accommodation']) }}
+                        @if ($this->folioDiscounts->isNegative())
+                            <div class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('after discounts of :amount', ['amount' => $amount(\App\Support\Money::zero()->subtract($this->folioDiscounts))]) }}</div>
+                        @endif
+                    </td>
                     <td class="{{ $td }}">{{ $amount($sales['extras']) }}</td>
                     <td class="{{ $td }}">{{ $amount($this->totalExpenses) }}</td>
                     <td class="{{ $td }}">

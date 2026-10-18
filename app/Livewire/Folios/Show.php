@@ -221,6 +221,7 @@ class Show extends Component
                 $this->folio,
                 Money::fromMajor((int) $this->discount_amount, $this->folio->currency),
                 $this->discount_reason,
+                Auth::user(),
             );
         } catch (RuntimeException $e) {
             $this->addError('discount_amount', $e->getMessage());

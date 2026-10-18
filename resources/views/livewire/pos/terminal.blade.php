@@ -53,7 +53,13 @@
                                         </span>
                                     @endif
                                     <div class="pr-14 font-medium">{{ $item->name }}</div>
-                                    <div class="mt-1 font-mono text-sm text-zinc-600 dark:text-zinc-300">{{ $item->price->format() }}</div>
+                                    <div class="mt-1 font-mono text-sm text-zinc-600 dark:text-zinc-300">
+                                        @if ($item->is_open_price)
+                                            {{ __('Open price') }}
+                                        @else
+                                            {{ $item->price->formatExact() }}
+                                        @endif
+                                    </div>
                                     @if ($outOfStock)
                                         <div class="mt-1 text-xs font-medium text-rose-600 dark:text-rose-400">{{ __('Out of stock') }}</div>
                                     @endif
@@ -83,17 +89,31 @@
 
             <div class="mt-4 space-y-2 max-h-[420px] overflow-y-auto">
                 @forelse ($this->order?->items ?? [] as $item)
-                    <div class="flex items-center justify-between gap-2 border-b border-zinc-100 pb-2 dark:border-zinc-800">
+                    <div wire:key="order-line-{{ $item->id }}" class="flex items-center justify-between gap-2 border-b border-zinc-100 pb-2 dark:border-zinc-800">
                         <div class="flex-1">
                             <div class="font-medium">{{ $item->name_snapshot }}</div>
-                            <div class="text-xs font-mono text-zinc-500">{{ $item->unit_price->format() }} ea.</div>
+                            <div class="text-xs font-mono text-zinc-500">
+                                @if ($item->original_unit_price)
+                                    <span class="line-through">{{ $item->original_unit_price->formatExact() }}</span>
+                                @endif
+                                {{ $item->unit_price->formatExact() }} ea.
+                            </div>
+                            @if ($item->discount_amount->isPositive())
+                                <div class="text-xs font-mono text-emerald-600 dark:text-emerald-400">− {{ $item->discount_amount->formatExact() }} {{ __('discount') }}</div>
+                            @endif
+                            @if ($item->adjustment_reason)
+                                <div class="text-xs text-zinc-500">{{ $item->adjustment_reason }}</div>
+                            @endif
                         </div>
+                        @if ($this->canAdjustPrices)
+                            <flux:button variant="ghost" size="sm" icon="pencil-square" wire:click="openAdjustLine({{ $item->id }})" :tooltip="__('Change price or discount')" />
+                        @endif
                         <div class="flex items-center gap-1">
                             <flux:button variant="ghost" size="sm" icon="minus" wire:click="changeQty({{ $item->id }}, -1)" />
                             <span class="w-8 text-center font-mono">{{ $item->quantity }}</span>
                             <flux:button variant="ghost" size="sm" icon="plus" wire:click="changeQty({{ $item->id }}, 1)" />
                         </div>
-                        <div class="w-24 text-right font-mono">{{ $item->line_total->format() }}</div>
+                        <div class="w-24 text-right font-mono">{{ $item->line_total->formatExact() }}</div>
                     </div>
                 @empty
                     <flux:text class="text-sm text-zinc-500">{{ __('No items yet. Tap a menu item to add it.') }}</flux:text>
@@ -105,12 +125,12 @@
                 @if ($this->order->tax_total->isPositive())
                     <div class="mb-1 flex justify-between text-sm text-zinc-500 dark:text-zinc-400">
                         <span>{{ \App\Support\Vat::current()->label() }}</span>
-                        <span class="font-mono">{{ $this->order->tax_total->format() }}</span>
+                        <span class="font-mono">{{ $this->order->tax_total->formatExact() }}</span>
                     </div>
                 @endif
                 <div class="flex justify-between text-lg">
                     <flux:heading size="sm">{{ __('Total') }}</flux:heading>
-                    <span class="font-mono font-semibold">{{ $this->order->total_amount->format() }}</span>
+                    <span class="font-mono font-semibold">{{ $this->order->total_amount->formatExact() }}</span>
                 </div>
 
                 <div class="mt-4 grid grid-cols-2 gap-2">
@@ -172,7 +192,7 @@
                             </flux:badge>
                         </flux:table.cell>
                         <flux:table.cell class="text-right font-mono">
-                            {{ $transaction->total_amount->format() }}
+                            {{ $transaction->total_amount->formatExact() }}
                         </flux:table.cell>
                         <flux:table.cell class="text-right">
                             <div class="inline-flex items-center gap-1">
@@ -196,6 +216,40 @@
         </flux:table>
     </flux:card>
 
+    <flux:modal name="pos-open-price" class="md:w-[400px]">
+        <form wire:submit="confirmOpenPrice" class="space-y-6">
+            <flux:heading size="lg">{{ __('Enter price') }}</flux:heading>
+            <flux:input wire:model="openPrice" type="number" min="0" step="0.01" autofocus required
+                :label="__('Price (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" />
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                </flux:modal.close>
+                <flux:button type="submit" variant="primary">{{ __('Add') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    @if ($this->canAdjustPrices)
+        <flux:modal name="pos-adjust-line" class="md:w-[440px]">
+            <form wire:submit="saveLineAdjustment" class="space-y-6">
+                <flux:heading size="lg">{{ __('Change price or discount') }}</flux:heading>
+                <flux:input wire:model="adjustUnitPrice" type="number" min="0" step="0.01" required
+                    :label="__('Unit price (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" />
+                <flux:input wire:model="adjustDiscount" type="number" min="0" step="0.01"
+                    :label="__('Discount off the line (:currency)', ['currency' => \App\Support\HotelCurrency::current()])" />
+                <flux:input wire:model="adjustReason" :label="__('Reason')"
+                    :description="__('Required when the price changes or a discount is given.')" />
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">{{ __('Cancel') }}</flux:button>
+                    </flux:modal.close>
+                    <flux:button type="submit" variant="primary">{{ __('Save') }}</flux:button>
+                </div>
+            </form>
+        </flux:modal>
+    @endif
+
     <flux:modal name="pos-settle" class="md:w-[520px]">
         <div class="space-y-6">
             <flux:heading size="lg">{{ __('Continue order') }}</flux:heading>
@@ -204,7 +258,7 @@
                 <div class="rounded-lg bg-zinc-50 p-4 dark:bg-zinc-800">
                     <div class="flex justify-between">
                         <span>{{ __('Total due') }}</span>
-                        <span class="font-mono font-semibold">{{ $this->order->total_amount->format() }}</span>
+                        <span class="font-mono font-semibold">{{ $this->order->total_amount->formatExact() }}</span>
                     </div>
                 </div>
             @endif

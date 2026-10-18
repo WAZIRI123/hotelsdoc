@@ -6,6 +6,7 @@ namespace App\Domain\Folios\Actions;
 
 use App\Models\Folio;
 use App\Models\FolioCharge;
+use App\Models\User;
 use App\Support\Money;
 use App\Support\Vat;
 use RuntimeException;
@@ -20,7 +21,7 @@ final class ApplyFolioDiscount
 {
     public function __construct(private readonly PostFolioCharge $postCharge) {}
 
-    public function execute(Folio $folio, Money $amount, string $reason): FolioCharge
+    public function execute(Folio $folio, Money $amount, string $reason, ?User $givenBy = null): FolioCharge
     {
         if (! $amount->isPositive()) {
             throw new RuntimeException('Discount amount must be positive.');
@@ -45,6 +46,7 @@ final class ApplyFolioDiscount
             description: 'Discount — '.trim($reason),
             net: $split['net'],
             tax: $split['tax'],
+            postedBy: $givenBy,
         );
     }
 }

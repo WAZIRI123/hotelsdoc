@@ -180,3 +180,21 @@ it('refuses to settle with a payment method that is not active', function (): vo
     expect(PosOrder::query()->sole()->status)->toBe('open')
         ->and(Folio::query()->count())->toBe(0);
 });
+
+it('starts a new line when the menu price changed since the item was added', function (): void {
+    $component = Livewire::test(Terminal::class, ['outlet' => $this->outlet])
+        ->call('addItem', $this->beer->id);
+
+    $this->beer->update(['price' => 6_000_00]);
+
+    $component->call('addItem', $this->beer->id)
+        ->call('addItem', $this->beer->id);
+
+    $lines = $component->instance()->order()->items->sortBy('id')->values();
+    expect($lines)->toHaveCount(2)
+        ->and($lines[0]->quantity)->toBe(1)
+        ->and($lines[0]->unit_price->toMajor())->toBe(5_000.0)
+        ->and($lines[1]->quantity)->toBe(2)
+        ->and($lines[1]->unit_price->toMajor())->toBe(6_000.0)
+        ->and($component->instance()->order()->total_amount->toMajor())->toBe(17_000.0);
+});

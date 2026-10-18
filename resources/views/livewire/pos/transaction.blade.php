@@ -112,10 +112,28 @@
             <flux:table.rows>
                 @forelse ($posOrder->items as $item)
                     <flux:table.row :key="$item->id">
-                        <flux:table.cell variant="strong">{{ $item->name_snapshot }}</flux:table.cell>
+                        <flux:table.cell variant="strong">
+                            {{ $item->name_snapshot }}
+                            @if ($item->isAdjusted())
+                                <div class="text-xs font-normal text-zinc-500">
+                                    @if ($item->discount_amount->isPositive())
+                                        {{ __('Discount :amount', ['amount' => $item->discount_amount->formatExact()]) }} ·
+                                    @endif
+                                    {{ $item->adjustment_reason }}
+                                    @if ($item->adjustedBy)
+                                        · {{ $item->adjustedBy->name }}
+                                    @endif
+                                </div>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell>{{ $item->quantity }}</flux:table.cell>
-                        <flux:table.cell class="font-mono">{{ $item->unit_price->format() }}</flux:table.cell>
-                        <flux:table.cell class="text-right font-mono">{{ $item->line_total->format() }}</flux:table.cell>
+                        <flux:table.cell class="font-mono">
+                            @if ($item->original_unit_price)
+                                <span class="text-zinc-400 line-through">{{ $item->original_unit_price->formatExact() }}</span>
+                            @endif
+                            {{ $item->unit_price->formatExact() }}
+                        </flux:table.cell>
+                        <flux:table.cell class="text-right font-mono">{{ $item->line_total->formatExact() }}</flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>
@@ -132,16 +150,16 @@
         <div class="ml-auto max-w-sm space-y-2">
             <div class="flex justify-between text-sm">
                 <span>{{ __('Subtotal (before VAT)') }}</span>
-                <span class="font-mono">{{ $posOrder->subtotal->format() }}</span>
+                <span class="font-mono">{{ $posOrder->subtotal->formatExact() }}</span>
             </div>
             <div class="flex justify-between text-sm">
                 <span>{{ \App\Support\Vat::current()->label() }}</span>
-                <span class="font-mono">{{ $posOrder->tax_total->format() }}</span>
+                <span class="font-mono">{{ $posOrder->tax_total->formatExact() }}</span>
             </div>
             <flux:separator />
             <div class="flex justify-between">
                 <flux:heading size="sm">{{ __('Total') }}</flux:heading>
-                <span class="font-mono font-semibold">{{ $posOrder->total_amount->format() }}</span>
+                <span class="font-mono font-semibold">{{ $posOrder->total_amount->formatExact() }}</span>
             </div>
         </div>
     </div>

@@ -7,6 +7,7 @@ namespace App\Livewire\Menu;
 use App\Domain\Stock\Actions\RecordStockEntry;
 use App\Models\MenuCategory;
 use App\Models\MenuItem;
+use App\Models\MenuItemPriceChange;
 use App\Models\Outlet;
 use App\Models\StockType;
 use App\Support\Money;
@@ -45,10 +46,13 @@ class Index extends Component
     #[Validate('nullable|string|max:300')]
     public string $itemDescription = '';
 
-    #[Validate('required|integer|min:0')]
-    public int $itemPriceTsh = 0;
+    /** Major units as typed, so fractional prices like 2.50 survive the round-trip. */
+    #[Validate('required|numeric|min:0|decimal:0,2')]
+    public string $itemPrice = '';
 
     public bool $itemIsActive = true;
+
+    public bool $itemIsOpenPrice = false;
 
     public bool $itemTrackStock = false;
 
@@ -86,6 +90,26 @@ class Index extends Component
     public function stockTypes(): Collection
     {
         return StockType::query()->orderBy('name')->get();
+    }
+
+    /**
+     * Past price edits of the item being edited, newest first.
+     *
+     * @return Collection<int, MenuItemPriceChange>
+     */
+    #[Computed]
+    public function priceHistory(): Collection
+    {
+        if ($this->editingItemId === null) {
+            return new Collection;
+        }
+
+        return MenuItemPriceChange::query()
+            ->where('menu_item_id', $this->outletItem($this->editingItemId)->id)
+            ->with('changedBy')
+            ->latest('id')
+            ->limit(10)
+            ->get();
     }
 
     /* Category actions */
@@ -145,7 +169,7 @@ class Index extends Component
 
     public function openCreateItem(?int $categoryId = null): void
     {
-        $this->reset(['editingItemId', 'itemName', 'itemDescription', 'itemPriceTsh', 'itemTrackStock', 'itemWasTracked', 'itemStockQuantity', 'itemStockTypeId']);
+        $this->reset(['editingItemId', 'itemName', 'itemDescription', 'itemPrice', 'itemIsOpenPrice', 'itemTrackStock', 'itemWasTracked', 'itemStockQuantity', 'itemStockTypeId']);
         $this->itemCategoryId = $categoryId;
         $this->itemIsActive = true;
         $this->resetValidation();
@@ -159,8 +183,9 @@ class Index extends Component
         $this->itemCategoryId = $item->menu_category_id;
         $this->itemName = $item->name;
         $this->itemDescription = $item->description ?? '';
-        $this->itemPriceTsh = (int) $item->price->toMajor();
+        $this->itemPrice = (string) $item->price->toMajor();
         $this->itemIsActive = $item->is_active;
+        $this->itemIsOpenPrice = $item->is_open_price;
         $this->itemTrackStock = $item->track_stock;
         $this->itemWasTracked = $item->track_stock;
         $this->itemStockQuantity = $item->stock_quantity;
@@ -175,7 +200,7 @@ class Index extends Component
             'itemCategoryId' => ['required', 'integer', Rule::exists('menu_categories', 'id')->where('outlet_id', $this->outlet->id)],
             'itemName' => 'required|string|max:120',
             'itemDescription' => 'nullable|string|max:300',
-            'itemPriceTsh' => 'required|integer|min:0',
+            'itemPrice' => 'required|numeric|min:0|decimal:0,2',
             'itemStockQuantity' => 'required|integer|min:0',
             'itemStockTypeId' => ['nullable', Rule::in($this->stockTypes()->modelKeys())],
         ]);
@@ -199,7 +224,8 @@ class Index extends Component
             'menu_category_id' => $this->itemCategoryId,
             'name' => $this->itemName,
             'description' => $this->itemDescription ?: null,
-            'price' => Money::fromMajor($this->itemPriceTsh),
+            'price' => Money::fromMajor((float) $this->itemPrice),
+            'is_open_price' => $this->itemIsOpenPrice,
             'is_active' => $this->itemIsActive,
             'stock_type_id' => $this->itemStockTypeId !== '' ? (int) $this->itemStockTypeId : null,
             'track_stock' => $this->itemTrackStock,
@@ -208,7 +234,16 @@ class Index extends Component
 
         DB::transaction(function () use ($item, $attrs, $openingStock, $recordStockEntry): void {
             if ($item) {
+                $oldPrice = $item->price;
                 $item->update($attrs);
+
+                if (! $oldPrice->equals($item->price)) {
+                    $item->priceChanges()->create([
+                        'old_price' => $oldPrice,
+                        'new_price' => $item->price,
+                        'changed_by' => Auth::id(),
+                    ]);
+                }
             } else {
                 $item = MenuItem::query()->create($attrs);
             }

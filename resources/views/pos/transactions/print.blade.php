@@ -258,10 +258,13 @@
                     <tr>
                         <td class="desc">
                             {{ $item->name_snapshot }}
-                            <br><span class="unit">{{ $item->unit_price->format() }} {{ __('ea.') }}</span>
+                            <br><span class="unit">{{ $item->unit_price->formatExact() }} {{ __('ea.') }}</span>
+                            @if ($item->discount_amount->isPositive())
+                                <br><span class="unit">{{ __('Discount') }} −{{ $item->discount_amount->formatExact() }}</span>
+                            @endif
                         </td>
                         <td class="num">{{ $item->quantity }}</td>
-                        <td class="num">{{ $item->line_total->format() }}</td>
+                        <td class="num">{{ $item->line_total->formatExact() }}</td>
                     </tr>
                 @empty
                     <tr class="empty">
@@ -272,9 +275,9 @@
         </table>
 
         <div class="totals">
-            <div class="row"><span>{{ __('Subtotal (before VAT)') }}</span><span class="value">{{ $order->subtotal->format() }}</span></div>
-            <div class="row"><span>{{ $hotel->vat()->label() }}</span><span class="value">{{ $order->tax_total->format() }}</span></div>
-            <div class="row grand"><span>{{ __('Total') }}</span><span class="value">{{ $order->total_amount->format() }}</span></div>
+            <div class="row"><span>{{ __('Subtotal (before VAT)') }}</span><span class="value">{{ $order->subtotal->formatExact() }}</span></div>
+            <div class="row"><span>{{ $hotel->vat()->label() }}</span><span class="value">{{ $order->tax_total->formatExact() }}</span></div>
+            <div class="row grand"><span>{{ __('Total') }}</span><span class="value">{{ $order->total_amount->formatExact() }}</span></div>
         </div>
 
         @if ($order->folio)
@@ -297,14 +300,14 @@
                         @if ($payment->changeGiven())
                             <div class="row">
                                 <span class="label">{{ __('Change') }}</span>
-                                <span class="value">{{ $payment->changeGiven()->format() }}</span>
+                                <span class="value">{{ $payment->changeGiven()->formatExact() }}</span>
                             </div>
                         @endif
                     @endforeach
                 </div>
             @elseif ($walkIn && $balance->isZero())
                 <div class="payment paid">
-                    <div class="row"><span class="label">{{ __('Paid in full') }}</span><span class="value">{{ $folio->paid_total->format() }}</span></div>
+                    <div class="row"><span class="label">{{ __('Paid in full') }}</span><span class="value">{{ $folio->paid_total->formatExact() }}</span></div>
                 </div>
             @elseif (! $walkIn)
                 <div class="payment">
@@ -323,7 +326,7 @@
 
             @if ($walkIn && ! $balance->isZero())
                 <div class="payment due">
-                    <div class="row"><span class="label">{{ __('Balance due') }}</span><span class="value">{{ $balance->format() }}</span></div>
+                    <div class="row"><span class="label">{{ __('Balance due') }}</span><span class="value">{{ $balance->formatExact() }}</span></div>
                 </div>
             @endif
         @endif

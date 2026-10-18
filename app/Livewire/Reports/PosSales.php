@@ -114,7 +114,8 @@ abstract class PosSales extends ReportComponent
     /**
      * One row per billed order with what was paid towards it.
      *
-     * POS orders carry no discount; see FolioPaymentShare for how payments are credited.
+     * The discount is what line discounts and price cuts at the till took off
+     * the bill (VAT included); see FolioPaymentShare for how payments are credited.
      *
      * @return array<int, array{order: PosOrder, customer: string|null, currency: string, total: Money, discount: Money, grand_total: Money, paid_by: string, paid: Money, balance: Money}>
      */
@@ -125,13 +126,17 @@ abstract class PosSales extends ReportComponent
             $folio = $order->folio;
             $grandTotal = $order->total_amount;
             $paid = FolioPaymentShare::paid($folio, $grandTotal, BillSection::Outlets);
+            $discount = $order->items->reduce(
+                fn (Money $carry, PosOrderItem $item): Money => $carry->add($item->amount_off_gross),
+                Money::zero(),
+            );
 
             return [
                 'order' => $order,
                 'customer' => $folio?->guest?->fullName(),
                 'currency' => $folio === null ? $this->hotelCurrency() : $folio->currency,
-                'total' => $grandTotal,
-                'discount' => Money::zero(),
+                'total' => $grandTotal->add($discount),
+                'discount' => $discount,
                 'grand_total' => $grandTotal,
                 'paid_by' => FolioPaymentShare::paidBy($folio, BillSection::Outlets),
                 'paid' => $paid,
@@ -141,7 +146,7 @@ abstract class PosSales extends ReportComponent
     }
 
     /**
-     * @return array{orders: int, quantity: int, tax: Money, total: Money, paid: Money, balance: Money}
+     * @return array{orders: int, quantity: int, tax: Money, total: Money, discount: Money, paid: Money, balance: Money}
      */
     #[Computed]
     public function totals(): array
@@ -153,6 +158,7 @@ abstract class PosSales extends ReportComponent
             'quantity' => array_sum(array_column($this->itemRows(), 'quantity')),
             'tax' => Money::fromMinor((int) $orders->sum(fn (PosOrder $order): int => $order->tax_total->amount)),
             'total' => Money::fromMinor((int) $orders->sum(fn (PosOrder $order): int => $order->total_amount->amount)),
+            'discount' => array_reduce($this->orderRows(), fn (Money $carry, array $row): Money => $carry->add($row['discount']), Money::zero()),
             'paid' => array_reduce($this->orderRows(), fn (Money $carry, array $row): Money => $carry->add($row['paid']), Money::zero()),
             'balance' => array_reduce($this->orderRows(), fn (Money $carry, array $row): Money => $carry->add($row['balance']), Money::zero()),
         ];

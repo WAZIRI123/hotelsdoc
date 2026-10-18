@@ -31,6 +31,7 @@ final class RolePermissionCatalog
         'manage-menu',
         'manage-stock',
         'operate-pos',
+        'override-pos-prices',
         'view-reports',
     ];
 
@@ -49,6 +50,7 @@ final class RolePermissionCatalog
             'manage-menu',
             'manage-stock',
             'operate-pos',
+            'override-pos-prices',
             'view-reports',
         ],
         'accountant' => [
