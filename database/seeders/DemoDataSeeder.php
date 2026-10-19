@@ -292,6 +292,7 @@ class DemoDataSeeder extends Seeder
         ];
 
         foreach ($completed as [$guest, $room, $arrival, $departure, $method]) {
+            CarbonImmutable::setTestNow($arrival->setTime(14, 0));
             $res = $createRes->execute(
                 guestId: $guest->id,
                 roomTypeId: $room->room_type_id,
@@ -299,7 +300,6 @@ class DemoDataSeeder extends Seeder
                 arrival: $arrival,
                 departure: $departure,
             );
-            CarbonImmutable::setTestNow($arrival->setTime(14, 0));
             $stay = $checkIn->execute($res->fresh(), $testUser);
 
             CarbonImmutable::setTestNow($departure->setTime(10, 30));
@@ -324,6 +324,7 @@ class DemoDataSeeder extends Seeder
 
         $inHouseStays = collect();
         foreach ($inHouse as [$guest, $room, $arrival, $departure]) {
+            CarbonImmutable::setTestNow($arrival->setTime(15, 0));
             $res = $createRes->execute(
                 guestId: $guest->id,
                 roomTypeId: $room->room_type_id,
@@ -331,7 +332,6 @@ class DemoDataSeeder extends Seeder
                 arrival: $arrival,
                 departure: $departure,
             );
-            CarbonImmutable::setTestNow($arrival->setTime(15, 0));
             $stay = $checkIn->execute($res->fresh(), $frontDesk);
             $inHouseStays->push($stay);
         }
