@@ -20,7 +20,8 @@ return new class extends Migration
             $table->foreignId('room_id')->constrained()->cascadeOnDelete();
             $table->date('date');
             $table->string('status')->default('open')->comment('open|booked|blocked');
-            $table->foreignId('reservation_id')->nullable()->constrained()->nullOnDelete();
+            // Constrained in the reservations migration, which runs after this one.
+            $table->foreignId('reservation_id')->nullable();
             $table->timestamps();
 
             $table->unique(['room_id', 'date']);

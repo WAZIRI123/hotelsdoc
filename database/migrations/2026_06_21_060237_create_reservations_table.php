@@ -30,10 +30,18 @@ return new class extends Migration
             $table->index(['hotel_id', 'status']);
             $table->index(['hotel_id', 'arrival']);
         });
+
+        Schema::table('room_availability', function (Blueprint $table): void {
+            $table->foreign('reservation_id')->references('id')->on('reservations')->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('room_availability', function (Blueprint $table): void {
+            $table->dropForeign(['reservation_id']);
+        });
+
         Schema::dropIfExists('reservations');
     }
 };
